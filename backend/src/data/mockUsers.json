@@ -1,0 +1,488 @@
+{
+  "f1e1g57h-h608-8701-ffi5-f6i42476h6e9": {
+    "userId": "f1e1g57h-h608-8701-ffi5-f6i42476h6e9",
+    "name": "Tamirat Kebede",
+    "email": "tamiratkebede@gmail.com",
+    "deals": [
+      {
+        "id": "d-343762335991",
+        "dealName": "New deal",
+        "company": "Unknown Company",
+        "pipelineName": "default",
+        "stage": "appointmentscheduled",
+        "amount": 2022,
+        "summary": "This deal is currently being tracked in the BarrierX platform.",
+        "closeDate": "2025-10-31T00:40:22.707Z",
+        "createdAt": "2025-10-28T00:40:56.116Z",
+        "userDealRiskScores": {
+          "arenaRisk": 0,
+          "controlRoomRisk": 0,
+          "scoreCardRisk": 0,
+          "totalDealRisk": 0,
+          "subCategoryRisk": {
+            "ChampionRisks": 0,
+            "CompetitionRisks": 0,
+            "ContractualLegalRisks": 0,
+            "DealVelocity": 0
+          }
+        },
+        "contacts": [
+          {
+            "id": "c-343762335991-1",
+            "properties": {
+              "email": "tamiratkebede@gmail.com",
+              "name": "Tamirat Kebede",
+              "phone": "+251914373107",
+              "jobtitle": "CEO"
+            }
+          },
+          {
+            "id": "c-343762335991-2",
+            "properties": {
+              "email": "contact@techcorp.com",
+              "name": "Sarah Miller",
+              "phone": "+14155551234",
+              "jobtitle": "VP of Sales"
+            }
+          }
+        ],
+        "meetings": [
+          {
+            "id": "m-328461812932",
+            "title": "Initial Discovery Call",
+            "body": "Discussing project requirements and timeline for the new deal.",
+            "startTime": "{{T+10}}",
+            "duration": "3600",
+            "endTime": "{{T+70}}"
+          },
+          {
+            "id": "m-328461812933",
+            "title": "Product Demo Session",
+            "body": "Comprehensive product demonstration and Q&A session.",
+            "startTime": "{{T+120}}",
+            "duration": "5400",
+            "endTime": "{{T+210}}"
+          },
+          {
+            "id": "m-328461812934",
+            "title": "Contract Review Meeting",
+            "body": "Review contract terms and finalize agreement.",
+            "startTime": "{{T-35}}",
+            "duration": "1800",
+            "endTime": "{{T-3}}"
+          }
+        ],
+        "owner": {
+          "name": "Tamirat Kebede",
+          "email": "tamiratkebede120@gmail.com",
+          "phone": "+251914373107",
+          "avatar": "https://i.pravatar.cc/150?u=tamirat"
+        }
+      },
+      {
+        "id": "d-355598434505",
+        "dealName": "Tamirat's Deal with BarrierX - Test 01",
+        "company": "BarrierX",
+        "pipelineName": "default",
+        "stage": "presentationscheduled",
+        "amount": 14000,
+        "summary": "This deal is currently being tracked in the BarrierX platform.",
+        "closeDate": "2025-12-15T00:00:00.000Z",
+        "createdAt": "2025-10-20T08:30:00.000Z",
+        "userDealRiskScores": {
+          "arenaRisk": 15,
+          "controlRoomRisk": 10,
+          "scoreCardRisk": 5,
+          "totalDealRisk": 30,
+          "subCategoryRisk": {
+            "ChampionRisks": 8,
+            "CompetitionRisks": 12,
+            "ContractualLegalRisks": 5,
+            "DealVelocity": 5
+          }
+        },
+        "contacts": [
+          {
+            "id": "c-355598434505-1",
+            "properties": {
+              "email": "john.doe@barrierx.com",
+              "name": "John Doe",
+              "phone": "+251914373107",
+              "jobtitle": "Product Manager"
+            }
+          }
+        ],
+        "meetings": [
+          {
+            "id": "m-341839848655",
+            "title": "Tamirat's Meeting - Test 01",
+            "body": "Strategic planning session for BarrierX integration.",
+            "startTime": "{{T+5}}",
+            "duration": "7200",
+            "endTime": "{{T+125}}"
+          },
+          {
+            "id": "m-341839848656",
+            "title": "Follow-up Sync",
+            "body": "Quick check-in on progress and next steps.",
+            "startTime": "{{T-5}}",
+            "duration": "1800",
+            "endTime": "{{T+25}}"
+          }
+        ],
+        "owner": {
+          "name": "Tamirat Kebede",
+          "email": "tamiratkebede120@gmail.com",
+          "phone": "+251914373107",
+          "avatar": "https://i.pravatar.cc/150?u=tamirat"
+        }
+      }
+    ]
+  },
+  "c8b8d24e-e275-5378-ccg2-c3g19143e3b6": {
+    "userId": "c8b8d24e-e275-5378-ccg2-c3g19143e3b6",
+    "name": "Alex Johnson",
+    "email": "alex.johnson@example.com",
+    "deals": [
+      {
+        "id": "d-8888888888",
+        "dealName": "Alex's Deal with BarrierX - Trial",
+        "company": "BarrierX",
+        "pipelineName": "sales-pipeline",
+        "stage": "contractsent",
+        "amount": 9500,
+        "summary": "Client is reviewing the contract proposal.",
+        "closeDate": "2025-11-30T00:00:00.000Z",
+        "createdAt": "2025-10-15T10:00:00.000Z",
+        "userDealRiskScores": {
+          "arenaRisk": 20,
+          "controlRoomRisk": 15,
+          "scoreCardRisk": 10,
+          "totalDealRisk": 45,
+          "subCategoryRisk": {
+            "ChampionRisks": 15,
+            "CompetitionRisks": 18,
+            "ContractualLegalRisks": 7,
+            "DealVelocity": 5
+          }
+        },
+        "contacts": [
+          {
+            "id": "c-8888888888-1",
+            "properties": {
+              "email": "alex.johnson@example.com",
+              "name": "Alex Johnson",
+              "phone": "+251914373107",
+              "jobtitle": "Sales Manager"
+            }
+          },
+          {
+            "id": "c-8888888888-2",
+            "properties": {
+              "email": "emily.brown@example.com",
+              "name": "Emily Brown",
+              "phone": "+14085555678",
+              "jobtitle": "Director of Operations"
+            }
+          }
+        ],
+        "meetings": [
+          {
+            "id": "m-9999999999",
+            "title": "Follow-up Discussion",
+            "body": "Reviewing proposal details and next steps.",
+            "startTime": "{{T+14}}",
+            "duration": "3600",
+            "endTime": "{{T+74}}"
+          },
+          {
+            "id": "m-9999999998",
+            "title": "Contract Negotiation",
+            "body": "Finalizing contract terms and pricing.",
+            "startTime": "{{T+180}}",
+            "duration": "5400",
+            "endTime": "{{T+270}}"
+          }
+        ],
+        "owner": {
+          "name": "Alex Johnson",
+          "email": "alex.johnson@example.com",
+          "phone": "+251931088792",
+          "avatar": "https://i.pravatar.cc/150?u=alex"
+        }
+      },
+      {
+        "id": "d-7777777777",
+        "dealName": "Enterprise SaaS Deal",
+        "company": "TechCorp Solutions",
+        "pipelineName": "enterprise",
+        "stage": "qualifiedtobuy",
+        "amount": 45000,
+        "summary": "Large enterprise client interested in our SaaS platform.",
+        "closeDate": "2026-01-15T00:00:00.000Z",
+        "createdAt": "2025-10-05T14:20:00.000Z",
+        "userDealRiskScores": {
+          "arenaRisk": 5,
+          "controlRoomRisk": 8,
+          "scoreCardRisk": 3,
+          "totalDealRisk": 16,
+          "subCategoryRisk": {
+            "ChampionRisks": 4,
+            "CompetitionRisks": 6,
+            "ContractualLegalRisks": 3,
+            "DealVelocity": 3
+          }
+        },
+        "contacts": [
+          {
+            "id": "c-7777777777-1",
+            "properties": {
+              "email": "michael.chen@techcorp.com",
+              "name": "Michael Chen",
+              "phone": "+16505551234",
+              "jobtitle": "CTO"
+            }
+          }
+        ],
+        "meetings": [
+          {
+            "id": "m-7777777777",
+            "title": "Technical Deep Dive",
+            "body": "Technical architecture review and integration discussion.",
+            "startTime": "{{T+60}}",
+            "duration": "7200",
+            "endTime": "{{T+180}}"
+          },
+          {
+            "id": "m-7777777776",
+            "title": "Stakeholder Presentation",
+            "body": "Present solution to executive stakeholders.",
+            "startTime": "{{T-10}}",
+            "duration": "4500",
+            "endTime": "{{T+65}}"
+          }
+        ],
+        "owner": {
+          "name": "Alex Johnson",
+          "email": "alex.johnson@example.com",
+          "phone": "+251931088792",
+          "avatar": "https://i.pravatar.cc/150?u=alex"
+        }
+      }
+    ]
+  },
+  "d9c9e35f-f386-6489-ddh3-d4h20254f4c7": {
+    "userId": "d9c9e35f-f386-6489-ddh3-d4h20254f4c7",
+    "name": "Sarah Williams",
+    "email": "sarah.williams@company.com",
+    "deals": [
+      {
+        "id": "d-6666666666",
+        "dealName": "Startup Partnership",
+        "company": "InnovateCo",
+        "pipelineName": "partnerships",
+        "stage": "decisionmakerboughtin",
+        "amount": 25000,
+        "summary": "Strategic partnership with fast-growing startup.",
+        "closeDate": "2025-12-01T00:00:00.000Z",
+        "createdAt": "2025-09-28T09:15:00.000Z",
+        "userDealRiskScores": {
+          "arenaRisk": 12,
+          "controlRoomRisk": 10,
+          "scoreCardRisk": 8,
+          "totalDealRisk": 30,
+          "subCategoryRisk": {
+            "ChampionRisks": 10,
+            "CompetitionRisks": 8,
+            "ContractualLegalRisks": 6,
+            "DealVelocity": 6
+          }
+        },
+        "contacts": [
+          {
+            "id": "c-6666666666-1",
+            "properties": {
+              "email": "david.kim@innovateco.com",
+              "name": "David Kim",
+              "phone": "+14155552345",
+              "jobtitle": "CEO"
+            }
+          },
+          {
+            "id": "c-6666666666-2",
+            "properties": {
+              "email": "lisa.park@innovateco.com",
+              "name": "Lisa Park",
+              "phone": "+14155553456",
+              "jobtitle": "VP of Product"
+            }
+          }
+        ],
+        "meetings": [
+          {
+            "id": "m-6666666666",
+            "title": "Partnership Kickoff",
+            "body": "Initial partnership discussion and goal alignment.",
+            "startTime": "{{T+12}}",
+            "duration": "5400",
+            "endTime": "{{T+102}}"
+          },
+          {
+            "id": "m-6666666665",
+            "title": "Integration Planning",
+            "body": "Technical integration roadmap and timeline.",
+            "startTime": "{{T-15}}",
+            "duration": "3600",
+            "endTime": "{{T+45}}"
+          },
+          {
+            "id": "m-6666666664",
+            "title": "Weekly Sync",
+            "body": "Regular check-in on partnership progress.",
+            "startTime": "{{T+240}}",
+            "duration": "1800",
+            "endTime": "{{T+270}}"
+          }
+        ],
+        "owner": {
+          "name": "Sarah Williams",
+          "email": "sarah.williams@company.com",
+          "phone": "+251914373107",
+          "avatar": "https://i.pravatar.cc/150?u=sarah"
+        }
+      }
+    ]
+  },
+  "e0d0f46g-g497-7590-eei4-e5i31365g5d8": {
+    "userId": "e0d0f46g-g497-7590-eei4-e5i31365g5d8",
+    "name": "James Martinez",
+    "email": "james.martinez@enterprise.com",
+    "deals": [
+      {
+        "id": "d-5555555555",
+        "dealName": "Global Enterprise Deal",
+        "company": "Global Enterprises Inc",
+        "pipelineName": "enterprise",
+        "stage": "closedwon",
+        "amount": 150000,
+        "summary": "Successfully closed major enterprise deal.",
+        "closeDate": "2025-10-15T00:00:00.000Z",
+        "createdAt": "2025-08-01T11:30:00.000Z",
+        "userDealRiskScores": {
+          "arenaRisk": 0,
+          "controlRoomRisk": 0,
+          "scoreCardRisk": 0,
+          "totalDealRisk": 0,
+          "subCategoryRisk": {
+            "ChampionRisks": 0,
+            "CompetitionRisks": 0,
+            "ContractualLegalRisks": 0,
+            "DealVelocity": 0
+          }
+        },
+        "contacts": [
+          {
+            "id": "c-5555555555-1",
+            "properties": {
+              "email": "robert.anderson@globalent.com",
+              "name": "Robert Anderson",
+              "phone": "+12125551234",
+              "jobtitle": "CFO"
+            }
+          },
+          {
+            "id": "c-5555555555-2",
+            "properties": {
+              "email": "jennifer.lee@globalent.com",
+              "name": "Jennifer Lee",
+              "phone": "+12125555678",
+              "jobtitle": "VP of Technology"
+            }
+          }
+        ],
+        "meetings": [
+          {
+            "id": "m-5555555555",
+            "title": "Onboarding Session",
+            "body": "Post-sale onboarding and implementation planning.",
+            "startTime": "{{T+8}}",
+            "duration": "7200",
+            "endTime": "{{T+128}}"
+          },
+          {
+            "id": "m-5555555554",
+            "title": "Implementation Review",
+            "body": "Review implementation progress and address concerns.",
+            "startTime": "{{T-20}}",
+            "duration": "3600",
+            "endTime": "{{T+40}}"
+          }
+        ],
+        "owner": {
+          "name": "James Martinez",
+          "email": "james.martinez@enterprise.com",
+          "phone": "+251931088792",
+          "avatar": "https://i.pravatar.cc/150?u=james"
+        }
+      },
+      {
+        "id": "d-4444444444",
+        "dealName": "Mid-Market Opportunity",
+        "company": "MidSize Corp",
+        "pipelineName": "default",
+        "stage": "appointmentscheduled",
+        "amount": 35000,
+        "summary": "Promising mid-market opportunity with strong interest.",
+        "closeDate": "2025-11-20T00:00:00.000Z",
+        "createdAt": "2025-10-18T13:45:00.000Z",
+        "userDealRiskScores": {
+          "arenaRisk": 8,
+          "controlRoomRisk": 6,
+          "scoreCardRisk": 4,
+          "totalDealRisk": 18,
+          "subCategoryRisk": {
+            "ChampionRisks": 5,
+            "CompetitionRisks": 7,
+            "ContractualLegalRisks": 3,
+            "DealVelocity": 3
+          }
+        },
+        "contacts": [
+          {
+            "id": "c-4444444444-1",
+            "properties": {
+              "email": "patricia.white@midsize.com",
+              "name": "Patricia White",
+              "phone": "+13105551234",
+              "jobtitle": "Director of Sales"
+            }
+          }
+        ],
+        "meetings": [
+          {
+            "id": "m-4444444444",
+            "title": "Discovery Call",
+            "body": "Understanding client needs and pain points.",
+            "startTime": "{{T+3}}",
+            "duration": "2700",
+            "endTime": "{{T+48}}"
+          },
+          {
+            "id": "m-4444444443",
+            "title": "Solution Presentation",
+            "body": "Present tailored solution and pricing.",
+            "startTime": "{{T+90}}",
+            "duration": "4500",
+            "endTime": "{{T+165}}"
+          }
+        ],
+        "owner": {
+          "name": "James Martinez",
+          "email": "james.martinez@enterprise.com",
+          "phone": "+251931088792",
+          "avatar": "https://i.pravatar.cc/150?u=james"
+        }
+      }
+    ]
+  }
+}
