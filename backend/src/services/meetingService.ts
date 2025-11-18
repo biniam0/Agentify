@@ -138,7 +138,8 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       console.log(`       ⚠️  ElevenLabs call may have failed - missing IDs`);
       console.log(`       📋 Full response:`, JSON.stringify(response.data, null, 2));
     } else {
-      console.log(`       ✅ ElevenLabs PRE-CALL initiated successfully!`);
+      console.log(`       ✅ ElevenLabs POST-CALL initiated successfully!`);
+      console.log(`       📞 Calling: ${ownerPhone}`);
       console.log(`       📞 Conversation ID: ${conversationId}`);
       console.log(`       📞 Twilio Call SID: ${callSid}`);
     }
@@ -211,7 +212,8 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
       console.log(`       ⚠️  ElevenLabs call may have failed - missing IDs`);
       console.log(`       📋 Full response:`, JSON.stringify(response.data, null, 2));
     } else {
-      console.log(`       ✅ ElevenLabs POST-CALL initiated successfully!`);
+      console.log(`       ✅ ElevenLabs PRE-CALL initiated successfully!`);
+      console.log(`       📞 Calling: ${ownerPhone}`);
       console.log(`       📞 Conversation ID: ${conversationId}`);
       console.log(`       📞 Twilio Call SID: ${callSid}`);
     }

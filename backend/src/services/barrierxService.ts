@@ -149,6 +149,29 @@ export const getUserById = async (id: string): Promise<BarrierXUser | null> => {
   return user || null;
 };
 
+// Process time templates like {{T+10}} or {{T-15}} into ISO dates
+const processTimeTemplates = (timeStr: string): string => {
+  const now = Date.now();
+
+  // Match {{T+X}} or {{T-X}} patterns
+  const match = timeStr.match(/\{\{T([+-])(\d+)\}\}/);
+
+  if (match) {
+    const operator = match[1];
+    const minutes = parseInt(match[2], 10);
+    const milliseconds = minutes * 60 * 1000;
+
+    const targetTime = operator === '+' 
+      ? now + milliseconds 
+      : now - milliseconds;
+
+    return new Date(targetTime).toISOString();
+  }
+
+  // If no template found, return as-is (might be an ISO date already)
+  return timeStr;
+};
+
 export const getUserDeals = async (userId: string): Promise<Deal[]> => {
   await new Promise(resolve => setTimeout(resolve, 400));
 
@@ -174,8 +197,8 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
     const meetings: Meeting[] = deal.meetings?.map((m: any) => ({
       id: m.id,
       title: m.title,
-      startTime: m.startTime,
-      endTime: m.endTime,
+      startTime: processTimeTemplates(m.startTime),
+      endTime: processTimeTemplates(m.endTime),
       status: 'scheduled' as const,
       agenda: m.body,
       participants: contacts,
