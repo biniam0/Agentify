@@ -161,8 +161,8 @@ const processTimeTemplates = (timeStr: string): string => {
     const minutes = parseInt(match[2], 10);
     const milliseconds = minutes * 60 * 1000;
 
-    const targetTime = operator === '+' 
-      ? now + milliseconds 
+    const targetTime = operator === '+'
+      ? now + milliseconds
       : now - milliseconds;
 
     return new Date(targetTime).toISOString();
@@ -268,7 +268,7 @@ export const createCompany = async (payload: {
   industry?: string;
 }): Promise<{ success: boolean; companyId: string }> => {
   await new Promise(resolve => setTimeout(resolve, 300));
-  
+
   return {
     success: true,
     companyId: `company-${Date.now()}`,
@@ -282,11 +282,11 @@ export const getRisks = async (dealId: string): Promise<{
   risks: Array<{ category: string; score: number; description: string }>;
 }> => {
   await new Promise(resolve => setTimeout(resolve, 200));
-  
+
   // Find deal in mockUsers.json to get risk scores
   const typedMockUsers = mockUsersDataJson as { [key: string]: any };
   let dealRiskScores = null;
-  
+
   // Search through all users to find the deal
   for (const userId in typedMockUsers) {
     const userData = typedMockUsers[userId];
@@ -296,13 +296,13 @@ export const getRisks = async (dealId: string): Promise<{
       break;
     }
   }
-  
+
   // Generate risks based on scores
   const risks = [];
-  
+
   if (dealRiskScores) {
     const subRisks = dealRiskScores.subCategoryRisk || {};
-    
+
     // Competition Risks
     if (subRisks.CompetitionRisks > 10) {
       risks.push({
@@ -317,7 +317,7 @@ export const getRisks = async (dealId: string): Promise<{
         description: `Moderate competition risk (score: ${subRisks.CompetitionRisks}). Some competitive pressure exists.`,
       });
     }
-    
+
     // Champion Risks
     if (subRisks.ChampionRisks > 10) {
       risks.push({
@@ -332,7 +332,7 @@ export const getRisks = async (dealId: string): Promise<{
         description: `Champion engagement needs attention (score: ${subRisks.ChampionRisks}).`,
       });
     }
-    
+
     // Contractual/Legal Risks
     if (subRisks.ContractualLegalRisks > 5) {
       risks.push({
@@ -341,7 +341,7 @@ export const getRisks = async (dealId: string): Promise<{
         description: `Contract review pending with risk score ${subRisks.ContractualLegalRisks}. Legal concerns may delay closure.`,
       });
     }
-    
+
     // Deal Velocity
     if (subRisks.DealVelocity > 5) {
       risks.push({
@@ -351,7 +351,7 @@ export const getRisks = async (dealId: string): Promise<{
       });
     }
   }
-  
+
   // Fill with defaults if less than 3 risks
   while (risks.length < 3) {
     if (risks.length === 0) {
@@ -368,7 +368,7 @@ export const getRisks = async (dealId: string): Promise<{
       });
     }
   }
-  
+
   return {
     success: true,
     dealId,
@@ -383,11 +383,11 @@ export const getRecommendations = async (dealId: string): Promise<{
   recommendations: Array<{ action: string; priority: string }>;
 }> => {
   await new Promise(resolve => setTimeout(resolve, 200));
-  
+
   // Find deal in mockUsers.json to get risk scores
   const typedMockUsers = mockUsersDataJson as { [key: string]: any };
   let dealRiskScores = null;
-  
+
   // Search through all users to find the deal
   for (const userId in typedMockUsers) {
     const userData = typedMockUsers[userId];
@@ -397,13 +397,13 @@ export const getRecommendations = async (dealId: string): Promise<{
       break;
     }
   }
-  
+
   // Generate recommendations based on risks
   const recommendations = [];
-  
+
   if (dealRiskScores) {
     const subRisks = dealRiskScores.subCategoryRisk || {};
-    
+
     // Competition-based recommendations
     if (subRisks.CompetitionRisks > 10) {
       recommendations.push({
@@ -416,7 +416,7 @@ export const getRecommendations = async (dealId: string): Promise<{
         priority: 'medium',
       });
     }
-    
+
     // Champion-based recommendations
     if (subRisks.ChampionRisks > 10) {
       recommendations.push({
@@ -429,7 +429,7 @@ export const getRecommendations = async (dealId: string): Promise<{
         priority: 'medium',
       });
     }
-    
+
     // Contractual recommendations
     if (subRisks.ContractualLegalRisks > 5) {
       recommendations.push({
@@ -437,7 +437,7 @@ export const getRecommendations = async (dealId: string): Promise<{
         priority: 'high',
       });
     }
-    
+
     // Velocity recommendations
     if (subRisks.DealVelocity > 5) {
       recommendations.push({
@@ -445,7 +445,7 @@ export const getRecommendations = async (dealId: string): Promise<{
         priority: 'medium',
       });
     }
-    
+
     // Arena/Control recommendations
     if (dealRiskScores.arenaRisk > 10) {
       recommendations.push({
@@ -454,7 +454,7 @@ export const getRecommendations = async (dealId: string): Promise<{
       });
     }
   }
-  
+
   // Fill with defaults if less than 3
   while (recommendations.length < 3) {
     if (recommendations.length === 0) {
@@ -469,7 +469,7 @@ export const getRecommendations = async (dealId: string): Promise<{
       });
     }
   }
-  
+
   return {
     success: true,
     dealId,

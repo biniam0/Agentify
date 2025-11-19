@@ -149,10 +149,10 @@ const runAutomationJob = async () => {
     console.log('⏰ Time:', new Date().toISOString());
     return;
   }
-  
+
   // Set lock
   isJobRunning = true;
-  
+
   try {
     console.log('\n🔄 Running automated meeting calls job...');
     console.log('⏰ Time:', new Date().toISOString());
@@ -258,7 +258,7 @@ const runAutomationJob = async () => {
     console.log(`   Pre-meeting calls triggered: ${totalPreMeetings}`);
     console.log(`   Post-meeting calls triggered: ${totalPostMeetings}`);
     console.log(`   Next run in 10 minutes\n`);
-    
+
   } catch (error) {
     console.error('❌ Error in automation job:', error);
   } finally {

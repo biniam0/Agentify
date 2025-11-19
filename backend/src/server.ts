@@ -17,7 +17,7 @@ const startServer = async () => {
       console.log('');
       
       // Start the automated meeting calls scheduler
-      startScheduler();
+      // startScheduler();
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

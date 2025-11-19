@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
+import { writeFile } from 'fs/promises';
+import { join } from 'path';
 import * as barrierxService from '../services/barrierxService';
 import { config } from '../config/env';
 import { verifyElevenLabsSignature } from '../utils/webhookVerification';
+import { CLIENT_RENEG_LIMIT } from 'tls';
 
 export const handleElevenLabsWebhook = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -25,6 +28,7 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
 
     const { type, event_timestamp, data } = req.body;
 
+
     if (!data) {
       res.status(400).json({ error: 'Invalid webhook payload' });
       return;
@@ -45,6 +49,22 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
     console.log(`📋 Conversation ID: ${conversationId}`);
     console.log(`📋 Agent ID: ${agentId}`);
     console.log(`📋 Status: ${status}`);
+
+    // Save webhook payload to file (overwrite if exists)
+    try {
+      const fileName = isPreMeetingCall
+        ? 'elevenlabs-pre-call-latest.json'
+        : isPostMeetingCall
+          ? 'elevenlabs-post-call-latest.json'
+          : 'elevenlabs-unknown-call-latest.json';
+
+      const filePath = join(__dirname, '../../webhooks', fileName);
+      await writeFile(filePath, JSON.stringify(req.body, null, 2), 'utf-8');
+      console.log(`💾 Webhook payload saved to: ${fileName}`);
+    } catch (saveError) {
+      console.error('⚠️  Failed to save webhook payload:', saveError);
+      // Continue processing even if save fails
+    }
 
     // Extract metadata
     const metadata = data.metadata || {};
@@ -132,6 +152,49 @@ Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
     console.error('❌ Webhook processing error:', error);
     res.status(500).json({
       error: 'Failed to process webhook',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+export const handleCreateContact = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('\n📇 Received create_contact command from ElevenLabs');
+    console.log('⏰ Time:', new Date().toISOString());
+    console.log('📋 Contact Data:', JSON.stringify(req.body, null, 2));
+
+    const { name, title, company, email, phone } = req.body;
+
+    console.log('\n📊 Extracted Fields:');
+    console.log(`  Name: ${name || 'Not provided'}`);
+    console.log(`  Title: ${title || 'Not provided'}`);
+    console.log(`  Company: ${company || 'Not provided'}`);
+    console.log(`  Email: ${email || 'Not provided'}`);
+    console.log(`  Phone: ${phone || 'Not provided'}`);
+
+    // TODO: Later, call barrierxService.createContact(req.body)
+    // const result = await barrierxService.createContact({
+    //   name,
+    //   email,
+    //   phone,
+    //   company,
+    // });
+
+    res.json({
+      success: true,
+      message: 'Contact creation command received',
+      contact: {
+        name,
+        title,
+        company,
+        email,
+        phone,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Create contact error:', error);
+    res.status(500).json({
+      error: 'Failed to process create contact command',
       details: error instanceof Error ? error.message : 'Unknown error',
     });
   }

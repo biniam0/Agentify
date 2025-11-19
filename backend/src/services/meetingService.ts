@@ -171,10 +171,17 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
     // Get customer contact for context/variables
     const customer = contacts && contacts.length > 0 ? contacts[0] : null;
 
-    // Prepare dynamic variables for ElevenLabs (simpler for post-call)
+    // Prepare dynamic variables for ElevenLabs (post-call needs meeting context)
     const dynamicVariables = {
       customer_name: dealData.company || customer?.properties.name || 'the prospect',
       deal_id: dealData.id,
+      meeting_title: meetingData.title || 'Recent Meeting',
+      meeting_date: new Date(meetingData.startTime).toLocaleDateString(),
+      meeting_time: new Date(meetingData.startTime).toLocaleTimeString(),
+      meeting_attendees: contacts?.map(c => c.properties.name || c.properties.email).join(', ') || 'No attendees listed',
+      deal_name: dealData.dealName || 'Deal',
+      deal_stage: dealData.stage || 'Unknown',
+      deal_amount: dealData.amount || 'Not specified',
     };
 
     // Check if ElevenLabs is configured
@@ -212,7 +219,7 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
       console.log(`       ⚠️  ElevenLabs call may have failed - missing IDs`);
       console.log(`       📋 Full response:`, JSON.stringify(response.data, null, 2));
     } else {
-      console.log(`       ✅ ElevenLabs PRE-CALL initiated successfully!`);
+      console.log(`       ✅ ElevenLabs POST-CALL initiated successfully!`);
       console.log(`       📞 Calling: ${ownerPhone}`);
       console.log(`       📞 Conversation ID: ${conversationId}`);
       console.log(`       📞 Twilio Call SID: ${callSid}`);

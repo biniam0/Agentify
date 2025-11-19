@@ -3,7 +3,11 @@ import * as webhookController from '../controllers/webhookController';
 
 const router = Router();
 
+// ElevenLabs post-call webhook (receives transcript after call ends)
 router.post('/elevenlabs', webhookController.handleElevenLabsWebhook);
+
+// ElevenLabs Server Tools (called during the call)
+router.post('/create-contact', webhookController.handleCreateContact);
 
 export default router;
 
