@@ -199,3 +199,111 @@ export const handleCreateContact = async (req: Request, res: Response): Promise<
     });
   }
 };
+
+export const handleCreateNote = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('\n📝 Received create_note command from ElevenLabs');
+    console.log('⏰ Time:', new Date().toISOString());
+    console.log('📋 Note Data:', JSON.stringify(req.body, null, 2));
+
+    const { hs_note_body, hs_timestamp, deal_id, hubspot_owner_id, hs_attachment_ids } = req.body;
+
+    console.log('\n📊 Extracted Fields:');
+    console.log(`  Note Body: ${hs_note_body || 'Not provided'}`);
+    console.log(`  Timestamp: ${hs_timestamp || 'Not provided'}`);
+    console.log(`  Deal ID: ${deal_id || 'Not provided'}`);
+    console.log(`  Owner ID: ${hubspot_owner_id || 'Not provided'}`);
+    console.log(`  Attachment IDs: ${hs_attachment_ids || 'Not provided'}`);
+
+    // TODO: Later, call barrierxService.createNote() when BarrierX endpoint is ready
+    // const result = await barrierxService.createNote({
+    //   dealId: deal_id,
+    //   content: hs_note_body,
+    //   timestamp: hs_timestamp,
+    //   ownerId: hubspot_owner_id,
+    // });
+
+    res.json({
+      success: true,
+      message: 'Note creation command received',
+      note: {
+        hs_note_body,
+        hs_timestamp,
+        deal_id,
+        hubspot_owner_id,
+        hs_attachment_ids,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Create note error:', error);
+    res.status(500).json({
+      error: 'Failed to process create note command',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+export const handleCreateMeeting = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('\n📅 Received create_meeting command from ElevenLabs');
+    console.log('⏰ Time:', new Date().toISOString());
+    console.log('📋 Meeting Data:', JSON.stringify(req.body, null, 2));
+
+    const {
+      deal_id,
+      hubspot_owner_id,
+      hs_timestamp,
+      hs_meeting_title,
+      hs_meeting_start_time,
+      hs_meeting_end_time,
+      hs_meeting_body,
+      hs_meeting_location,
+      hs_meeting_outcome,
+    } = req.body;
+
+    console.log('\n📊 Extracted Fields:');
+    console.log(`  Meeting Title: ${hs_meeting_title || 'Not provided'}`);
+    console.log(`  Start Time: ${hs_meeting_start_time || 'Not provided'}`);
+    console.log(`  End Time: ${hs_meeting_end_time || 'Not provided'}`);
+    console.log(`  Deal ID: ${deal_id || 'Not provided'}`);
+    console.log(`  Timestamp: ${hs_timestamp || 'Not provided'}`);
+    console.log(`  Owner ID: ${hubspot_owner_id || 'Not provided'}`);
+    console.log(`  Body: ${hs_meeting_body || 'Not provided'}`);
+    console.log(`  Location: ${hs_meeting_location || 'Not provided'}`);
+    console.log(`  Outcome: ${hs_meeting_outcome || 'Not provided'}`);
+
+    // TODO: Later, call barrierxService.createMeeting() when BarrierX endpoint is ready
+    // const result = await barrierxService.createMeeting({
+    //   dealId: deal_id,
+    //   title: hs_meeting_title,
+    //   startTime: hs_meeting_start_time,
+    //   endTime: hs_meeting_end_time,
+    //   body: hs_meeting_body,
+    //   location: hs_meeting_location,
+    //   outcome: hs_meeting_outcome,
+    //   ownerId: hubspot_owner_id,
+    // });
+
+    res.json({
+      success: true,
+      message: 'Meeting creation command received',
+      meeting: {
+        hs_timestamp,
+        hs_meeting_title,
+        hs_meeting_start_time,
+        hs_meeting_end_time,
+        deal_id,
+        hubspot_owner_id,
+        hs_meeting_body,
+        hs_meeting_location,
+        hs_meeting_outcome,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Create meeting error:', error);
+    res.status(500).json({
+      error: 'Failed to process create meeting command',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};

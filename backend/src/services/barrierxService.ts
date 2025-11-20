@@ -237,7 +237,7 @@ export const createNote = async (payload: {
 export const createContact = async (payload: {
   name: string;
   email: string;
-  phone?: string;
+  phone: string;
   company?: string;
 }): Promise<{ success: boolean; contactId: string }> => {
   await new Promise(resolve => setTimeout(resolve, 300));

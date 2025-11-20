@@ -8,6 +8,8 @@ router.post('/elevenlabs', webhookController.handleElevenLabsWebhook);
 
 // ElevenLabs Server Tools (called during the call)
 router.post('/create-contact', webhookController.handleCreateContact);
+router.post('/create-note', webhookController.handleCreateNote);
+router.post('/create-meeting', webhookController.handleCreateMeeting);
 
 export default router;
 
