@@ -307,3 +307,57 @@ export const handleCreateMeeting = async (req: Request, res: Response): Promise<
     });
   }
 };
+
+export const handleCreateDeal = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('\n💼 Received create_deal command from ElevenLabs');
+    console.log('⏰ Time:', new Date().toISOString());
+    console.log('📋 Deal Data:', JSON.stringify(req.body, null, 2));
+
+    const {
+      dealname,
+      dealstage,
+      pipeline,
+      amount,
+      closedate,
+      hubspot_owner_id,
+    } = req.body;
+
+    console.log('\n📊 Extracted Fields:');
+    console.log(`  Deal Name: ${dealname || 'Not provided'}`);
+    console.log(`  Deal Stage: ${dealstage || 'Not provided'}`);
+    console.log(`  Pipeline: ${pipeline || 'Not provided'}`);
+    console.log(`  Amount: ${amount || 'Not provided'}`);
+    console.log(`  Close Date: ${closedate || 'Not provided'}`);
+    console.log(`  Owner ID: ${hubspot_owner_id || 'Not provided'}`);
+
+    // TODO: Later, call barrierxService.createDeal() when BarrierX endpoint is ready
+    // const result = await barrierxService.createDeal({
+    //   dealName: dealname,
+    //   stage: dealstage,
+    //   pipeline: pipeline,
+    //   amount: amount,
+    //   closeDate: closedate,
+    //   ownerId: hubspot_owner_id,
+    // });
+
+    res.json({
+      success: true,
+      message: 'Deal creation command received',
+      deal: {
+        dealname,
+        dealstage,
+        pipeline,
+        amount,
+        closedate,
+        hubspot_owner_id,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Create deal error:', error);
+    res.status(500).json({
+      error: 'Failed to process create deal command',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
