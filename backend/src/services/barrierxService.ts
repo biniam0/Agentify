@@ -51,12 +51,15 @@ export interface Deal {
   name: string;
   amount: number;
   stage: string;
+  company?: string;
   ownerId: string;
   ownerName: string;
   ownerPhone?: string;
   contacts: Contact[];
   meetings: Meeting[];
   summary?: string;
+  userDealRiskScores?: any;
+  closeDate?: string;
 }
 
 
@@ -211,12 +214,15 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
       name: deal.dealName,
       amount: deal.amount,
       stage: deal.stage,
+      company: deal.company,
       ownerId: userId,
       ownerName: userData.name,
       ownerPhone: deal.owner?.phone,
       contacts,
       meetings,
       summary: deal.summary,
+      userDealRiskScores: deal.userDealRiskScores,
+      closeDate: deal.closeDate,
     };
   });
 

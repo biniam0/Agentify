@@ -38,6 +38,12 @@ export const getMeetings = async (req: AuthRequest, res: Response): Promise<void
         ...meeting,
         dealId: deal.id,
         dealName: deal.name,
+        dealAmount: deal.amount,
+        dealStage: deal.stage,
+        dealCompany: deal.company,
+        dealSummary: deal.summary,
+        dealRisks: deal.userDealRiskScores,
+        dealCloseDate: deal.closeDate,
         contact: meeting.participants[0] || null,
         owner: deal.ownerPhone ? {
           name: deal.ownerName,
