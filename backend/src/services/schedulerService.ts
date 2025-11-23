@@ -99,6 +99,7 @@ const processUserMeetings = (userData: any) => {
               amount: deal.amount,
               owner: deal.owner,  // Include owner in deal object
               userDealRiskScores: deal.userDealRiskScores,  // Include risk scores
+              attachments: deal.attachments,  // Include attachments
             },
             contacts: deal.contacts,
             owner: deal.owner,
@@ -121,6 +122,7 @@ const processUserMeetings = (userData: any) => {
               amount: deal.amount,
               owner: deal.owner,  // Include owner in deal object
               userDealRiskScores: deal.userDealRiskScores,  // Include risk scores
+              attachments: deal.attachments,  // Include attachments
             },
             contacts: deal.contacts,
             owner: deal.owner,
@@ -162,11 +164,13 @@ const runAutomationJob = async () => {
       where: {
         isAuth: true,
         isEnabled: true,
+        barrierxUserId: { not: null }, // Only users with barrierxUserId
       },
       select: {
         id: true,
         name: true,
         email: true,
+        barrierxUserId: true,
       },
     });
 
@@ -184,10 +188,15 @@ const runAutomationJob = async () => {
 
     // Process each authenticated user
     for (const dbUser of authenticatedUsers) {
-      const userData = typedMockUsers[dbUser.id];
+      if (!dbUser.barrierxUserId) {
+        console.log(`⚠️  No barrierxUserId found for user: ${dbUser.name} (${dbUser.id})`);
+        continue;
+      }
+
+      const userData = typedMockUsers[dbUser.barrierxUserId];
 
       if (!userData) {
-        console.log(`⚠️  No mock data found for user: ${dbUser.name} (${dbUser.id})`);
+        console.log(`⚠️  No mock data found for user: ${dbUser.name} (barrierxUserId: ${dbUser.barrierxUserId})`);
         continue;
       }
 

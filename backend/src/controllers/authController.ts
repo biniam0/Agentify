@@ -7,40 +7,40 @@ import { generateToken } from '../utils/jwt';
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       res.status(400).json({ error: 'Email and password are required' });
       return;
     }
-    
+
     // Call BarrierX API to authenticate
     const barrierxLoginResponse = await barrierxService.login(email, password);
-    
+
     if (!barrierxLoginResponse || !barrierxLoginResponse.ok) {
       res.status(401).json({ error: 'Invalid credentials' });
       return;
     }
-    
+
     // Get full user details from BarrierX
     const barrierxUser = await barrierxService.getUserById(barrierxLoginResponse.userId);
-    
+
     if (!barrierxUser) {
       res.status(401).json({ error: 'User not found' });
       return;
     }
-    
+
     // Try to find user by ID first, then by email
     let user = await prisma.user.findUnique({
       where: { id: barrierxUser.id },
     });
-    
+
     if (!user) {
       // Check if user exists with this email
       user = await prisma.user.findUnique({
         where: { email: barrierxUser.email },
       });
     }
-    
+
     if (user) {
       // User exists - update their information
       user = await prisma.user.update({
@@ -48,6 +48,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         data: {
           name: barrierxUser.name,
           email: barrierxUser.email,
+          barrierxUserId: barrierxLoginResponse.userId,
           isAuth: barrierxUser.isAuth,
           isEnabled: barrierxUser.isEnabled,
         },
@@ -59,18 +60,19 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           id: barrierxUser.id,
           name: barrierxUser.name,
           email: barrierxUser.email,
+          barrierxUserId: barrierxLoginResponse.userId,
           isAuth: barrierxUser.isAuth,
           isEnabled: barrierxUser.isEnabled,
         },
       });
     }
-    
+
     // Generate JWT token (or use BarrierX accessToken)
     const token = generateToken({
       userId: user.id,
       email: user.email,
     });
-    
+
     res.json({
       success: true,
       token,

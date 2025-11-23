@@ -53,6 +53,7 @@ export interface Deal {
   stage: string;
   ownerId: string;
   ownerName: string;
+  ownerPhone?: string;
   contacts: Contact[];
   meetings: Meeting[];
   summary?: string;
@@ -73,6 +74,7 @@ const mockTenants: Tenant[] = [
   },
 ];
 
+// Verified BarrierX Users
 const mockUsers: BarrierXUser[] = [
   {
     id: 'f1e1g57h-h608-8701-ffi5-f6i42476h6e9',
@@ -211,6 +213,7 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
       stage: deal.stage,
       ownerId: userId,
       ownerName: userData.name,
+      ownerPhone: deal.owner?.phone,
       contacts,
       meetings,
       summary: deal.summary,

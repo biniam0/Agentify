@@ -22,6 +22,7 @@ interface Deal {
   amount: number;
   summary?: string;
   userDealRiskScores?: any;
+  attachments?: Array<{ id: string; name?: string; url?: string }>;
 }
 
 interface Meeting {
@@ -39,6 +40,7 @@ interface User {
 }
 
 interface Owner {
+  id?: string;
   name: string;
   email: string;
   phone: string;
@@ -175,6 +177,7 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
     const dynamicVariables = {
       customer_name: dealData.company || customer?.properties.name || 'the prospect',
       deal_id: dealData.id,
+      hubspot_owner_id: userData.userId || '',
       meeting_title: meetingData.title || 'Recent Meeting',
       meeting_date: new Date(meetingData.startTime).toLocaleDateString(),
       meeting_time: new Date(meetingData.startTime).toLocaleTimeString(),
