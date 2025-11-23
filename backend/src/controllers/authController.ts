@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import prisma from '../config/database';
 import * as barrierxService from '../services/barrierxService';
 import { generateToken } from '../utils/jwt';
+import { AuthRequest } from '../middlewares/auth';
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -21,17 +23,33 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Get full user details from BarrierX
-    const barrierxUser = await barrierxService.getUserById(barrierxLoginResponse.userId);
-
-    if (!barrierxUser) {
-      res.status(401).json({ error: 'User not found' });
+    // Decode JWT to extract user info (no signature verification needed, just reading data)
+    const decoded = jwt.decode(barrierxLoginResponse.accessToken) as any;
+    
+    if (!decoded || !decoded.user_metadata) {
+      console.error('❌ Invalid JWT token format:', decoded);
+      res.status(401).json({ error: 'Invalid token format' });
       return;
     }
 
-    // Try to find user by ID first, then by email
+    // Extract user details from JWT
+    const firstName = decoded.user_metadata.first_name || '';
+    const lastName = decoded.user_metadata.last_name || '';
+    const userName = `${firstName} ${lastName}`.trim() || email.split('@')[0];
+    
+    console.log(`✅ User info extracted from JWT: ${userName} (${decoded.email})`);
+    
+    const barrierxUser = {
+      id: barrierxLoginResponse.userId,
+      name: userName,
+      email: decoded.email || email,
+      isAuth: true,
+      isEnabled: true,
+    };
+
+    // Try to find user by barrierxUserId first, then by email
     let user = await prisma.user.findUnique({
-      where: { id: barrierxUser.id },
+      where: { barrierxUserId: barrierxLoginResponse.userId },
     });
 
     if (!user) {
@@ -57,7 +75,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       // User doesn't exist - create new user
       user = await prisma.user.create({
         data: {
-          id: barrierxUser.id,
           name: barrierxUser.name,
           email: barrierxUser.email,
           barrierxUserId: barrierxLoginResponse.userId,
@@ -94,6 +111,62 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });
+  }
+};
+
+export const refreshToken = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      res.status(400).json({ error: 'Refresh token is required' });
+      return;
+    }
+
+    // Call BarrierX refresh endpoint
+    const barrierxRefreshResponse = await barrierxService.refreshAccessToken(refreshToken);
+
+    if (!barrierxRefreshResponse || !barrierxRefreshResponse.ok) {
+      res.status(401).json({ error: 'Invalid or expired refresh token' });
+      return;
+    }
+
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { barrierxUserId: barrierxRefreshResponse.userId },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Generate new JWT for your backend (optional - could reuse existing)
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+    });
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        isAuth: user.isAuth,
+        isEnabled: user.isEnabled,
+      },
+      barrierx: {
+        accessToken: barrierxRefreshResponse.accessToken,
+        refreshToken: barrierxRefreshResponse.refreshToken,
+        expiresAt: barrierxRefreshResponse.expiresAt,
+        tenants: barrierxRefreshResponse.tenants,
+      },
+    });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(500).json({ error: 'Token refresh failed' });
   }
 };
 

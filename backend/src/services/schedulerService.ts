@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import prisma from '../config/database';
-import mockUsersData from '../data/mockUsers.json';
+import * as barrierxService from './barrierxService';
 import * as meetingService from './meetingService';
 
 interface MeetingTemplate {
@@ -184,8 +184,14 @@ const runAutomationJob = async () => {
     let totalPreMeetings = 0;
     let totalPostMeetings = 0;
 
-    const typedMockUsers = mockUsersData as { [key: string]: any };
-
+    // Batch fetch all users' deals at once (more efficient!)
+    const userIds = authenticatedUsers
+      .map(u => u.barrierxUserId)
+      .filter((id): id is string => id !== null);
+    
+    console.log(`📦 Batch fetching deals for all ${userIds.length} users...`);
+    const dealsMap = await barrierxService.getBatchUserDeals(userIds);
+    
     // Process each authenticated user
     for (const dbUser of authenticatedUsers) {
       if (!dbUser.barrierxUserId) {
@@ -193,12 +199,37 @@ const runAutomationJob = async () => {
         continue;
       }
 
-      const userData = typedMockUsers[dbUser.barrierxUserId];
+      const deals = dealsMap.get(dbUser.barrierxUserId);
 
-      if (!userData) {
-        console.log(`⚠️  No mock data found for user: ${dbUser.name} (barrierxUserId: ${dbUser.barrierxUserId})`);
+      if (!deals || deals.length === 0) {
+        console.log(`⚠️  No deals found for user: ${dbUser.name} (barrierxUserId: ${dbUser.barrierxUserId})`);
         continue;
       }
+
+      // Convert deals to old format for backward compatibility with existing code
+      const userData = {
+        userId: dbUser.barrierxUserId,
+        name: dbUser.name,
+        email: dbUser.email,
+        deals: deals.map(deal => ({
+          id: deal.id,
+          dealName: deal.name,
+          company: deal.company,
+          stage: deal.stage,
+          amount: deal.amount,
+          owner: {
+            name: deal.ownerName,
+            phone: deal.ownerPhone,
+          },
+          contacts: deal.contacts,
+          meetings: deal.meetings.map(m => ({
+            ...m,
+            body: m.agenda,
+          })),
+          summary: deal.summary,
+          userDealRiskScores: deal.userDealRiskScores,
+        })),
+      };
 
       const { preMeetings, postMeetings } = processUserMeetings(userData);
 

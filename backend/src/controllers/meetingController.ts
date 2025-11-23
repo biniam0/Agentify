@@ -3,7 +3,6 @@ import { AuthRequest } from '../middlewares/auth';
 import prisma from '../config/database';
 import * as barrierxService from '../services/barrierxService';
 import * as meetingService from '../services/meetingService';
-import mockUsersData from '../data/mockUsers.json';
 
 export const getMeetings = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -25,10 +24,6 @@ export const getMeetings = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // Get user data for owner email using barrierxUserId
-    const typedMockUsers = mockUsersData as { [key: string]: any };
-    const userData = typedMockUsers[dbUser.barrierxUserId];
-
     // Get user's deals and meetings from BarrierX using barrierxUserId
     const deals = await barrierxService.getUserDeals(dbUser.barrierxUserId);
 
@@ -48,7 +43,7 @@ export const getMeetings = async (req: AuthRequest, res: Response): Promise<void
         owner: deal.ownerPhone ? {
           name: deal.ownerName,
           phone: deal.ownerPhone,
-          email: dbUser.email || userData?.email || '',
+          email: dbUser.email || '',
         } : null,
       }))
     );
@@ -81,7 +76,7 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
     // Get user from database to get barrierxUserId
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { barrierxUserId: true },
+      select: { barrierxUserId: true, name: true, email: true },
     });
 
     if (!dbUser || !dbUser.barrierxUserId) {
@@ -89,17 +84,16 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
       return;
     }
 
-    // Lookup user data from mockUsers.json using barrierxUserId
-    const typedMockUsers = mockUsersData as { [key: string]: any };
-    const userData = typedMockUsers[dbUser.barrierxUserId];
+    // Fetch user deals from BarrierX API (or mock data)
+    const deals = await barrierxService.getUserDeals(dbUser.barrierxUserId);
 
-    if (!userData) {
-      res.status(404).json({ error: 'User data not found' });
+    if (!deals || deals.length === 0) {
+      res.status(404).json({ error: 'No deals found for user' });
       return;
     }
 
     // Find the specific deal
-    const deal = userData.deals?.find((d: any) => d.id === dealId);
+    const deal = deals.find((d: any) => d.id === dealId);
 
     if (!deal) {
       res.status(404).json({ error: 'Deal not found' });
@@ -119,30 +113,34 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
       meetingData: {
         id: meeting.id,
         title: meeting.title,
-        body: meeting.body,
+        body: meeting.agenda || meeting.body || '',
         startTime: meeting.startTime,
         endTime: meeting.endTime,
       },
       dealData: {
         id: deal.id,
-        dealName: deal.dealName,
+        dealName: deal.name,
         company: deal.company,
         stage: deal.stage,
         amount: deal.amount,
-        owner: deal.owner,
+        owner: {
+          name: deal.ownerName,
+          phone: deal.ownerPhone,
+          email: dbUser.email,
+        },
         userDealRiskScores: deal.userDealRiskScores,
       },
       userData: {
-        userId: userData.userId,
-        name: userData.name,
-        email: userData.email,
+        userId: dbUser.barrierxUserId,
+        name: dbUser.name,
+        email: dbUser.email,
       },
       contacts: deal.contacts || [],
     };
 
-    console.log(`\n🔧 Manual PRE-CALL trigger by ${userData.name}`);
+    console.log(`\n🔧 Manual PRE-CALL trigger by ${dbUser.name}`);
     console.log(`📋 Meeting: ${meeting.title}`);
-    console.log(`💼 Deal: ${deal.dealName}`);
+    console.log(`💼 Deal: ${deal.name}`);
 
     // Call the meeting service
     const result = await meetingService.triggerPreMeetingCall(payload);
@@ -180,7 +178,7 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
     // Get user from database to get barrierxUserId
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { barrierxUserId: true },
+      select: { barrierxUserId: true, name: true, email: true },
     });
 
     if (!dbUser || !dbUser.barrierxUserId) {
@@ -188,17 +186,16 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    // Lookup user data from mockUsers.json using barrierxUserId
-    const typedMockUsers = mockUsersData as { [key: string]: any };
-    const userData = typedMockUsers[dbUser.barrierxUserId];
+    // Fetch user deals from BarrierX API (or mock data)
+    const deals = await barrierxService.getUserDeals(dbUser.barrierxUserId);
 
-    if (!userData) {
-      res.status(404).json({ error: 'User data not found' });
+    if (!deals || deals.length === 0) {
+      res.status(404).json({ error: 'No deals found for user' });
       return;
     }
 
     // Find the specific deal
-    const deal = userData.deals?.find((d: any) => d.id === dealId);
+    const deal = deals.find((d: any) => d.id === dealId);
 
     if (!deal) {
       res.status(404).json({ error: 'Deal not found' });
@@ -218,30 +215,34 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
       meetingData: {
         id: meeting.id,
         title: meeting.title,
-        body: meeting.body,
+        body: meeting.agenda || meeting.body || '',
         startTime: meeting.startTime,
         endTime: meeting.endTime,
       },
       dealData: {
         id: deal.id,
-        dealName: deal.dealName,
+        dealName: deal.name,
         company: deal.company,
         stage: deal.stage,
         amount: deal.amount,
-        owner: deal.owner,
+        owner: {
+          name: deal.ownerName,
+          phone: deal.ownerPhone,
+          email: dbUser.email,
+        },
         userDealRiskScores: deal.userDealRiskScores,
       },
       userData: {
-        userId: userData.userId,
-        name: userData.name,
-        email: userData.email,
+        userId: dbUser.barrierxUserId,
+        name: dbUser.name,
+        email: dbUser.email,
       },
       contacts: deal.contacts || [],
     };
 
-    console.log(`\n🔧 Manual POST-CALL trigger by ${userData.name}`);
+    console.log(`\n🔧 Manual POST-CALL trigger by ${dbUser.name}`);
     console.log(`📋 Meeting: ${meeting.title}`);
-    console.log(`💼 Deal: ${deal.dealName}`);
+    console.log(`💼 Deal: ${deal.name}`);
 
     // Call the meeting service
     const result = await meetingService.triggerPostMeetingCall(payload);

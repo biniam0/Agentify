@@ -3,16 +3,7 @@ import axios from 'axios';
 import { config } from '../config/env';
 import { formatMeetingTime } from '../utils/riskGenerator';
 import * as barrierxService from './barrierxService';
-
-interface Contact {
-  id: string;
-  properties: {
-    email: string;
-    name: string;
-    phone: string;
-    jobtitle: string;
-  };
-}
+import { Contact } from './barrierxService';
 
 interface Deal {
   id: string;
@@ -91,7 +82,7 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
 
     // Prepare dynamic variables for ElevenLabs
     const dynamicVariables = {
-      customer_name: customer?.properties.name || 'the prospect',
+      customer_name: customer?.name || dealData.company || 'the prospect',
       company_name: dealData.company || 'their company',
       meeting_time: formatMeetingTime(meetingData.startTime),
       dealId: dealData.id,
@@ -175,13 +166,13 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
 
     // Prepare dynamic variables for ElevenLabs (post-call needs meeting context)
     const dynamicVariables = {
-      customer_name: dealData.company || customer?.properties.name || 'the prospect',
+      customer_name: dealData.company || customer?.name || 'the prospect',
       deal_id: dealData.id,
       hubspot_owner_id: userData.userId || '',
       meeting_title: meetingData.title || 'Recent Meeting',
       meeting_date: new Date(meetingData.startTime).toLocaleDateString(),
       meeting_time: new Date(meetingData.startTime).toLocaleTimeString(),
-      meeting_attendees: contacts?.map(c => c.properties.name || c.properties.email).join(', ') || 'No attendees listed',
+      meeting_attendees: contacts?.map(c => c.name || c.email).join(', ') || 'No attendees listed',
       deal_name: dealData.dealName || 'Deal',
       deal_stage: dealData.stage || 'Unknown',
       deal_amount: dealData.amount || 'Not specified',

@@ -1,6 +1,8 @@
-// Mock BarrierX Service
-// This simulates the BarrierX API with dummy data
+// BarrierX Service - Hybrid Approach
+// Uses real BarrierX API when configured, falls back to mock data for development
 
+import axios from 'axios';
+import { config } from '../config/env';
 import mockUsersDataJson from '../data/mockUsers.json';
 
 export interface Tenant {
@@ -121,18 +123,55 @@ const mockUsers: BarrierXUser[] = [
 
 // Simulated API Methods
 
+// Real BarrierX Login
 export const login = async (email: string, password: string): Promise<BarrierXLoginResponse | null> => {
-  // Simulate API delay
+  // Use mock data if flag is enabled
+  if (config.barrierx.useMockData) {
+    console.log('🔧 Using MOCK BarrierX data');
+    return mockLogin(email, password);
+  }
+
+  // Real BarrierX API call
+  try {
+    console.log('🌐 Calling real BarrierX login API...');
+    const response = await axios.post(
+      `${config.barrierx.baseUrl}/api/external/login`,
+      { email, password },
+      {
+        headers: {
+          'accept': 'application/json',
+          'Authorization': `Bearer ${config.barrierx.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, // 10 second timeout
+      }
+    );
+
+    console.log('✅ BarrierX login successful');
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ BarrierX login error:', error.response?.data || error.message);
+    
+    // Fallback to mock data on error (for development resilience)
+    if (config.nodeEnv === 'development') {
+      console.log('🔧 Falling back to MOCK data due to API error');
+      return mockLogin(email, password);
+    }
+    
+    return null;
+  }
+};
+
+// Mock login function for development
+const mockLogin = async (email: string, password: string): Promise<BarrierXLoginResponse | null> => {
   await new Promise(resolve => setTimeout(resolve, 500));
 
   const user = mockUsers.find(u => u.email === email);
 
-  // For demo purposes, any password works
   if (user && password) {
-    // Generate mock JWT token
     const mockAccessToken = `eyJhbGciOiJIUzI1NiIsImtpZCI6IjIxejc1OFk1R0l4b3dPTDEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL21vY2stYmFycmllcnguY29tL2F1dGgvdjEiLCJzdWIiOiIke3VzZXIuaWR9IiwiYXVkIjoiYXV0aGVudGljYXRlZCIsImV4cCI6MTc5OTk5OTk5OSwiaWF0IjoxNzYyOTMyOTAzLCJlbWFpbCI6IiR7dXNlci5lbWFpbH0iLCJwaG9uZSI6IiR7dXNlci5waG9uZX0iLCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsIjoiJHt1c2VyLmVtYWlsfSIsImZpcnN0X25hbWUiOiIke3VzZXIubmFtZS5zcGxpdCgnICcpWzBdfSIsImxhc3RfbmFtZSI6IiR7dXNlci5uYW1lLnNwbGl0KCcgJylbMV19Iiwic3ViIjoiJHt1c2VyLmlkfSJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCJ9.mock-signature`;
 
-    const expiresAt = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+    const expiresAt = Math.floor(Date.now() / 1000) + 3600;
 
     return {
       ok: true,
@@ -147,14 +186,70 @@ export const login = async (email: string, password: string): Promise<BarrierXLo
   return null;
 };
 
-export const getUserById = async (id: string): Promise<BarrierXUser | null> => {
+// Refresh BarrierX access token
+export const refreshAccessToken = async (refreshToken: string): Promise<BarrierXLoginResponse | null> => {
+  // Use mock data if flag is enabled
+  if (config.barrierx.useMockData) {
+    console.log('🔧 Using MOCK BarrierX refresh');
+    return mockRefresh(refreshToken);
+  }
+
+  // Real BarrierX API call
+  try {
+    console.log('🌐 Refreshing BarrierX access token...');
+    const response = await axios.post(
+      `${config.barrierx.baseUrl}/api/external/refresh`,
+      { refreshToken },
+      {
+        headers: {
+          'accept': 'application/json',
+          'Authorization': `Bearer ${config.barrierx.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      }
+    );
+
+    console.log('✅ BarrierX token refreshed successfully');
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ BarrierX refresh error:', error.response?.data || error.message);
+    
+    // Fallback to mock data on error (for development resilience)
+    if (config.nodeEnv === 'development') {
+      console.log('🔧 Falling back to MOCK refresh');
+      return mockRefresh(refreshToken);
+    }
+    
+    return null;
+  }
+};
+
+// Mock refresh function for development
+const mockRefresh = async (refreshToken: string): Promise<BarrierXLoginResponse | null> => {
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  const user = mockUsers.find(u => u.id === id);
-  return user || null;
+  if (!refreshToken || !refreshToken.startsWith('mock-refresh-token')) {
+    return null;
+  }
+
+  // Find a user (just use first one for mock)
+  const user = mockUsers[0];
+  const mockAccessToken = `eyJhbGciOiJIUzI1NiIsImtpZCI6IjIxejc1OFk1R0l4b3dPTDEiLCJ0eXAiOiJKV1QifQ.refreshed-mock-token-${Date.now()}`;
+  const expiresAt = Math.floor(Date.now() / 1000) + 3600;
+
+  return {
+    ok: true,
+    userId: user.id,
+    accessToken: mockAccessToken,
+    refreshToken: 'mock-refresh-token-' + Math.random().toString(36).substring(7),
+    expiresAt,
+    tenants: user.tenants,
+  };
 };
 
 // Process time templates like {{T+10}} or {{T-15}} into ISO dates
+// Used by mock data to generate dynamic meeting times
 const processTimeTemplates = (timeStr: string): string => {
   const now = Date.now();
 
@@ -177,7 +272,143 @@ const processTimeTemplates = (timeStr: string): string => {
   return timeStr;
 };
 
+/**
+ * Get deals for a specific user
+ * Uses real BarrierX bulk API when available, falls back to mock data
+ */
 export const getUserDeals = async (userId: string): Promise<Deal[]> => {
+  // Use mock data if flag is enabled
+  if (config.barrierx.useMockData) {
+    console.log(`🔧 Using MOCK data for user ${userId}`);
+    return mockGetUserDeals(userId);
+  }
+
+  // Real BarrierX API call
+  try {
+    console.log(`🌐 Fetching deals from BarrierX for user: ${userId}`);
+    
+    const response = await axios.get(
+      `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
+      {
+        params: {
+          user_ids: userId,
+          include_deals: true,
+          include_members: false,
+          page: 1,
+          limit: 100,
+        },
+        headers: {
+          'Authorization': `Bearer ${config.barrierx.apiKey}`,
+          'Accept': 'application/json',
+        },
+        timeout: 15000,
+      }
+    );
+
+    if (!response.data.ok || !response.data.tenants?.length) {
+      console.log(`⚠️  No tenants found for user ${userId}, using mock data`);
+      return mockGetUserDeals(userId);
+    }
+
+    // Transform BarrierX format to AgentX format
+    const { transformBarrierXDeals } = await import('./barrierx/dataTransformers');
+    const deals = transformBarrierXDeals(response.data.tenants[0], userId);
+    
+    console.log(`✅ Successfully fetched ${deals.length} deals for user ${userId}`);
+    return deals;
+    
+  } catch (error: any) {
+    console.error(`❌ BarrierX API error for user ${userId}:`, error.response?.data || error.message);
+    
+    // Fallback to mock data in development
+    if (config.nodeEnv === 'development') {
+      console.log(`🔧 Falling back to MOCK data due to API error`);
+      return mockGetUserDeals(userId);
+    }
+    
+    return [];
+  }
+};
+
+/**
+ * Get deals for multiple users in one batch request
+ * More efficient for scheduler that processes multiple users
+ */
+export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, Deal[]>> => {
+  if (userIds.length === 0) {
+    return new Map();
+  }
+
+  // Use mock data if flag is enabled
+  if (config.barrierx.useMockData) {
+    console.log(`🔧 Using MOCK data for ${userIds.length} users`);
+    const dealsMap = new Map<string, Deal[]>();
+    userIds.forEach(id => {
+      dealsMap.set(id, mockGetUserDeals(id));
+    });
+    return dealsMap;
+  }
+
+  // Real BarrierX batch API call
+  try {
+    console.log(`🌐 Batch fetching deals for ${userIds.length} users from BarrierX`);
+    
+    const response = await axios.get(
+      `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
+      {
+        params: {
+          user_ids: userIds.join(','),  // Comma-separated
+          include_deals: true,
+          include_members: true,
+          page: 1,
+          limit: 500,  // Max allowed
+        },
+        headers: {
+          'Authorization': `Bearer ${config.barrierx.apiKey}`,
+          'Accept': 'application/json',
+        },
+        timeout: 30000,  // 30 seconds for batch
+      }
+    );
+
+    if (!response.data.ok || !response.data.tenants) {
+      console.log(`⚠️  Batch API returned no tenants, using mock data`);
+      const dealsMap = new Map<string, Deal[]>();
+      userIds.forEach(id => {
+        dealsMap.set(id, mockGetUserDeals(id));
+      });
+      return dealsMap;
+    }
+
+    // Transform bulk response
+    const { transformBulkResponse } = await import('./barrierx/dataTransformers');
+    const dealsMap = transformBulkResponse(response.data.tenants, userIds);
+    
+    console.log(`✅ Successfully batch fetched deals for ${dealsMap.size} users`);
+    return dealsMap;
+    
+  } catch (error: any) {
+    console.error(`❌ Batch API error:`, error.response?.data || error.message);
+    
+    // Fallback to mock data in development
+    if (config.nodeEnv === 'development') {
+      console.log(`🔧 Falling back to MOCK data for batch request`);
+      const dealsMap = new Map<string, Deal[]>();
+      userIds.forEach(id => {
+        dealsMap.set(id, mockGetUserDeals(id));
+      });
+      return dealsMap;
+    }
+    
+    return new Map();
+  }
+};
+
+/**
+ * Mock implementation for getUserDeals
+ * Used when USE_MOCK_BARRIERX=true or as fallback
+ */
+const mockGetUserDeals = async (userId: string): Promise<Deal[]> => {
   await new Promise(resolve => setTimeout(resolve, 400));
 
   const typedMockUsers = mockUsersDataJson as { [key: string]: any };
