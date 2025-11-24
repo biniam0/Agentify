@@ -421,6 +421,35 @@ export const createNoteEngagement = async (params: {
 };
 
 /**
+ * Helper: Create a MEETING engagement in HubSpot
+ * Called from ElevenLabs webhook when sales rep instructs to create a meeting
+ */
+export const createMeetingEngagement = async (params: {
+  tenantSlug: string;
+  dealId: string;
+  ownerId: string;
+  subject: string;
+  body?: string;
+  startTime: string;
+  endTime: string;
+  timestamp?: number;
+}): Promise<{ success: boolean; engagementId?: string; error?: string }> => {
+  return createHubSpotEngagement({
+    tenantSlug: params.tenantSlug,
+    dealId: params.dealId,
+    type: 'MEETING',
+    ownerId: params.ownerId,
+    subject: params.subject,
+    body: params.body,
+    timestamp: params.timestamp,
+    metadata: {
+      start_time: params.startTime,
+      end_time: params.endTime,
+    },
+  });
+};
+
+/**
  * @deprecated Use createNoteEngagement instead
  * Kept for backward compatibility with existing webhook code
  */

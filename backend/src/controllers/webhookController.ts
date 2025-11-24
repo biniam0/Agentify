@@ -90,9 +90,13 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
     const dynamicVariables = data.conversation_initiation_client_data?.dynamic_variables || {};
     const dealId = dynamicVariables.dealId || dynamicVariables.deal_id;
     const customerName = dynamicVariables.customer_name;
+    const tenantSlug = dynamicVariables.tenant_slug;
+    const hubspotOwnerId = dynamicVariables.hubspot_owner_id;
 
     console.log(`💼 Deal ID: ${dealId}`);
     console.log(`👤 Customer: ${customerName}`);
+    console.log(`🏢 Tenant Slug: ${tenantSlug}`);
+    console.log(`👤 Owner ID: ${hubspotOwnerId}`);
 
     // Extract full transcript
     const transcript = data.transcript || [];
@@ -101,7 +105,7 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
     ).join('\n');
 
     // Create note in HubSpot via BarrierX
-    if (dealId) {
+    if (dealId && tenantSlug && hubspotOwnerId) {
       console.log('\n📝 Creating note in HubSpot via BarrierX...');
 
       const noteContent = `
@@ -109,29 +113,32 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
 Title: ${callSummaryTitle}
 Call Status: ${callSuccessful}
 Duration: ${callDuration} seconds
-Called Number: ${calledNumber}
-Termination: ${terminationReason}
 
 Summary:
 ${transcriptSummary}
 
-Full Transcript:
-${fullTranscript}
-
 Conversation ID: ${conversationId}
-Call Type: ${callType}
 Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
       `.trim();
 
-      const noteResult = await barrierxService.createNote({
+      const noteResult = await barrierxService.createNoteEngagement({
+        tenantSlug: tenantSlug,
         dealId: dealId,
-        content: noteContent,
-        userId: 'system-elevenlabs',
+        ownerId: hubspotOwnerId,
+        body: noteContent,
+        timestamp: event_timestamp * 1000,
       });
 
-      console.log(`✅ Note created successfully! Note ID: ${noteResult.noteId}`);
+      if (noteResult.success) {
+        console.log(`✅ Note created successfully! Engagement ID: ${noteResult.engagementId}`);
+      } else {
+        console.error(`❌ Failed to create note: ${noteResult.error}`);
+      }
     } else {
-      console.log('⚠️  No dealId found in dynamic variables, skipping note creation');
+      console.log('⚠️  Missing required fields for note creation:');
+      console.log(`   Deal ID: ${dealId || 'MISSING'}`);
+      console.log(`   Tenant Slug: ${tenantSlug || 'MISSING'}`);
+      console.log(`   Owner ID: ${hubspotOwnerId || 'MISSING'}`);
     }
 
     // Optional: Create contact if new contact info is detected
@@ -206,12 +213,12 @@ export const handleCreateNote = async (req: Request, res: Response): Promise<voi
     console.log('⏰ Time:', new Date().toISOString());
     console.log('📋 Note Data:', JSON.stringify(req.body, null, 2));
 
-    const { 
-      hs_note_body, 
-      hs_timestamp, 
-      deal_id, 
-      hubspot_owner_id, 
-      tenant_slug 
+    const {
+      hs_note_body,
+      hs_timestamp,
+      deal_id,
+      hubspot_owner_id,
+      tenant_slug
     } = req.body;
 
     console.log('\n📊 Extracted Fields:');
@@ -283,6 +290,7 @@ export const handleCreateMeeting = async (req: Request, res: Response): Promise<
     const {
       deal_id,
       hubspot_owner_id,
+      tenant_slug,
       hs_timestamp,
       hs_meeting_title,
       hs_meeting_start_time,
@@ -297,42 +305,90 @@ export const handleCreateMeeting = async (req: Request, res: Response): Promise<
     console.log(`  Start Time: ${hs_meeting_start_time || 'Not provided'}`);
     console.log(`  End Time: ${hs_meeting_end_time || 'Not provided'}`);
     console.log(`  Deal ID: ${deal_id || 'Not provided'}`);
-    console.log(`  Timestamp: ${hs_timestamp || 'Not provided'}`);
     console.log(`  Owner ID: ${hubspot_owner_id || 'Not provided'}`);
+    console.log(`  Tenant Slug: ${tenant_slug || 'Not provided'}`);
     console.log(`  Body: ${hs_meeting_body || 'Not provided'}`);
     console.log(`  Location: ${hs_meeting_location || 'Not provided'}`);
-    console.log(`  Outcome: ${hs_meeting_outcome || 'Not provided'}`);
 
-    // TODO: Later, call barrierxService.createMeeting() when BarrierX endpoint is ready
-    // const result = await barrierxService.createMeeting({
-    //   dealId: deal_id,
-    //   title: hs_meeting_title,
-    //   startTime: hs_meeting_start_time,
-    //   endTime: hs_meeting_end_time,
-    //   body: hs_meeting_body,
-    //   location: hs_meeting_location,
-    //   outcome: hs_meeting_outcome,
-    //   ownerId: hubspot_owner_id,
-    // });
+    // Validate required fields
+    if (!deal_id || !hs_meeting_title || !hs_meeting_start_time || !hs_meeting_end_time || !hubspot_owner_id || !tenant_slug) {
+      console.error('❌ Missing required fields');
+      res.status(400).json({
+        success: false,
+        error: 'Missing required fields: deal_id, hs_meeting_title, hs_meeting_start_time, hs_meeting_end_time, hubspot_owner_id, tenant_slug',
+        received: {
+          deal_id,
+          hs_meeting_title: !!hs_meeting_title,
+          hs_meeting_start_time: !!hs_meeting_start_time,
+          hs_meeting_end_time: !!hs_meeting_end_time,
+          hubspot_owner_id,
+          tenant_slug
+        },
+      });
+      return;
+    }
 
-    res.json({
-      success: true,
-      message: 'Meeting creation command received',
-      meeting: {
-        hs_timestamp,
-        hs_meeting_title,
-        hs_meeting_start_time,
-        hs_meeting_end_time,
-        deal_id,
-        hubspot_owner_id,
-        hs_meeting_body,
-        hs_meeting_location,
-        hs_meeting_outcome,
-      },
+    // Helper function to ensure ISO 8601 format with timezone
+    const ensureTimezone = (time: string): string => {
+      if (!time) return time;
+      // If already has timezone (Z or +/- offset), return as is
+      if (time.endsWith('Z') || time.includes('+') || time.match(/-\d{2}:\d{2}$/)) {
+        return time;
+      }
+      // Add UTC timezone suffix
+      return `${time}Z`;
+    };
+
+    // Format times to ensure HubSpot compatibility
+    const formattedStartTime = ensureTimezone(hs_meeting_start_time);
+    const formattedEndTime = ensureTimezone(hs_meeting_end_time);
+
+    console.log(`  📅 Formatted Start Time: ${formattedStartTime}`);
+    console.log(`  📅 Formatted End Time: ${formattedEndTime}`);
+
+    // Create meeting in HubSpot via BarrierX
+    console.log('🚀 Calling BarrierX to create meeting in HubSpot...');
+    const result = await barrierxService.createMeetingEngagement({
+      tenantSlug: tenant_slug,
+      dealId: deal_id,
+      ownerId: hubspot_owner_id,
+      subject: hs_meeting_title,
+      body: hs_meeting_body || `Meeting scheduled from ${formattedStartTime} to ${formattedEndTime}${hs_meeting_location ? ` at ${hs_meeting_location}` : ''}`,
+      startTime: formattedStartTime,
+      endTime: formattedEndTime,
+      timestamp: hs_timestamp ? parseInt(hs_timestamp) : Date.now(),
     });
+
+    if (result.success) {
+      console.log(`✅ Meeting created successfully! Engagement ID: ${result.engagementId}`);
+      res.json({
+        success: true,
+        message: 'Meeting created in HubSpot via BarrierX',
+        engagementId: result.engagementId,
+        meeting: {
+          hs_timestamp,
+          hs_meeting_title,
+          hs_meeting_start_time,
+          hs_meeting_end_time,
+          deal_id,
+          hubspot_owner_id,
+          tenant_slug,
+          hs_meeting_body,
+          hs_meeting_location,
+        },
+      });
+    } else {
+      console.error(`❌ Failed to create meeting: ${result.error}`);
+      res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to create meeting in HubSpot',
+        details: 'BarrierX API returned an error',
+      });
+    }
   } catch (error) {
     console.error('❌ Create meeting error:', error);
     res.status(500).json({
+      success: false,
       error: 'Failed to process create meeting command',
       details: error instanceof Error ? error.message : 'Unknown error',
     });
