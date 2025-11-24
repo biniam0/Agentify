@@ -183,30 +183,39 @@ const determineStatus = (meeting: any): 'scheduled' | 'in_progress' | 'completed
 /**
  * Transform bulk tenant response to user-deals map
  * Maps multiple tenants to their respective users
+ * 
+ * Note: Since BarrierX API doesn't return members array consistently,
+ * we assign all tenant deals to all requesting users.
  */
 export const transformBulkResponse = (
   tenantsData: any[],
   userIds: string[]
 ): Map<string, Deal[]> => {
   const dealsMap = new Map<string, Deal[]>();
+  
+  // Initialize empty arrays for all users
+  userIds.forEach(userId => dealsMap.set(userId, []));
 
   tenantsData.forEach((tenant: any) => {
-    if (!tenant.members || tenant.members.length === 0) {
-      // No members info, assume single user for the tenant
-      if (userIds.length === 1) {
-        const deals = transformBarrierXDeals(tenant, userIds[0]);
-        dealsMap.set(userIds[0], deals);
-      }
+    if (!tenant.deals || tenant.deals.length === 0) {
+      console.log(`  ⚠️  No deals in tenant ${tenant.name || tenant.slug}`);
       return;
     }
 
-    // Map tenant members to userIds
-    tenant.members.forEach((member: any) => {
-      if (userIds.includes(member.user_id)) {
-        const deals = transformBarrierXDeals(tenant, member.user_id);
-        dealsMap.set(member.user_id, deals);
-      }
+    console.log(`  📦 Processing ${tenant.deals.length} deals from tenant ${tenant.name || tenant.slug}`);
+
+    // Since members array is not available, assign all deals to all users
+    // Each user will see all deals from all tenants they have access to
+    userIds.forEach(userId => {
+      const deals = transformBarrierXDeals(tenant, userId);
+      const existingDeals = dealsMap.get(userId) || [];
+      dealsMap.set(userId, [...existingDeals, ...deals]);
     });
+  });
+
+  console.log(`  ✅ Mapped deals to ${dealsMap.size} users`);
+  dealsMap.forEach((deals, userId) => {
+    console.log(`     User ${userId}: ${deals.length} deals`);
   });
 
   return dealsMap;

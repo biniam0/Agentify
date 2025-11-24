@@ -50,6 +50,12 @@ const filterMeetingsByTime = (meetings: Meeting[]): { preMeetings: Meeting[]; po
     const startTime = new Date(meeting.startTime).getTime();
     const endTime = new Date(meeting.endTime).getTime();
 
+    // // ⭐ TESTING: Meetings starting within next 24 hours (1 day)
+    // const isUpcomingWithin15 = startTime >= now && startTime <= (now + 24 * 60 * 60 * 1000);
+
+    // // ⭐ TESTING: Meetings that ended within last 24 hours (1 day)
+    // const endedWithin5 = endTime >= (now - 24 * 60 * 60 * 1000) && endTime <= now;
+
     // T-15: Meetings starting within next 15 minutes
     const isUpcomingWithin15 = startTime >= now && startTime <= (now + 15 * 60 * 1000);
 
@@ -164,13 +170,13 @@ const runAutomationJob = async () => {
       where: {
         isAuth: true,
         isEnabled: true,
-        barrierxUserId: { not: null }, // Only users with barrierxUserId
       },
       select: {
         id: true,
         name: true,
         email: true,
         barrierxUserId: true,
+        tenantSlug: true,
       },
     });
 
@@ -185,20 +191,13 @@ const runAutomationJob = async () => {
     let totalPostMeetings = 0;
 
     // Batch fetch all users' deals at once (more efficient!)
-    const userIds = authenticatedUsers
-      .map(u => u.barrierxUserId)
-      .filter((id): id is string => id !== null);
+    const userIds = authenticatedUsers.map(u => u.barrierxUserId);
     
     console.log(`📦 Batch fetching deals for all ${userIds.length} users...`);
     const dealsMap = await barrierxService.getBatchUserDeals(userIds);
     
     // Process each authenticated user
     for (const dbUser of authenticatedUsers) {
-      if (!dbUser.barrierxUserId) {
-        console.log(`⚠️  No barrierxUserId found for user: ${dbUser.name} (${dbUser.id})`);
-        continue;
-      }
-
       const deals = dealsMap.get(dbUser.barrierxUserId);
 
       if (!deals || deals.length === 0) {
@@ -211,6 +210,7 @@ const runAutomationJob = async () => {
         userId: dbUser.barrierxUserId,
         name: dbUser.name,
         email: dbUser.email,
+        tenantSlug: dbUser.tenantSlug,
         deals: deals.map(deal => ({
           id: deal.id,
           dealName: deal.name,
