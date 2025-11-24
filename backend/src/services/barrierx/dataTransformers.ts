@@ -54,6 +54,7 @@ const transformSingleDeal = (deal: any, userId: string, tenant: any): Deal => {
     ownerId: userId,
     ownerName: owner.name,
     ownerPhone: owner.phone,
+    ownerHubspotId: owner.id,
     contacts,
     meetings,
     summary: deal.summary || `Deal: ${deal.dealName}`,
@@ -130,9 +131,21 @@ const transformRiskScores = (deal: any): any => {
  * Provides sensible defaults if owner info is missing
  * Uses default phone number if not available
  */
-const transformOwner = (deal: any): { name: string; phone: string } => {
+const transformOwner = (deal: any): { name: string; phone: string; id?: string } => {
   const ownerName = deal.owner?.name || 'Unknown Owner';
+  const ownerId = deal.owner?.hubspotId || deal.owner?.id || deal.ownerId;
   let ownerPhone = deal.owner?.phone || '';
+
+  // Debug logging for owner data
+  if (deal.owner) {
+    console.log(`  👤 Owner data for deal ${deal.id}:`, JSON.stringify({
+      name: deal.owner.name,
+      hubspotId: deal.owner.hubspotId,
+      id: deal.owner.id,
+      phone: deal.owner.phone,
+      extracted_ownerId: ownerId
+    }, null, 2));
+  }
 
   // Use default phone number if missing
   if (!ownerPhone) {
@@ -143,6 +156,7 @@ const transformOwner = (deal: any): { name: string; phone: string } => {
   return {
     name: ownerName,
     phone: ownerPhone,
+    id: ownerId,
   };
 };
 

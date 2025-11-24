@@ -28,6 +28,7 @@ interface User {
   userId: string;
   name: string;
   email: string;
+  tenantSlug?: string;
 }
 
 interface Owner {
@@ -94,7 +95,16 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       action_1: recommendations[0]?.action || 'Proceed with standard process',
       action_2: recommendations[1]?.action || '',
       action_3: recommendations[2]?.action || '',
+      // ⭐ Required for note/meeting creation via webhook
+      hubspot_owner_id: dealData.owner?.id || ownerPhone,
+      tenant_slug: userData.tenantSlug || 'agent-call',
     };
+
+    // Debug log critical webhook values
+    console.log('       📋 Webhook-Critical Values:');
+    console.log(`          dealId: ${dynamicVariables.dealId}`);
+    console.log(`          hubspot_owner_id: ${dynamicVariables.hubspot_owner_id}`);
+    console.log(`          tenant_slug: ${dynamicVariables.tenant_slug}`);
 
     // Check if ElevenLabs is configured
     if (!config.elevenlabs.apiKey || !config.elevenlabs.preAgentId) {
@@ -168,7 +178,7 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
     const dynamicVariables = {
       customer_name: dealData.company || customer?.name || 'the prospect',
       deal_id: dealData.id,
-      hubspot_owner_id: userData.userId || '',
+      hubspot_owner_id: dealData.owner?.id || ownerPhone,
       meeting_title: meetingData.title || 'Recent Meeting',
       meeting_date: new Date(meetingData.startTime).toLocaleDateString(),
       meeting_time: new Date(meetingData.startTime).toLocaleTimeString(),
@@ -176,7 +186,16 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
       deal_name: dealData.dealName || 'Deal',
       deal_stage: dealData.stage || 'Unknown',
       deal_amount: dealData.amount || 'Not specified',
+      // ⭐ Required for note/meeting creation via webhook
+      dealId: dealData.id,
+      tenant_slug: userData.tenantSlug || 'agent-call',
     };
+
+    // Debug log critical webhook values
+    console.log('       📋 Webhook-Critical Values:');
+    console.log(`          dealId: ${dynamicVariables.dealId}`);
+    console.log(`          hubspot_owner_id: ${dynamicVariables.hubspot_owner_id}`);
+    console.log(`          tenant_slug: ${dynamicVariables.tenant_slug}`);
 
     // Check if ElevenLabs is configured
     if (!config.elevenlabs.apiKey || !config.elevenlabs.postAgentId) {

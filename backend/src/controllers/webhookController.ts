@@ -206,37 +206,68 @@ export const handleCreateNote = async (req: Request, res: Response): Promise<voi
     console.log('⏰ Time:', new Date().toISOString());
     console.log('📋 Note Data:', JSON.stringify(req.body, null, 2));
 
-    const { hs_note_body, hs_timestamp, deal_id, hubspot_owner_id, hs_attachment_ids } = req.body;
+    const { 
+      hs_note_body, 
+      hs_timestamp, 
+      deal_id, 
+      hubspot_owner_id, 
+      tenant_slug 
+    } = req.body;
 
     console.log('\n📊 Extracted Fields:');
     console.log(`  Note Body: ${hs_note_body || 'Not provided'}`);
     console.log(`  Timestamp: ${hs_timestamp || 'Not provided'}`);
     console.log(`  Deal ID: ${deal_id || 'Not provided'}`);
     console.log(`  Owner ID: ${hubspot_owner_id || 'Not provided'}`);
-    console.log(`  Attachment IDs: ${hs_attachment_ids || 'Not provided'}`);
+    console.log(`  Tenant Slug: ${tenant_slug || 'Not provided'}`);
 
-    // TODO: Later, call barrierxService.createNote() when BarrierX endpoint is ready
-    // const result = await barrierxService.createNote({
-    //   dealId: deal_id,
-    //   content: hs_note_body,
-    //   timestamp: hs_timestamp,
-    //   ownerId: hubspot_owner_id,
-    // });
+    // Validate required fields
+    if (!deal_id || !hs_note_body || !hubspot_owner_id || !tenant_slug) {
+      console.error('❌ Missing required fields');
+      res.status(400).json({
+        success: false,
+        error: 'Missing required fields: deal_id, hs_note_body, hubspot_owner_id, tenant_slug',
+        received: { deal_id, hs_note_body: !!hs_note_body, hubspot_owner_id, tenant_slug },
+      });
+      return;
+    }
 
-    res.json({
-      success: true,
-      message: 'Note creation command received',
-      note: {
-        hs_note_body,
-        hs_timestamp,
-        deal_id,
-        hubspot_owner_id,
-        hs_attachment_ids,
-      },
+    // Create note in HubSpot via BarrierX
+    console.log('🚀 Calling BarrierX to create note in HubSpot...');
+    const result = await barrierxService.createNoteEngagement({
+      tenantSlug: tenant_slug,
+      dealId: deal_id,
+      ownerId: hubspot_owner_id,
+      body: hs_note_body,
+      timestamp: hs_timestamp ? parseInt(hs_timestamp) : Date.now(),
     });
+
+    if (result.success) {
+      console.log(`✅ Note created successfully! Engagement ID: ${result.engagementId}`);
+      res.json({
+        success: true,
+        message: 'Note created in HubSpot via BarrierX',
+        engagementId: result.engagementId,
+        note: {
+          hs_note_body,
+          hs_timestamp,
+          deal_id,
+          hubspot_owner_id,
+          tenant_slug,
+        },
+      });
+    } else {
+      console.error(`❌ Failed to create note: ${result.error}`);
+      res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to create note in HubSpot',
+        details: 'BarrierX API returned an error',
+      });
+    }
   } catch (error) {
     console.error('❌ Create note error:', error);
     res.status(500).json({
+      success: false,
       error: 'Failed to process create note command',
       details: error instanceof Error ? error.message : 'Unknown error',
     });

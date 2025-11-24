@@ -76,7 +76,7 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
     // Get user from database to get barrierxUserId
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { barrierxUserId: true, name: true, email: true },
+      select: { barrierxUserId: true, name: true, email: true, tenantSlug: true },
     });
 
     if (!dbUser || !dbUser.barrierxUserId) {
@@ -124,6 +124,7 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
         stage: deal.stage,
         amount: deal.amount,
         owner: {
+          id: deal.ownerHubspotId,
           name: deal.ownerName,
           phone: deal.ownerPhone,
           email: dbUser.email,
@@ -134,6 +135,7 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
         userId: dbUser.barrierxUserId,
         name: dbUser.name,
         email: dbUser.email,
+        tenantSlug: dbUser.tenantSlug,
       },
       contacts: deal.contacts || [],
     };
@@ -178,7 +180,7 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
     // Get user from database to get barrierxUserId
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { barrierxUserId: true, name: true, email: true },
+      select: { barrierxUserId: true, name: true, email: true, tenantSlug: true },
     });
 
     if (!dbUser || !dbUser.barrierxUserId) {
@@ -226,6 +228,7 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
         stage: deal.stage,
         amount: deal.amount,
         owner: {
+          id: deal.ownerHubspotId,
           name: deal.ownerName,
           phone: deal.ownerPhone,
           email: dbUser.email,
@@ -236,6 +239,7 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
         userId: dbUser.barrierxUserId,
         name: dbUser.name,
         email: dbUser.email,
+        tenantSlug: dbUser.tenantSlug,
       },
       contacts: deal.contacts || [],
     };

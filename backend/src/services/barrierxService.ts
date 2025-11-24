@@ -1,5 +1,6 @@
-// BarrierX Service - Hybrid Approach
-// Uses real BarrierX API when configured, falls back to mock data for development
+// BarrierX Service - Real API Integration
+// Uses real BarrierX API for authentication (login/refresh)
+// Falls back to mock data for deals in development mode
 
 import axios from 'axios';
 import { config } from '../config/env';
@@ -17,16 +18,6 @@ export interface BarrierXLoginResponse {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
-  tenants: Tenant[];
-}
-
-export interface BarrierXUser {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  isAuth: boolean;
-  isEnabled: boolean;
   tenants: Tenant[];
 }
 
@@ -65,75 +56,12 @@ export interface Deal {
 }
 
 
-// Mock data store
-const mockTenants: Tenant[] = [
-  {
-    id: '3ee7bca3-fa9b-4abc-b886-f45b286451cc',
-    slug: 'agent-call',
-    name: 'AgentCall',
-  },
-  {
-    id: '4ff8cdb4-gb0c-5bcd-c997-g56c397562dd',
-    slug: 'sales-pro',
-    name: 'SalesPro',
-  },
-];
+// API Methods
 
-// Verified BarrierX Users
-const mockUsers: BarrierXUser[] = [
-  {
-    id: 'f1e1g57h-h608-8701-ffi5-f6i42476h6e9',
-    name: 'Tamirat Kebede',
-    email: 'tamiratkebede@gmail.com',
-    phone: '+251914373107',
-    isAuth: true,
-    isEnabled: true,
-    tenants: [mockTenants[0]],
-  },
-  {
-    id: 'c8b8d24e-e275-5378-ccg2-c3g19143e3b6',
-    name: 'Alex Johnson',
-    email: 'alex.johnson@example.com',
-    phone: '+251914373107',
-    isAuth: true,
-    isEnabled: true,
-    tenants: [mockTenants[0], mockTenants[1]],
-  },
-  {
-    id: 'd9c9e35f-f386-6489-ddh3-d4h20254f4c7',
-    name: 'Sarah Williams',
-    email: 'sarah.williams@company.com',
-    phone: '+251914373107',
-    isAuth: true,
-    isEnabled: true,
-    tenants: [mockTenants[0]],
-  },
-  {
-    id: 'e0d0f46g-g497-7590-eei4-e5i31365g5d8',
-    name: 'James Martinez',
-    email: 'james.martinez@enterprise.com',
-    phone: '+12125556789',
-    isAuth: true,
-    isEnabled: true,
-    tenants: [mockTenants[0], mockTenants[1]],
-  },
-];
-
-
-
-// Simulated API Methods
-
-// Real BarrierX Login
+// Real BarrierX Login (No Mock Fallback)
 export const login = async (email: string, password: string): Promise<BarrierXLoginResponse | null> => {
-  // Use mock data if flag is enabled
-  if (config.barrierx.useMockData) {
-    console.log('🔧 Using MOCK BarrierX data');
-    return mockLogin(email, password);
-  }
-
-  // Real BarrierX API call
   try {
-    console.log('🌐 Calling real BarrierX login API...');
+    console.log('🌐 Calling BarrierX login API...');
     const response = await axios.post(
       `${config.barrierx.baseUrl}/api/external/login`,
       { email, password },
@@ -151,50 +79,12 @@ export const login = async (email: string, password: string): Promise<BarrierXLo
     return response.data;
   } catch (error: any) {
     console.error('❌ BarrierX login error:', error.response?.data || error.message);
-    
-    // Fallback to mock data on error (for development resilience)
-    if (config.nodeEnv === 'development') {
-      console.log('🔧 Falling back to MOCK data due to API error');
-      return mockLogin(email, password);
-    }
-    
     return null;
   }
 };
 
-// Mock login function for development
-const mockLogin = async (email: string, password: string): Promise<BarrierXLoginResponse | null> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  const user = mockUsers.find(u => u.email === email);
-
-  if (user && password) {
-    const mockAccessToken = `eyJhbGciOiJIUzI1NiIsImtpZCI6IjIxejc1OFk1R0l4b3dPTDEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL21vY2stYmFycmllcnguY29tL2F1dGgvdjEiLCJzdWIiOiIke3VzZXIuaWR9IiwiYXVkIjoiYXV0aGVudGljYXRlZCIsImV4cCI6MTc5OTk5OTk5OSwiaWF0IjoxNzYyOTMyOTAzLCJlbWFpbCI6IiR7dXNlci5lbWFpbH0iLCJwaG9uZSI6IiR7dXNlci5waG9uZX0iLCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsIjoiJHt1c2VyLmVtYWlsfSIsImZpcnN0X25hbWUiOiIke3VzZXIubmFtZS5zcGxpdCgnICcpWzBdfSIsImxhc3RfbmFtZSI6IiR7dXNlci5uYW1lLnNwbGl0KCcgJylbMV19Iiwic3ViIjoiJHt1c2VyLmlkfSJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCJ9.mock-signature`;
-
-    const expiresAt = Math.floor(Date.now() / 1000) + 3600;
-
-    return {
-      ok: true,
-      userId: user.id,
-      accessToken: mockAccessToken,
-      refreshToken: 'mock-refresh-token-' + Math.random().toString(36).substring(7),
-      expiresAt,
-      tenants: user.tenants,
-    };
-  }
-
-  return null;
-};
-
-// Refresh BarrierX access token
+// Refresh BarrierX access token (No Mock Fallback)
 export const refreshAccessToken = async (refreshToken: string): Promise<BarrierXLoginResponse | null> => {
-  // Use mock data if flag is enabled
-  if (config.barrierx.useMockData) {
-    console.log('🔧 Using MOCK BarrierX refresh');
-    return mockRefresh(refreshToken);
-  }
-
-  // Real BarrierX API call
   try {
     console.log('🌐 Refreshing BarrierX access token...');
     const response = await axios.post(
@@ -214,38 +104,8 @@ export const refreshAccessToken = async (refreshToken: string): Promise<BarrierX
     return response.data;
   } catch (error: any) {
     console.error('❌ BarrierX refresh error:', error.response?.data || error.message);
-    
-    // Fallback to mock data on error (for development resilience)
-    if (config.nodeEnv === 'development') {
-      console.log('🔧 Falling back to MOCK refresh');
-      return mockRefresh(refreshToken);
-    }
-    
     return null;
   }
-};
-
-// Mock refresh function for development
-const mockRefresh = async (refreshToken: string): Promise<BarrierXLoginResponse | null> => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-
-  if (!refreshToken || !refreshToken.startsWith('mock-refresh-token')) {
-    return null;
-  }
-
-  // Find a user (just use first one for mock)
-  const user = mockUsers[0];
-  const mockAccessToken = `eyJhbGciOiJIUzI1NiIsImtpZCI6IjIxejc1OFk1R0l4b3dPTDEiLCJ0eXAiOiJKV1QifQ.refreshed-mock-token-${Date.now()}`;
-  const expiresAt = Math.floor(Date.now() / 1000) + 3600;
-
-  return {
-    ok: true,
-    userId: user.id,
-    accessToken: mockAccessToken,
-    refreshToken: 'mock-refresh-token-' + Math.random().toString(36).substring(7),
-    expiresAt,
-    tenants: user.tenants,
-  };
 };
 
 // Process time templates like {{T+10}} or {{T-15}} into ISO dates
@@ -286,7 +146,7 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
   // Real BarrierX API call
   try {
     console.log(`🌐 Fetching deals from BarrierX for user: ${userId}`);
-    
+
     const response = await axios.get(
       `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
       {
@@ -313,19 +173,19 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
     // Transform BarrierX format to AgentX format
     const { transformBarrierXDeals } = await import('./barrierx/dataTransformers');
     const deals = transformBarrierXDeals(response.data.tenants[0], userId);
-    
+
     console.log(`✅ Successfully fetched ${deals.length} deals for user ${userId}`);
     return deals;
-    
+
   } catch (error: any) {
     console.error(`❌ BarrierX API error for user ${userId}:`, error.response?.data || error.message);
-    
+
     // Fallback to mock data in development
     if (config.nodeEnv === 'development') {
       console.log(`🔧 Falling back to MOCK data due to API error`);
       return mockGetUserDeals(userId);
     }
-    
+
     return [];
   }
 };
@@ -343,16 +203,19 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
   if (config.barrierx.useMockData) {
     console.log(`🔧 Using MOCK data for ${userIds.length} users`);
     const dealsMap = new Map<string, Deal[]>();
-    userIds.forEach(id => {
-      dealsMap.set(id, mockGetUserDeals(id));
-    });
+    await Promise.all(
+      userIds.map(async (id) => {
+        const deals = await mockGetUserDeals(id);
+        dealsMap.set(id, deals);
+      })
+    );
     return dealsMap;
   }
 
   // Real BarrierX batch API call
   try {
     console.log(`🌐 Batch fetching deals for ${userIds.length} users from BarrierX`);
-    
+
     const response = await axios.get(
       `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
       {
@@ -374,32 +237,38 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
     if (!response.data.ok || !response.data.tenants) {
       console.log(`⚠️  Batch API returned no tenants, using mock data`);
       const dealsMap = new Map<string, Deal[]>();
-      userIds.forEach(id => {
-        dealsMap.set(id, mockGetUserDeals(id));
-      });
+      await Promise.all(
+        userIds.map(async (id) => {
+          const deals = await mockGetUserDeals(id);
+          dealsMap.set(id, deals);
+        })
+      );
       return dealsMap;
     }
 
     // Transform bulk response
     const { transformBulkResponse } = await import('./barrierx/dataTransformers');
     const dealsMap = transformBulkResponse(response.data.tenants, userIds);
-    
+
     console.log(`✅ Successfully batch fetched deals for ${dealsMap.size} users`);
     return dealsMap;
-    
+
   } catch (error: any) {
     console.error(`❌ Batch API error:`, error.response?.data || error.message);
-    
+
     // Fallback to mock data in development
     if (config.nodeEnv === 'development') {
       console.log(`🔧 Falling back to MOCK data for batch request`);
       const dealsMap = new Map<string, Deal[]>();
-      userIds.forEach(id => {
-        dealsMap.set(id, mockGetUserDeals(id));
-      });
+      await Promise.all(
+        userIds.map(async (id) => {
+          const deals = await mockGetUserDeals(id);
+          dealsMap.set(id, deals);
+        })
+      );
       return dealsMap;
     }
-    
+
     return new Map();
   }
 };
@@ -407,7 +276,7 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
 /**
  * Mock implementation for getUserDeals
  * Used when USE_MOCK_BARRIERX=true or as fallback
- */
+*/
 const mockGetUserDeals = async (userId: string): Promise<Deal[]> => {
   await new Promise(resolve => setTimeout(resolve, 400));
 
@@ -460,7 +329,101 @@ const mockGetUserDeals = async (userId: string): Promise<Deal[]> => {
   return deals;
 };
 
+/**
+ * Create HubSpot engagement (NOTE, MEETING, CALL, etc.) via BarrierX
+ * This calls the BarrierX API which then creates the engagement in HubSpot
+ */
+export const createHubSpotEngagement = async (payload: {
+  tenantSlug: string;
+  dealId: string;
+  type: 'NOTE' | 'MEETING' | 'CALL' | 'EMAIL' | 'TASK' | 'SMS';
+  ownerId?: string;
+  subject?: string;
+  body?: string;
+  timestamp?: number;
+  metadata?: {
+    start_time?: string;
+    end_time?: string;
+    [key: string]: any;
+  };
+}): Promise<{
+  success: boolean;
+  engagementId?: string;
+  message?: string;
+  error?: string;
+}> => {
+  try {
+    console.log(`📝 Creating ${payload.type} engagement in HubSpot via BarrierX...`);
+    console.log(`   Deal: ${payload.dealId}, Tenant: ${payload.tenantSlug}`);
 
+    const response = await axios.post(
+      `${config.barrierx.baseUrl}/api/external/tenants/${payload.tenantSlug}/deals/${payload.dealId}/hubspot/engagements`,
+      {
+        type: payload.type,
+        ownerId: payload.ownerId,
+        subject: payload.subject,
+        body: payload.body,
+        timestamp: payload.timestamp || Date.now(),
+        metadata: payload.metadata,
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${config.barrierx.apiKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        timeout: 15000,
+      }
+    );
+
+    if (response.data.ok) {
+      console.log(`✅ ${payload.type} created successfully! ID: ${response.data.engagementId}`);
+      return {
+        success: true,
+        engagementId: response.data.engagementId,
+        message: response.data.message,
+      };
+    } else {
+      console.error(`❌ BarrierX returned not ok:`, response.data);
+      return {
+        success: false,
+        error: response.data.error || 'Unknown error',
+      };
+    }
+  } catch (error: any) {
+    console.error(`❌ Failed to create ${payload.type} engagement:`, error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || 'Failed to create engagement',
+    };
+  }
+};
+
+/**
+ * Helper: Create a NOTE engagement in HubSpot
+ * Called from ElevenLabs webhook when sales rep instructs to create a note
+ */
+export const createNoteEngagement = async (params: {
+  tenantSlug: string;
+  dealId: string;
+  ownerId: string;
+  body: string;
+  timestamp?: number;
+}): Promise<{ success: boolean; engagementId?: string; error?: string }> => {
+  return createHubSpotEngagement({
+    tenantSlug: params.tenantSlug,
+    dealId: params.dealId,
+    type: 'NOTE',
+    ownerId: params.ownerId,
+    body: params.body,
+    timestamp: params.timestamp,
+  });
+};
+
+/**
+ * @deprecated Use createNoteEngagement instead
+ * Kept for backward compatibility with existing webhook code
+ */
 export const createNote = async (payload: {
   dealId: string;
   content: string;
