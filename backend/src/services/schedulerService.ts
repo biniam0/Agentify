@@ -50,12 +50,6 @@ const filterMeetingsByTime = (meetings: Meeting[]): { preMeetings: Meeting[]; po
     const startTime = new Date(meeting.startTime).getTime();
     const endTime = new Date(meeting.endTime).getTime();
 
-    // // ⭐ TESTING: Meetings starting within next 24 hours (1 day)
-    // const isUpcomingWithin15 = startTime >= now && startTime <= (now + 24 * 60 * 60 * 1000);
-
-    // // ⭐ TESTING: Meetings that ended within last 24 hours (1 day)
-    // const endedWithin5 = endTime >= (now - 24 * 60 * 60 * 1000) && endTime <= now;
-
     // T-15: Meetings starting within next 15 minutes
     const isUpcomingWithin15 = startTime >= now && startTime <= (now + 15 * 60 * 1000);
 

@@ -10,8 +10,12 @@ import {
   generateDummyContacts,
   generateDummyMeetings,
   generateDummyRiskScores,
-  generateDummyRecommendations,
 } from './dummyDataGenerators';
+
+/**
+ * Default phone number to use when owner phone is not available
+ */
+const DEFAULT_PHONE = '+251914373107';
 
 /**
  * Transform a single BarrierX tenant's deals to AgentX Deal format
@@ -54,7 +58,6 @@ const transformSingleDeal = (deal: any, userId: string, tenant: any): Deal => {
     ownerId: userId,
     ownerName: owner.name,
     ownerPhone: owner.phone,
-    ownerHubspotId: owner.id,
     contacts,
     meetings,
     summary: deal.summary || `Deal: ${deal.dealName}`,
@@ -85,22 +88,30 @@ const transformContacts = (deal: any): Contact[] => {
 /**
  * Transform meetings from BarrierX format
  * Falls back to dummy data if meetings array is empty
+ * Generates descriptive titles when meeting title is empty
  */
 const transformMeetings = (deal: any, contacts: Contact[]): Meeting[] => {
   if (!deal.meetings || deal.meetings.length === 0) {
     console.log(`  📅 No meetings for deal ${deal.id}, generating dummy data`);
-    return generateDummyMeetings(deal, contacts);
+    // return generateDummyMeetings(deal, contacts);
+    return []
   }
 
-  return deal.meetings.map((m: any) => ({
-    id: m.id || `m-${deal.id}-${Math.random().toString(36).substring(7)}`,
-    title: m.title || m.name || 'Meeting',
-    startTime: m.startTime || m.start_time || new Date().toISOString(),
-    endTime: m.endTime || m.end_time || new Date(Date.now() + 3600000).toISOString(),
-    status: determineStatus(m),
-    agenda: m.agenda || m.body || m.description || 'No agenda set',
-    participants: contacts,
-  }));
+  return deal.meetings.map((m: any, index: number) => {
+    // Generate descriptive title when empty
+    const meetingTitle = m.title || m.name ||
+      `${deal.stage || 'Sales'} Meeting - ${deal.dealName || deal.company || 'Deal'} (#${index + 1})`;
+
+    return {
+      id: m.id || `m-${deal.id}-${Math.random().toString(36).substring(7)}`,
+      title: meetingTitle,
+      startTime: m.startTime || m.start_time || new Date().toISOString(),
+      endTime: m.endTime || m.end_time || new Date(Date.now() + 3600000).toISOString(),
+      status: determineStatus(m),
+      agenda: m.agenda || m.body || m.description || `Discussion about ${deal.dealName || 'the deal'}`,
+      participants: contacts,
+    };
+  });
 };
 
 /**
@@ -134,7 +145,7 @@ const transformRiskScores = (deal: any): any => {
 const transformOwner = (deal: any): { name: string; phone: string; id?: string } => {
   const ownerName = deal.owner?.name || 'Unknown Owner';
   const ownerId = deal.owner?.hubspotId || deal.owner?.id || deal.ownerId;
-  let ownerPhone = deal.owner?.phone || '';
+  const ownerPhone = deal.owner?.phone || DEFAULT_PHONE;
 
   // Debug logging for owner data
   if (deal.owner) {
@@ -142,15 +153,9 @@ const transformOwner = (deal: any): { name: string; phone: string; id?: string }
       name: deal.owner.name,
       hubspotId: deal.owner.hubspotId,
       id: deal.owner.id,
-      phone: deal.owner.phone,
+      phone: deal.owner.phone || `(using default: ${DEFAULT_PHONE})`,
       extracted_ownerId: ownerId
     }, null, 2));
-  }
-
-  // Use default phone number if missing
-  if (!ownerPhone) {
-    ownerPhone = '+251914373107';
-    console.log(`  📞 Using default phone for owner: ${ownerPhone}`);
   }
 
   return {
@@ -168,15 +173,15 @@ const determineStatus = (meeting: any): 'scheduled' | 'in_progress' | 'completed
   if (!meeting.status) return 'scheduled';
 
   const status = meeting.status.toLowerCase();
-  
+
   if (status.includes('completed') || status.includes('done')) {
     return 'completed';
   }
-  
+
   if (status.includes('progress') || status.includes('active') || status.includes('ongoing')) {
     return 'in_progress';
   }
-  
+
   return 'scheduled';
 };
 
@@ -192,7 +197,7 @@ export const transformBulkResponse = (
   userIds: string[]
 ): Map<string, Deal[]> => {
   const dealsMap = new Map<string, Deal[]>();
-  
+
   // Initialize empty arrays for all users
   userIds.forEach(userId => dealsMap.set(userId, []));
 

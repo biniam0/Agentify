@@ -5,11 +5,12 @@
 import axios from 'axios';
 import { config } from '../config/env';
 import mockUsersDataJson from '../data/mockUsers.json';
+import { generateDummyRecommendations } from './barrierx/dummyDataGenerators';
 
 export interface Tenant {
-  id: string;
+    id: string;
   slug: string;
-  name: string;
+    name: string;
 }
 
 export interface BarrierXLoginResponse {
@@ -501,8 +502,8 @@ export const createCompany = async (payload: {
 }): Promise<{ success: boolean; companyId: string }> => {
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  return {
-    success: true,
+    return {
+      success: true,
     companyId: `company-${Date.now()}`,
   };
 };
@@ -601,8 +602,8 @@ export const getRisks = async (dealId: string): Promise<{
     }
   }
 
-  return {
-    success: true,
+    return {
+      success: true,
     dealId,
     risks: risks.slice(0, 3),
   };
@@ -616,9 +617,10 @@ export const getRecommendations = async (dealId: string): Promise<{
 }> => {
   await new Promise(resolve => setTimeout(resolve, 200));
 
-  // Find deal in mockUsers.json to get risk scores
+  // Find deal in mockUsers.json to get risk scores and deal data
   const typedMockUsers = mockUsersDataJson as { [key: string]: any };
   let dealRiskScores = null;
+  let dealData = null;
 
   // Search through all users to find the deal
   for (const userId in typedMockUsers) {
@@ -626,12 +628,13 @@ export const getRecommendations = async (dealId: string): Promise<{
     const deal = userData.deals?.find((d: any) => d.id === dealId);
     if (deal) {
       dealRiskScores = deal.userDealRiskScores;
+      dealData = deal;
       break;
     }
   }
 
   // Generate recommendations based on risks
-  const recommendations = [];
+  const recommendations: Array<{ action: string; priority: string }> = [];
 
   if (dealRiskScores) {
     const subRisks = dealRiskScores.subCategoryRisk || {};
@@ -687,7 +690,19 @@ export const getRecommendations = async (dealId: string): Promise<{
     }
   }
 
-  // Fill with defaults if less than 3
+  // If no recommendations from risks, use dummy generator
+  if (recommendations.length === 0 && dealData) {
+    console.log(`  📝 No recommendations from risk scores, generating dummy recommendations for deal ${dealId}`);
+    const dummyRecs = generateDummyRecommendations(dealData);
+    dummyRecs.forEach(rec => {
+      recommendations.push({
+        action: rec,
+        priority: 'medium',
+      });
+    });
+  }
+
+  // Fill with generic defaults if still less than 3
   while (recommendations.length < 3) {
     if (recommendations.length === 0) {
       recommendations.push({
