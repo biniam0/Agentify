@@ -8,9 +8,9 @@ import mockUsersDataJson from '../data/mockUsers.json';
 import { generateDummyRecommendations } from './barrierx/dummyDataGenerators';
 
 export interface Tenant {
-    id: string;
+  id: string;
   slug: string;
-    name: string;
+  name: string;
 }
 
 export interface BarrierXLoginResponse {
@@ -49,6 +49,9 @@ export interface Deal {
   ownerId: string;
   ownerName: string;
   ownerPhone?: string;
+  ownerEmail?: string;
+  ownerHubspotId?: string;
+  tenantSlug?: string;
   contacts: Contact[];
   meetings: Meeting[];
   summary?: string;
@@ -155,6 +158,7 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
           user_ids: userId,
           include_deals: true,
           include_members: false,
+          sync_engagements: true,
           page: 1,
           limit: 100,
         },
@@ -224,6 +228,7 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
           user_ids: userIds.join(','),  // Comma-separated
           include_deals: true,
           include_members: true,
+          sync_engagements: true,
           page: 1,
           limit: 500,  // Max allowed
         },
@@ -292,7 +297,7 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
     // This reduces payload by ~67% while still catching all active deals
     const updateWindowDays = config.automation.dealUpdateWindowDays;
     const dealUpdatedSince = new Date(Date.now() - updateWindowDays * 24 * 60 * 60 * 1000).toISOString();
-    
+
     console.log(`🌐 Fetching deals updated in last ${updateWindowDays} days (since ${dealUpdatedSince})...`);
 
     const response = await axios.get(
@@ -302,11 +307,12 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
           // 🌟 NO user_ids = wildcard "give me everything"!
           // 🔥 BUT filter by update time to reduce payload
           deal_updated_since: dealUpdatedSince,
-          
+
           // Inclusion settings
           include_deals: true,
           include_members: false,  // Don't need members - we get users from deal owners
-          
+          sync_engagements: true,
+
           // Pagination
           page: 1,
           limit: 1000,  // Max limit for large datasets
@@ -360,7 +366,7 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
     const dealsMap = transformBulkResponse(filteredTenants, Array.from(allUserIds));
 
     console.log(`✅ Wildcard fetch complete: ${dealsMap.size} users mapped`);
-    
+
     // Log summary per user
     dealsMap.forEach((deals, userId) => {
       console.log(`   User ${userId.substring(0, 12)}...: ${deals.length} deals`);
@@ -370,7 +376,7 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
 
   } catch (error: any) {
     console.error('❌ Wildcard bulk API error:', error.response?.data || error.message);
-    
+
     // Fallback to mock data in development
     if (config.nodeEnv === 'development') {
       console.log(`🔧 Falling back to MOCK data for wildcard request`);
@@ -609,8 +615,8 @@ export const createCompany = async (payload: {
 }): Promise<{ success: boolean; companyId: string }> => {
   await new Promise(resolve => setTimeout(resolve, 300));
 
-    return {
-      success: true,
+  return {
+    success: true,
     companyId: `company-${Date.now()}`,
   };
 };
@@ -709,8 +715,8 @@ export const getRisks = async (dealId: string): Promise<{
     }
   }
 
-    return {
-      success: true,
+  return {
+    success: true,
     dealId,
     risks: risks.slice(0, 3),
   };

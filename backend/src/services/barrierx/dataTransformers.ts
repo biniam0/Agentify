@@ -13,6 +13,11 @@ import {
 } from './dummyDataGenerators';
 
 /**
+ * Debug flag for transformer logs - set to true to enable verbose logging
+ */
+const DEBUG_TRANSFORMERS = false;
+
+/**
  * Default phone number to use when owner phone is not available
  */
 const DEFAULT_PHONE = '+251914373107';
@@ -69,6 +74,9 @@ const transformSingleDeal = (deal: any, userId: string, tenant: any): Deal => {
     ownerId: userId,
     ownerName: owner.name,
     ownerPhone: owner.phone,
+    ownerEmail: owner.email,
+    ownerHubspotId: owner.hubspotId,
+    tenantSlug: tenant?.slug || tenant?.name || 'unknown',
     contacts,
     meetings,
     summary: deal.summary || `Deal: ${deal.dealName}`,
@@ -83,7 +91,7 @@ const transformSingleDeal = (deal: any, userId: string, tenant: any): Deal => {
  */
 const transformContacts = (deal: any): Contact[] => {
   if (!deal.contacts || deal.contacts.length === 0) {
-    console.log(`  📝 No contacts for deal ${deal.id}, generating dummy data`);
+    if (DEBUG_TRANSFORMERS) console.log(`  📝 No contacts for deal ${deal.id}, generating dummy data`);
     return generateDummyContacts(deal);
   }
 
@@ -103,7 +111,7 @@ const transformContacts = (deal: any): Contact[] => {
  */
 const transformMeetings = (deal: any, contacts: Contact[]): Meeting[] => {
   if (!deal.meetings || deal.meetings.length === 0) {
-    console.log(`  📅 No meetings for deal ${deal.id}, generating dummy data`);
+    if (DEBUG_TRANSFORMERS) console.log(`  📅 No meetings for deal ${deal.id}, generating dummy data`);
     // return generateDummyMeetings(deal, contacts);
     return []
   }
@@ -131,7 +139,7 @@ const transformMeetings = (deal: any, contacts: Contact[]): Meeting[] => {
  */
 const transformRiskScores = (deal: any): any => {
   if (!deal.userDealRiskScores) {
-    console.log(`  ⚠️  No risk scores for deal ${deal.id}, generating dummy data`);
+    if (DEBUG_TRANSFORMERS) console.log(`  ⚠️  No risk scores for deal ${deal.id}, generating dummy data`);
     return generateDummyRiskScores(deal);
   }
 
@@ -140,7 +148,7 @@ const transformRiskScores = (deal: any): any => {
   const totalRisk = deal.userDealRiskScores.totalDealRisk;
 
   if (status === 'calculating' || status === 'pending' || totalRisk === 0) {
-    console.log(`  ⚠️  Risk calculation ${status} for deal ${deal.id}, using dummy data`);
+    if (DEBUG_TRANSFORMERS) console.log(`  ⚠️  Risk calculation ${status} for deal ${deal.id}, using dummy data`);
     return generateDummyRiskScores(deal);
   }
 
@@ -153,27 +161,35 @@ const transformRiskScores = (deal: any): any => {
  * Provides sensible defaults if owner info is missing
  * Uses default phone number if not available
  */
-const transformOwner = (deal: any): { name: string; phone: string; id?: string } => {
+const transformOwner = (deal: any): {
+  name: string;
+  phone: string;
+  email: string;
+  hubspotId?: string;
+} => {
   const ownerName = deal.owner?.name || 'Unknown Owner';
-  const ownerId = deal.owner?.hubspotId || deal.owner?.id || deal.ownerId;
+  const ownerEmail = deal.owner?.email || '';
+  const ownerHubspotId = deal.owner?.hubspotId || deal.owner?.id || deal.ownerId;
   const ownerPhone = formatPhoneNumber(deal.owner?.phone || DEFAULT_PHONE);
 
   // Debug logging for owner data
-  if (deal.owner) {
+  if (DEBUG_TRANSFORMERS && deal.owner) {
     console.log(`  👤 Owner data for deal ${deal.id}:`, JSON.stringify({
       name: deal.owner.name,
+      email: deal.owner.email,
       hubspotId: deal.owner.hubspotId,
       id: deal.owner.id,
       phone_raw: deal.owner.phone || `(using default: ${DEFAULT_PHONE})`,
       phone_formatted: ownerPhone,
-      extracted_ownerId: ownerId
+      extracted_hubspotId: ownerHubspotId
     }, null, 2));
   }
 
   return {
     name: ownerName,
     phone: ownerPhone,
-    id: ownerId,
+    email: ownerEmail,
+    hubspotId: ownerHubspotId,
   };
 };
 
@@ -223,7 +239,7 @@ export const transformBulkResponse = (
       const ownerId = deal.owner?.hubspotId;
 
       if (!ownerId) {
-        console.log(`    ⚠️  Deal ${deal.id} (${deal.dealName}) has no owner.hubspotId, skipping...`);
+        if (DEBUG_TRANSFORMERS) console.log(`    ⚠️  Deal ${deal.id} (${deal.dealName}) has no owner.hubspotId, skipping...`);
         return;
       }
 

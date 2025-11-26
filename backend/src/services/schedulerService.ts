@@ -62,6 +62,7 @@ const processUserMeetings = (userData: any) => {
     userId: userData.userId,
     name: userData.name,
     email: userData.email,
+    tenantSlug: userData.tenantSlug, // Include tenant slug for ElevenLabs
   };
 
   // ✅ Use for loop for better performance (faster than forEach)
@@ -103,6 +104,7 @@ const processUserMeetings = (userData: any) => {
             stage: deal.stage,
             amount: deal.amount,
             owner: deal.owner,
+            tenantSlug: deal.tenantSlug,  // Include tenant slug for ElevenLabs webhook
             userDealRiskScores: deal.userDealRiskScores,
             attachments: deal.attachments,
           };
@@ -159,9 +161,9 @@ const runAutomationJob = async () => {
     if (config.automation.mode === 'bulk') {
       // 🌟 NEW: Bulk mode - fetch ALL users and deals in ONE call (no user_ids = wildcard)
       console.log('🌐 Bulk mode: Fetching ALL tenants and users...');
-      
+
       dealsMap = await barrierxService.getAllDealsWildcard();
-      
+
       if (dealsMap.size === 0) {
         console.log('⚠️  No deals found in bulk mode. Skipping...');
         return;
@@ -170,17 +172,17 @@ const runAutomationJob = async () => {
       console.log(`👥 Bulk mode: Processing ${dealsMap.size} users from external API`);
 
       // In bulk mode, we don't have DB users, so create minimal user objects
-      // The actual user data will be in the deals (owner info)
+      // The actual user data will be in the deals (owner info from transformed deal)
       dealsMap.forEach((deals, barrierxUserId) => {
         if (deals.length > 0) {
-          // Use deal owner info as user data
+          // Use deal owner info as user data (from transformed Deal properties)
           const firstDeal = deals[0];
           usersToProcess.push({
             id: barrierxUserId, // Using barrierxUserId as ID
-            name: firstDeal.owner?.name || 'Unknown User',
-            email: firstDeal.owner?.email || 'unknown@example.com',
+            name: firstDeal.ownerName || 'Unknown User',
+            email: firstDeal.ownerEmail || 'unknown@example.com',
             barrierxUserId: barrierxUserId,
-            tenantSlug: 'bulk-mode', // Default tenant slug for bulk mode
+            tenantSlug: firstDeal.tenantSlug || 'unknown', // Get tenant from deal
           });
         }
       });
@@ -188,7 +190,7 @@ const runAutomationJob = async () => {
     } else {
       // EXISTING: Authenticated mode - use database users
       console.log('👥 Authenticated mode: Fetching users from database...');
-      
+
       const authenticatedUsers = await prisma.user.findMany({
         where: {
           isAuth: true,
@@ -214,14 +216,14 @@ const runAutomationJob = async () => {
 
       // Batch fetch all users' deals
       const userIds = authenticatedUsers.map(u => u.barrierxUserId);
-      
+
       console.log(`📦 Batch fetching deals for ${userIds.length} users...`);
       dealsMap = await barrierxService.getBatchUserDeals(userIds);
     }
 
     let totalPreMeetings = 0;
     let totalPostMeetings = 0;
-    
+
     // Process each user
     for (const dbUser of usersToProcess) {
       const deals = dealsMap.get(dbUser.barrierxUserId);
@@ -246,7 +248,11 @@ const runAutomationJob = async () => {
           owner: {
             name: deal.ownerName,
             phone: deal.ownerPhone,
+            email: deal.ownerEmail,
+            id: deal.ownerHubspotId,        // HubSpot owner ID for webhook
+            hubspotId: deal.ownerHubspotId, // Alias for compatibility
           },
+          tenantSlug: deal.tenantSlug,      // Pass tenant slug for each deal
           contacts: deal.contacts,
           meetings: deal.meetings.map((m: any) => ({
             ...m,
