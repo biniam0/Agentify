@@ -18,6 +18,17 @@ import {
 const DEFAULT_PHONE = '+251914373107';
 
 /**
+ * Format phone number by removing hyphens, spaces, and parentheses
+ * Keeps the + sign for international format
+ * Example: "+251-914373107" → "+251914373107"
+ */
+const formatPhoneNumber = (phone: string): string => {
+  if (!phone) return phone;
+  // Remove hyphens, spaces, and parentheses, but keep the + sign
+  return phone.replace(/[-\s()]/g, '');
+};
+
+/**
  * Transform a single BarrierX tenant's deals to AgentX Deal format
  * Handles missing data gracefully with dummy data generation
  */
@@ -145,7 +156,7 @@ const transformRiskScores = (deal: any): any => {
 const transformOwner = (deal: any): { name: string; phone: string; id?: string } => {
   const ownerName = deal.owner?.name || 'Unknown Owner';
   const ownerId = deal.owner?.hubspotId || deal.owner?.id || deal.ownerId;
-  const ownerPhone = deal.owner?.phone || DEFAULT_PHONE;
+  const ownerPhone = formatPhoneNumber(deal.owner?.phone || DEFAULT_PHONE);
 
   // Debug logging for owner data
   if (deal.owner) {
@@ -153,7 +164,8 @@ const transformOwner = (deal: any): { name: string; phone: string; id?: string }
       name: deal.owner.name,
       hubspotId: deal.owner.hubspotId,
       id: deal.owner.id,
-      phone: deal.owner.phone || `(using default: ${DEFAULT_PHONE})`,
+      phone_raw: deal.owner.phone || `(using default: ${DEFAULT_PHONE})`,
+      phone_formatted: ownerPhone,
       extracted_ownerId: ownerId
     }, null, 2));
   }
@@ -209,7 +221,7 @@ export const transformBulkResponse = (
     // Map each deal to its actual owner
     tenant.deals.forEach((deal: any) => {
       const ownerId = deal.owner?.hubspotId;
-      
+
       if (!ownerId) {
         console.log(`    ⚠️  Deal ${deal.id} (${deal.dealName}) has no owner.hubspotId, skipping...`);
         return;

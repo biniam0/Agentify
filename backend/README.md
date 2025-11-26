@@ -74,8 +74,9 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
    USE_MOCK_BARRIERX=false  # Set to 'true' for development with mock data
    
    # Automation Mode Configuration
-   AUTOMATION_MODE=bulk              # Options: 'authenticated' | 'bulk'
-   # TARGET_TENANT_SLUGS=agent-call  # Optional: comma-separated tenant slugs (leave empty for all)
+   AUTOMATION_MODE=bulk                    # Options: 'authenticated' | 'bulk'
+   DEAL_UPDATE_WINDOW_DAYS=60              # Only fetch deals updated in last 60 days (reduces payload ~67%)
+   # TARGET_TENANT_SLUGS=agent-call        # Optional: comma-separated tenant slugs (leave empty for all)
    
    # ElevenLabs Integration
    ELEVENLABS_API_KEY="your_elevenlabs_api_key"

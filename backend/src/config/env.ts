@@ -7,6 +7,10 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   databaseUrl: process.env.DATABASE_URL || '',
   jwtSecret: process.env.JWT_SECRET || 'default-secret-change-in-production',
+  // CORS configuration
+  allowedOrigins: process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+    : ['http://localhost:3000', 'http://localhost:5173'],
   barrierx: {
     baseUrl: process.env.BARRIERX_BASE_URL || 'https://platform.barrierx.ai',
     apiKey: process.env.BARRIERX_API_KEY || '',
@@ -24,6 +28,8 @@ export const config = {
     mode: (process.env.AUTOMATION_MODE || 'authenticated') as 'authenticated' | 'bulk',
     // Optional: comma-separated tenant slugs to filter (leave empty for all)
     targetTenants: process.env.TARGET_TENANT_SLUGS?.split(',').filter(Boolean) || [],
+    // Filter deals by update time (in days) - skips stale deals
+    dealUpdateWindowDays: parseInt(process.env.DEAL_UPDATE_WINDOW_DAYS || '60'),
   },
 };
 
