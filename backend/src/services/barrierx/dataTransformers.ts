@@ -187,10 +187,7 @@ const determineStatus = (meeting: any): 'scheduled' | 'in_progress' | 'completed
 
 /**
  * Transform bulk tenant response to user-deals map
- * Maps multiple tenants to their respective users
- * 
- * Note: Since BarrierX API doesn't return members array consistently,
- * we assign all tenant deals to all requesting users.
+ * Maps each deal to its actual owner based on deal.owner.hubspotId
  */
 export const transformBulkResponse = (
   tenantsData: any[],
@@ -209,12 +206,21 @@ export const transformBulkResponse = (
 
     console.log(`  📦 Processing ${tenant.deals.length} deals from tenant ${tenant.name || tenant.slug}`);
 
-    // Since members array is not available, assign all deals to all users
-    // Each user will see all deals from all tenants they have access to
-    userIds.forEach(userId => {
-      const deals = transformBarrierXDeals(tenant, userId);
-      const existingDeals = dealsMap.get(userId) || [];
-      dealsMap.set(userId, [...existingDeals, ...deals]);
+    // Map each deal to its actual owner
+    tenant.deals.forEach((deal: any) => {
+      const ownerId = deal.owner?.hubspotId;
+      
+      if (!ownerId) {
+        console.log(`    ⚠️  Deal ${deal.id} (${deal.dealName}) has no owner.hubspotId, skipping...`);
+        return;
+      }
+
+      // Only process deals for users we're tracking
+      if (dealsMap.has(ownerId)) {
+        const transformedDeal = transformSingleDeal(deal, ownerId, tenant);
+        const existingDeals = dealsMap.get(ownerId) || [];
+        dealsMap.set(ownerId, [...existingDeals, transformedDeal]);
+      }
     });
   });
 

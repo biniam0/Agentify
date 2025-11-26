@@ -19,5 +19,11 @@ export const config = {
     phoneNumberId: process.env.ELEVENLABS_PHONE_NUMBER_ID || '',
     webhookSecret: process.env.ELEVENLABS_WEBHOOK_SECRET || '',
   },
+  automation: {
+    // Toggle between 'authenticated' (DB users) or 'bulk' (all users from API)
+    mode: (process.env.AUTOMATION_MODE || 'authenticated') as 'authenticated' | 'bulk',
+    // Optional: comma-separated tenant slugs to filter (leave empty for all)
+    targetTenants: process.env.TARGET_TENANT_SLUGS?.split(',').filter(Boolean) || [],
+  },
 };
 

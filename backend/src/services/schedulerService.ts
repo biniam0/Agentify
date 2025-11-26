@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import prisma from '../config/database';
+import { config } from '../config/env';
 import * as barrierxService from './barrierxService';
 import * as meetingService from './meetingService';
 
@@ -158,40 +159,79 @@ const runAutomationJob = async () => {
   try {
     console.log('\n🔄 Running automated meeting calls job...');
     console.log('⏰ Time:', new Date().toISOString());
+    console.log(`🔧 Automation Mode: ${config.automation.mode}`);
 
-    // Fetch authenticated and enabled users from database
-    const authenticatedUsers = await prisma.user.findMany({
-      where: {
-        isAuth: true,
-        isEnabled: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        barrierxUserId: true,
-        tenantSlug: true,
-      },
-    });
+    let dealsMap: Map<string, any[]>;
+    let usersToProcess: Array<{ id: string; name: string; email: string; barrierxUserId: string; tenantSlug: string }> = [];
 
-    console.log(`👥 Found ${authenticatedUsers.length} authenticated and enabled users`);
+    if (config.automation.mode === 'bulk') {
+      // 🌟 NEW: Bulk mode - fetch ALL users and deals in ONE call (no user_ids = wildcard)
+      console.log('🌐 Bulk mode: Fetching ALL tenants and users...');
+      
+      dealsMap = await barrierxService.getAllDealsWildcard();
+      
+      if (dealsMap.size === 0) {
+        console.log('⚠️  No deals found in bulk mode. Skipping...');
+        return;
+      }
 
-    if (authenticatedUsers.length === 0) {
-      console.log('⚠️  No authenticated users found. Skipping...');
-      return;
+      console.log(`👥 Bulk mode: Processing ${dealsMap.size} users from external API`);
+
+      // In bulk mode, we don't have DB users, so create minimal user objects
+      // The actual user data will be in the deals (owner info)
+      dealsMap.forEach((deals, barrierxUserId) => {
+        if (deals.length > 0) {
+          // Use deal owner info as user data
+          const firstDeal = deals[0];
+          usersToProcess.push({
+            id: barrierxUserId, // Using barrierxUserId as ID
+            name: firstDeal.owner?.name || 'Unknown User',
+            email: firstDeal.owner?.email || 'unknown@example.com',
+            barrierxUserId: barrierxUserId,
+            tenantSlug: 'bulk-mode', // Default tenant slug for bulk mode
+          });
+        }
+      });
+
+    } else {
+      // EXISTING: Authenticated mode - use database users
+      console.log('👥 Authenticated mode: Fetching users from database...');
+      
+      const authenticatedUsers = await prisma.user.findMany({
+        where: {
+          isAuth: true,
+          isEnabled: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          barrierxUserId: true,
+          tenantSlug: true,
+        },
+      });
+
+      console.log(`👥 Found ${authenticatedUsers.length} authenticated and enabled users`);
+
+      if (authenticatedUsers.length === 0) {
+        console.log('⚠️  No authenticated users found. Skipping...');
+        return;
+      }
+
+      usersToProcess = authenticatedUsers;
+
+      // Batch fetch all users' deals
+      const userIds = authenticatedUsers.map(u => u.barrierxUserId);
+      
+      console.log(`📦 Batch fetching deals for ${userIds.length} users...`);
+      dealsMap = await barrierxService.getBatchUserDeals(userIds);
     }
 
     let totalPreMeetings = 0;
     let totalPostMeetings = 0;
-
-    // Batch fetch all users' deals at once (more efficient!)
-    const userIds = authenticatedUsers.map(u => u.barrierxUserId);
     
-    console.log(`📦 Batch fetching deals for all ${userIds.length} users...`);
-    const dealsMap = await barrierxService.getBatchUserDeals(userIds);
-    
-    // Process each authenticated user
-    for (const dbUser of authenticatedUsers) {
+    // Process each user
+    for (const dbUser of usersToProcess) {
       const deals = dealsMap.get(dbUser.barrierxUserId);
 
       if (!deals || deals.length === 0) {

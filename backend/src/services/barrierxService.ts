@@ -275,6 +275,102 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
 };
 
 /**
+ * Get ALL deals from ALL tenants and ALL users in ONE call
+ * Uses wildcard approach (no user_ids parameter) to fetch everything
+ * Perfect for bulk automation mode
+ */
+export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
+  // Use mock data if flag is enabled
+  if (config.barrierx.useMockData) {
+    console.log(`🔧 Using MOCK data for wildcard request`);
+    // For mock, just return empty map or all mock users
+    return new Map();
+  }
+
+  try {
+    console.log('🌐 Fetching ALL deals using wildcard (no user_ids parameter)...');
+
+    const response = await axios.get(
+      `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
+      {
+        params: {
+          // 🌟 NO user_ids = wildcard "give me everything"!
+          include_deals: true,
+          include_members: true,
+          page: 1,
+          limit: 1000,  // Max limit for large datasets
+        },
+        headers: {
+          'Authorization': `Bearer ${config.barrierx.apiKey}`,
+          'Accept': 'application/json',
+        },
+        timeout: 60000,  // 60 seconds for potentially large response
+      }
+    );
+
+    if (!response.data.ok || !response.data.tenants) {
+      console.error('❌ Wildcard bulk API failed');
+      return new Map();
+    }
+
+    const tenants = response.data.tenants;
+    console.log(`✅ Got ${tenants.length} tenants with wildcard`);
+    console.log(`📊 Total tenants in system: ${response.data.total || response.data.count || tenants.length}`);
+
+    // Filter tenants if TARGET_TENANT_SLUGS is specified
+    const filteredTenants = config.automation.targetTenants.length > 0
+      ? tenants.filter((t: any) => config.automation.targetTenants.includes(t.slug))
+      : tenants;
+
+    if (filteredTenants.length < tenants.length) {
+      console.log(`🎯 Filtered to ${filteredTenants.length} target tenants: ${config.automation.targetTenants.join(', ')}`);
+    }
+
+    // Extract all unique user IDs from deal owners across all tenants
+    const allUserIds = new Set<string>();
+    let totalDeals = 0;
+
+    filteredTenants.forEach((tenant: any) => {
+      if (tenant.deals) {
+        totalDeals += tenant.deals.length;
+        tenant.deals.forEach((deal: any) => {
+          if (deal.owner?.hubspotId) {
+            allUserIds.add(deal.owner.hubspotId);
+          }
+        });
+      }
+    });
+
+    console.log(`👥 Found ${allUserIds.size} unique users from deal owners`);
+    console.log(`📦 Total deals across all tenants: ${totalDeals}`);
+
+    // Transform bulk response
+    const { transformBulkResponse } = await import('./barrierx/dataTransformers');
+    const dealsMap = transformBulkResponse(filteredTenants, Array.from(allUserIds));
+
+    console.log(`✅ Wildcard fetch complete: ${dealsMap.size} users mapped`);
+    
+    // Log summary per user
+    dealsMap.forEach((deals, userId) => {
+      console.log(`   User ${userId.substring(0, 12)}...: ${deals.length} deals`);
+    });
+
+    return dealsMap;
+
+  } catch (error: any) {
+    console.error('❌ Wildcard bulk API error:', error.response?.data || error.message);
+    
+    // Fallback to mock data in development
+    if (config.nodeEnv === 'development') {
+      console.log(`🔧 Falling back to MOCK data for wildcard request`);
+      return new Map();
+    }
+
+    return new Map();
+  }
+};
+
+/**
  * Mock implementation for getUserDeals
  * Used when USE_MOCK_BARRIERX=true or as fallback
 */
