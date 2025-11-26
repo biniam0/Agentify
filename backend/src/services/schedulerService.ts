@@ -41,101 +41,93 @@ const processTimeTemplates = (timeStr: string): string => {
   return timeStr;
 };
 
-// Helper function to filter meetings based on T-15 and T+5 logic
-const filterMeetingsByTime = (meetings: Meeting[]): { preMeetings: Meeting[]; postMeetings: Meeting[] } => {
-  const now = Date.now();
-  const preMeetings: Meeting[] = [];
-  const postMeetings: Meeting[] = [];
 
-  meetings.forEach(meeting => {
-    const startTime = new Date(meeting.startTime).getTime();
-    const endTime = new Date(meeting.endTime).getTime();
-
-    // T-15: Meetings starting within next 15 minutes
-    const isUpcomingWithin15 = startTime >= now && startTime <= (now + 15 * 60 * 1000);
-
-    // T+5: Meetings that ended within last 5 minutes
-    const endedWithin5 = endTime >= (now - 5 * 60 * 1000) && endTime <= now;
-
-    if (isUpcomingWithin15) {
-      preMeetings.push(meeting);
-    }
-
-    if (endedWithin5) {
-      postMeetings.push(meeting);
-    }
-  });
-
-  return { preMeetings, postMeetings };
-};
-
-// Process user data and filter meetings
+// Process user data and filter meetings (OPTIMIZED)
 const processUserMeetings = (userData: any) => {
-  const processedUser = JSON.parse(JSON.stringify(userData)); // Deep clone
-  let allPreMeetings: any[] = [];
-  let allPostMeetings: any[] = [];
+  const allPreMeetings: any[] = [];
+  const allPostMeetings: any[] = [];
 
-  if (processedUser.deals) {
-    processedUser.deals.forEach((deal: any) => {
-      if (deal.meetings) {
-        // Process time templates
-        const meetings = deal.meetings.map((meeting: MeetingTemplate) => ({
+  // Early exit if no deals
+  if (!userData.deals || userData.deals.length === 0) {
+    return { preMeetings: allPreMeetings, postMeetings: allPostMeetings };
+  }
+
+  // ✅ Cache time values - calculate once, reuse for all meetings
+  const now = Date.now();
+  const fifteenMinutesFromNow = now + 15 * 60 * 1000;
+  const fiveMinutesAgo = now - 5 * 60 * 1000;
+
+  // Cache user info to avoid repeated access
+  const userInfo = {
+    userId: userData.userId,
+    name: userData.name,
+    email: userData.email,
+  };
+
+  // ✅ Use for loop for better performance (faster than forEach)
+  for (let i = 0; i < userData.deals.length; i++) {
+    const deal = userData.deals[i];
+
+    // ✅ Early exit - skip deals with no meetings
+    if (!deal.meetings || deal.meetings.length === 0) {
+      continue;
+    }
+
+    // Pre-build deal context once for this deal (if needed)
+    let dealContext: any = null;
+
+    // ✅ Single-pass filtering - check conditions as we iterate
+    for (let j = 0; j < deal.meetings.length; j++) {
+      const meeting = deal.meetings[j];
+
+      // Process time templates
+      const startTimeStr = processTimeTemplates(meeting.startTime);
+      const endTimeStr = processTimeTemplates(meeting.endTime);
+      const startTime = new Date(startTimeStr).getTime();
+      const endTime = new Date(endTimeStr).getTime();
+
+      // Check for pre-meeting (T-15: upcoming within next 15 minutes)
+      const isPreMeeting = startTime >= now && startTime <= fifteenMinutesFromNow;
+
+      // Check for post-meeting (T+5: ended within last 5 minutes)
+      const isPostMeeting = endTime >= fiveMinutesAgo && endTime <= now;
+
+      // ✅ Filter before building - only create objects for matching meetings
+      if (isPreMeeting || isPostMeeting) {
+        // Lazy initialization of dealContext (only when we have a match)
+        if (!dealContext) {
+          dealContext = {
+            id: deal.id,
+            dealName: deal.dealName,
+            company: deal.company,
+            stage: deal.stage,
+            amount: deal.amount,
+            owner: deal.owner,
+            userDealRiskScores: deal.userDealRiskScores,
+            attachments: deal.attachments,
+          };
+        }
+
+        // Build meeting object
+        const meetingObj = {
           ...meeting,
-          startTime: processTimeTemplates(meeting.startTime),
-          endTime: processTimeTemplates(meeting.endTime),
-        }));
+          startTime: startTimeStr,
+          endTime: endTimeStr,
+          deal: dealContext,
+          contacts: deal.contacts,
+          owner: deal.owner,
+          user: userInfo,
+        };
 
-        // Filter meetings by T-15 and T+5
-        const { preMeetings, postMeetings } = filterMeetingsByTime(meetings);
-
-        // Add deal context to meetings
-        preMeetings.forEach(meeting => {
-          allPreMeetings.push({
-            ...meeting,
-            deal: {
-              id: deal.id,
-              dealName: deal.dealName,
-              company: deal.company,
-              stage: deal.stage,
-              amount: deal.amount,
-              owner: deal.owner,  // Include owner in deal object
-              userDealRiskScores: deal.userDealRiskScores,  // Include risk scores
-              attachments: deal.attachments,  // Include attachments
-            },
-            contacts: deal.contacts,
-            owner: deal.owner,
-            user: {
-              userId: processedUser.userId,
-              name: processedUser.name,
-              email: processedUser.email,
-            },
-          });
-        });
-
-        postMeetings.forEach(meeting => {
-          allPostMeetings.push({
-            ...meeting,
-            deal: {
-              id: deal.id,
-              dealName: deal.dealName,
-              company: deal.company,
-              stage: deal.stage,
-              amount: deal.amount,
-              owner: deal.owner,  // Include owner in deal object
-              userDealRiskScores: deal.userDealRiskScores,  // Include risk scores
-              attachments: deal.attachments,  // Include attachments
-            },
-            contacts: deal.contacts,
-            owner: deal.owner,
-            user: {
-              userId: processedUser.userId,
-              name: processedUser.name,
-              email: processedUser.email,
-            },
-          });
-        });
+        // Add to appropriate array
+        if (isPreMeeting) {
+          allPreMeetings.push(meetingObj);
+        }
+        if (isPostMeeting) {
+          allPostMeetings.push(meetingObj);
+        }
       }
-    });
+    }
   }
 
   return { preMeetings: allPreMeetings, postMeetings: allPostMeetings };
@@ -256,7 +248,7 @@ const runAutomationJob = async () => {
             phone: deal.ownerPhone,
           },
           contacts: deal.contacts,
-          meetings: deal.meetings.map(m => ({
+          meetings: deal.meetings.map((m: any) => ({
             ...m,
             body: m.agenda,
           })),
@@ -331,7 +323,7 @@ const runAutomationJob = async () => {
     console.log(`\n✅ Job completed!`);
     console.log(`   Pre-meeting calls triggered: ${totalPreMeetings}`);
     console.log(`   Post-meeting calls triggered: ${totalPostMeetings}`);
-    console.log(`   Next run in 10 minutes\n`);
+    console.log(`   Next run in 5 minutes\n`);
 
   } catch (error) {
     console.error('❌ Error in automation job:', error);
@@ -344,15 +336,15 @@ const runAutomationJob = async () => {
 // Initialize scheduler
 export const startScheduler = () => {
   console.log('🚀 Starting automated meeting calls scheduler...');
-  console.log('⏱️  Schedule: Every 10 minutes');
+  console.log('⏱️  Schedule: Every 5 minutes');
 
-  // Run every 10 minutes: */10 * * * *
-  cron.schedule('*/10 * * * *', () => {
+  // Run every 5 minutes: */5 * * * *
+  cron.schedule('*/5 * * * *', () => {
     runAutomationJob();
   });
 
   console.log('✅ Scheduler started successfully!');
-  console.log('💡 Tip: First run will happen in 10 minutes\n');
+  console.log('💡 Tip: First run will happen in 5 minutes\n');
 
   // Optionally run immediately on startup for testing
   // Uncomment the line below to run immediately when server starts

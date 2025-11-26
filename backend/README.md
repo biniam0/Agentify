@@ -16,7 +16,7 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
 - 📞 **Automated Calls** - Pre-meeting (T-15) and post-meeting (T+5) via ElevenLabs
 - 📅 **Meeting Management** - Fetch and manage user meetings from BarrierX
 - 🤖 **AI Voice Agents** - Pre-call preparation & post-call follow-up agents
-- 🔄 **Scheduler Service** - Automated call triggering every 3 minutes
+- 🔄 **Scheduler Service** - Automated call triggering every 5 minutes
 - 🎯 **Smart Data Handling** - Real API + dummy data fallback for resilience
 - 📊 **Batch Processing** - Efficient multi-user data fetching (5x faster)
 - 🔗 **BarrierX Integration** - Real-time deal, contact, and meeting data sync
@@ -213,7 +213,7 @@ model User {
 
 ## 🔄 Scheduler Service
 
-Runs every **3 minutes** to automatically trigger calls.
+Runs every **5 minutes** to automatically trigger calls.
 
 ### 🔀 Automation Modes
 
@@ -266,7 +266,7 @@ AUTOMATION_MODE=bulk
 5. **Logs** results with detailed console output
 
 **Configuration:**
-- Interval: 3 minutes
+- Interval: 5 minutes
 - Concurrency protection: Built-in lock mechanism
 - Error handling: Continues on individual failures
 - Timeout: 60 seconds for bulk mode API calls
@@ -344,7 +344,7 @@ USE_MOCK_BARRIERX=true
 ### Testing Calls
 
 1. **Manual Trigger**: Use Pre-Call/Post-Call buttons in frontend
-2. **Scheduled Calls**: Wait for scheduler (runs every 3 minutes)
+2. **Scheduled Calls**: Wait for scheduler (runs every 5 minutes)
 3. **Webhook Testing**: Send POST to `/api/webhook/elevenlabs`
 
 ### Console Logs
