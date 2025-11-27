@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import prisma from '../config/database';
+import { config } from '../config/env';
 import * as barrierxService from './barrierxService';
 import * as meetingService from './meetingService';
 
@@ -16,6 +17,63 @@ interface Meeting extends Omit<MeetingTemplate, 'startTime' | 'endTime'> {
   startTime: string;
   endTime: string;
 }
+
+// ============================================
+// IN-MEMORY CALL TRACKING (Prevents Duplicates)
+// ============================================
+// Key format: meetingId_startTime_callType
+// This ensures:
+// - Same meeting + same time = SKIP (duplicate)
+// - Same meeting + different time (rescheduled) = ALLOW
+// ============================================
+
+interface CalledMeetingRecord {
+  calledAt: number;       // Timestamp when call was triggered
+  meetingStartTime: string; // Original meeting start time
+}
+
+// Store called meetings: key = "meetingId_startTime_callType"
+const calledMeetings = new Map<string, CalledMeetingRecord>();
+
+// Generate tracking key for a meeting call
+const getCallTrackingKey = (meetingId: string, startTime: string, callType: 'pre' | 'post'): string => {
+  return `${meetingId}_${startTime}_${callType}`;
+};
+
+// Check if a meeting call has already been triggered
+const hasBeenCalled = (meetingId: string, startTime: string, callType: 'pre' | 'post'): boolean => {
+  const key = getCallTrackingKey(meetingId, startTime, callType);
+  return calledMeetings.has(key);
+};
+
+// Mark a meeting call as triggered
+const markAsCalled = (meetingId: string, startTime: string, callType: 'pre' | 'post'): void => {
+  const key = getCallTrackingKey(meetingId, startTime, callType);
+  calledMeetings.set(key, {
+    calledAt: Date.now(),
+    meetingStartTime: startTime,
+  });
+  console.log(`       📝 Marked as called: ${key}`);
+};
+
+// Cleanup old entries (meetings that started more than 1 hour ago)
+const cleanupOldEntries = (): void => {
+  const oneHourAgo = Date.now() - (60 * 60 * 1000);
+  let cleanedCount = 0;
+  
+  calledMeetings.forEach((record, key) => {
+    const meetingTime = new Date(record.meetingStartTime).getTime();
+    // Remove if meeting started more than 1 hour ago
+    if (meetingTime < oneHourAgo) {
+      calledMeetings.delete(key);
+      cleanedCount++;
+    }
+  });
+  
+  if (cleanedCount > 0) {
+    console.log(`🧹 Cleaned up ${cleanedCount} old call tracking entries`);
+  }
+};
 
 // Helper function to replace time placeholders with actual timestamps
 const processTimeTemplates = (timeStr: string): string => {
@@ -40,101 +98,95 @@ const processTimeTemplates = (timeStr: string): string => {
   return timeStr;
 };
 
-// Helper function to filter meetings based on T-15 and T+5 logic
-const filterMeetingsByTime = (meetings: Meeting[]): { preMeetings: Meeting[]; postMeetings: Meeting[] } => {
-  const now = Date.now();
-  const preMeetings: Meeting[] = [];
-  const postMeetings: Meeting[] = [];
 
-  meetings.forEach(meeting => {
-    const startTime = new Date(meeting.startTime).getTime();
-    const endTime = new Date(meeting.endTime).getTime();
-
-    // T-15: Meetings starting within next 15 minutes
-    const isUpcomingWithin15 = startTime >= now && startTime <= (now + 15 * 60 * 1000);
-
-    // T+5: Meetings that ended within last 5 minutes
-    const endedWithin5 = endTime >= (now - 5 * 60 * 1000) && endTime <= now;
-
-    if (isUpcomingWithin15) {
-      preMeetings.push(meeting);
-    }
-
-    if (endedWithin5) {
-      postMeetings.push(meeting);
-    }
-  });
-
-  return { preMeetings, postMeetings };
-};
-
-// Process user data and filter meetings
+// Process user data and filter meetings (OPTIMIZED)
 const processUserMeetings = (userData: any) => {
-  const processedUser = JSON.parse(JSON.stringify(userData)); // Deep clone
-  let allPreMeetings: any[] = [];
-  let allPostMeetings: any[] = [];
+  const allPreMeetings: any[] = [];
+  const allPostMeetings: any[] = [];
 
-  if (processedUser.deals) {
-    processedUser.deals.forEach((deal: any) => {
-      if (deal.meetings) {
-        // Process time templates
-        const meetings = deal.meetings.map((meeting: MeetingTemplate) => ({
+  // Early exit if no deals
+  if (!userData.deals || userData.deals.length === 0) {
+    return { preMeetings: allPreMeetings, postMeetings: allPostMeetings };
+  }
+
+  // ✅ Cache time values - calculate once, reuse for all meetings
+  const now = Date.now();
+  const fifteenMinutesFromNow = now + 15 * 60 * 1000;
+  const fiveMinutesAgo = now - 5 * 60 * 1000;
+
+  // Cache user info to avoid repeated access
+  const userInfo = {
+    userId: userData.userId,
+    name: userData.name,
+    email: userData.email,
+    tenantSlug: userData.tenantSlug, // Include tenant slug for ElevenLabs
+  };
+
+  // ✅ Use for loop for better performance (faster than forEach)
+  for (let i = 0; i < userData.deals.length; i++) {
+    const deal = userData.deals[i];
+
+    // ✅ Early exit - skip deals with no meetings
+    if (!deal.meetings || deal.meetings.length === 0) {
+      continue;
+    }
+
+    // Pre-build deal context once for this deal (if needed)
+    let dealContext: any = null;
+
+    // ✅ Single-pass filtering - check conditions as we iterate
+    for (let j = 0; j < deal.meetings.length; j++) {
+      const meeting = deal.meetings[j];
+
+      // Process time templates
+      const startTimeStr = processTimeTemplates(meeting.startTime);
+      const endTimeStr = processTimeTemplates(meeting.endTime);
+      const startTime = new Date(startTimeStr).getTime();
+      const endTime = new Date(endTimeStr).getTime();
+
+      // Check for pre-meeting (T-15: upcoming within next 15 minutes)
+      const isPreMeeting = startTime >= now && startTime <= fifteenMinutesFromNow;
+
+      // Check for post-meeting (T+5: ended within last 5 minutes)
+      const isPostMeeting = endTime >= fiveMinutesAgo && endTime <= now;
+
+      // ✅ Filter before building - only create objects for matching meetings
+      if (isPreMeeting || isPostMeeting) {
+        // Lazy initialization of dealContext (only when we have a match)
+        if (!dealContext) {
+          dealContext = {
+            id: deal.id,
+            dealName: deal.dealName,
+            company: deal.company,
+            stage: deal.stage,
+            amount: deal.amount,
+            owner: deal.owner,
+            tenantSlug: deal.tenantSlug,  // Include tenant slug for ElevenLabs webhook
+            userDealRiskScores: deal.userDealRiskScores,
+            attachments: deal.attachments,
+          };
+        }
+
+        // Build meeting object
+        const meetingObj = {
           ...meeting,
-          startTime: processTimeTemplates(meeting.startTime),
-          endTime: processTimeTemplates(meeting.endTime),
-        }));
+          startTime: startTimeStr,
+          endTime: endTimeStr,
+          deal: dealContext,
+          contacts: deal.contacts,
+          owner: deal.owner,
+          user: userInfo,
+        };
 
-        // Filter meetings by T-15 and T+5
-        const { preMeetings, postMeetings } = filterMeetingsByTime(meetings);
-
-        // Add deal context to meetings
-        preMeetings.forEach(meeting => {
-          allPreMeetings.push({
-            ...meeting,
-            deal: {
-              id: deal.id,
-              dealName: deal.dealName,
-              company: deal.company,
-              stage: deal.stage,
-              amount: deal.amount,
-              owner: deal.owner,  // Include owner in deal object
-              userDealRiskScores: deal.userDealRiskScores,  // Include risk scores
-              attachments: deal.attachments,  // Include attachments
-            },
-            contacts: deal.contacts,
-            owner: deal.owner,
-            user: {
-              userId: processedUser.userId,
-              name: processedUser.name,
-              email: processedUser.email,
-            },
-          });
-        });
-
-        postMeetings.forEach(meeting => {
-          allPostMeetings.push({
-            ...meeting,
-            deal: {
-              id: deal.id,
-              dealName: deal.dealName,
-              company: deal.company,
-              stage: deal.stage,
-              amount: deal.amount,
-              owner: deal.owner,  // Include owner in deal object
-              userDealRiskScores: deal.userDealRiskScores,  // Include risk scores
-              attachments: deal.attachments,  // Include attachments
-            },
-            contacts: deal.contacts,
-            owner: deal.owner,
-            user: {
-              userId: processedUser.userId,
-              name: processedUser.name,
-              email: processedUser.email,
-            },
-          });
-        });
+        // Add to appropriate array
+        if (isPreMeeting) {
+          allPreMeetings.push(meetingObj);
+        }
+        if (isPostMeeting) {
+          allPostMeetings.push(meetingObj);
+        }
       }
-    });
+    }
   }
 
   return { preMeetings: allPreMeetings, postMeetings: allPostMeetings };
@@ -158,40 +210,83 @@ const runAutomationJob = async () => {
   try {
     console.log('\n🔄 Running automated meeting calls job...');
     console.log('⏰ Time:', new Date().toISOString());
+    console.log(`🔧 Automation Mode: ${config.automation.mode}`);
+    console.log(`📊 Tracked calls in memory: ${calledMeetings.size}`);
 
-    // Fetch authenticated and enabled users from database
-    const authenticatedUsers = await prisma.user.findMany({
-      where: {
-        isAuth: true,
-        isEnabled: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        barrierxUserId: true,
-        tenantSlug: true,
-      },
-    });
+    // Cleanup old call tracking entries
+    cleanupOldEntries();
 
-    console.log(`👥 Found ${authenticatedUsers.length} authenticated and enabled users`);
+    let dealsMap: Map<string, any[]>;
+    let usersToProcess: Array<{ id: string; name: string; email: string; barrierxUserId: string; tenantSlug: string }> = [];
 
-    if (authenticatedUsers.length === 0) {
-      console.log('⚠️  No authenticated users found. Skipping...');
-      return;
+    if (config.automation.mode === 'bulk') {
+      // 🌟 NEW: Bulk mode - fetch ALL users and deals in ONE call (no user_ids = wildcard)
+      console.log('🌐 Bulk mode: Fetching ALL tenants and users...');
+
+      dealsMap = await barrierxService.getAllDealsWildcard();
+
+      if (dealsMap.size === 0) {
+        console.log('⚠️  No deals found in bulk mode. Skipping...');
+        return;
+      }
+
+      console.log(`👥 Bulk mode: Processing ${dealsMap.size} users from external API`);
+
+      // In bulk mode, we don't have DB users, so create minimal user objects
+      // The actual user data will be in the deals (owner info from transformed deal)
+      dealsMap.forEach((deals, barrierxUserId) => {
+        if (deals.length > 0) {
+          // Use deal owner info as user data (from transformed Deal properties)
+          const firstDeal = deals[0];
+          usersToProcess.push({
+            id: barrierxUserId, // Using barrierxUserId as ID
+            name: firstDeal.ownerName || 'Unknown User',
+            email: firstDeal.ownerEmail || 'unknown@example.com',
+            barrierxUserId: barrierxUserId,
+            tenantSlug: firstDeal.tenantSlug || 'unknown', // Get tenant from deal
+          });
+        }
+      });
+
+    } else {
+      // EXISTING: Authenticated mode - use database users
+      console.log('👥 Authenticated mode: Fetching users from database...');
+
+      const authenticatedUsers = await prisma.user.findMany({
+        where: {
+          isAuth: true,
+          isEnabled: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          barrierxUserId: true,
+          tenantSlug: true,
+        },
+      });
+
+      console.log(`👥 Found ${authenticatedUsers.length} authenticated and enabled users`);
+
+      if (authenticatedUsers.length === 0) {
+        console.log('⚠️  No authenticated users found. Skipping...');
+        return;
+      }
+
+      usersToProcess = authenticatedUsers;
+
+      // Batch fetch all users' deals
+      const userIds = authenticatedUsers.map(u => u.barrierxUserId);
+
+      console.log(`📦 Batch fetching deals for ${userIds.length} users...`);
+      dealsMap = await barrierxService.getBatchUserDeals(userIds);
     }
 
     let totalPreMeetings = 0;
     let totalPostMeetings = 0;
 
-    // Batch fetch all users' deals at once (more efficient!)
-    const userIds = authenticatedUsers.map(u => u.barrierxUserId);
-    
-    console.log(`📦 Batch fetching deals for all ${userIds.length} users...`);
-    const dealsMap = await barrierxService.getBatchUserDeals(userIds);
-    
-    // Process each authenticated user
-    for (const dbUser of authenticatedUsers) {
+    // Process each user
+    for (const dbUser of usersToProcess) {
       const deals = dealsMap.get(dbUser.barrierxUserId);
 
       if (!deals || deals.length === 0) {
@@ -214,9 +309,13 @@ const runAutomationJob = async () => {
           owner: {
             name: deal.ownerName,
             phone: deal.ownerPhone,
+            email: deal.ownerEmail,
+            id: deal.ownerHubspotId,        // HubSpot owner ID for webhook
+            hubspotId: deal.ownerHubspotId, // Alias for compatibility
           },
+          tenantSlug: deal.tenantSlug,      // Pass tenant slug for each deal
           contacts: deal.contacts,
-          meetings: deal.meetings.map(m => ({
+          meetings: deal.meetings.map((m: any) => ({
             ...m,
             body: m.agenda,
           })),
@@ -235,6 +334,12 @@ const runAutomationJob = async () => {
       if (preMeetings.length > 0) {
         console.log(`  📞 ${preMeetings.length} pre-meeting call(s) to trigger:`);
         for (const meeting of preMeetings) {
+          // Check if this meeting has already been called
+          if (hasBeenCalled(meeting.id, meeting.startTime, 'pre')) {
+            console.log(`     ⏭️  SKIP: ${meeting.title} (already called for this time slot)`);
+            continue;
+          }
+
           console.log(`     - ${meeting.title} (starts at ${new Date(meeting.startTime).toLocaleTimeString()})`);
 
           try {
@@ -252,6 +357,8 @@ const runAutomationJob = async () => {
               contacts: meeting.contacts,
             });
 
+            // Mark as called to prevent duplicates
+            markAsCalled(meeting.id, meeting.startTime, 'pre');
             totalPreMeetings++;
           } catch (error) {
             console.error(`       ❌ Failed to trigger call for ${meeting.title}`);
@@ -263,6 +370,12 @@ const runAutomationJob = async () => {
       if (postMeetings.length > 0) {
         console.log(`  📞 ${postMeetings.length} post-meeting call(s) to trigger:`);
         for (const meeting of postMeetings) {
+          // Check if this meeting has already been called
+          if (hasBeenCalled(meeting.id, meeting.startTime, 'post')) {
+            console.log(`     ⏭️  SKIP: ${meeting.title} (already called for this time slot)`);
+            continue;
+          }
+
           console.log(`     - ${meeting.title} (ended at ${new Date(meeting.endTime).toLocaleTimeString()})`);
 
           try {
@@ -280,6 +393,8 @@ const runAutomationJob = async () => {
               contacts: meeting.contacts,
             });
 
+            // Mark as called to prevent duplicates
+            markAsCalled(meeting.id, meeting.startTime, 'post');
             totalPostMeetings++;
           } catch (error) {
             console.error(`       ❌ Failed to trigger call for ${meeting.title}`);
@@ -291,7 +406,7 @@ const runAutomationJob = async () => {
     console.log(`\n✅ Job completed!`);
     console.log(`   Pre-meeting calls triggered: ${totalPreMeetings}`);
     console.log(`   Post-meeting calls triggered: ${totalPostMeetings}`);
-    console.log(`   Next run in 10 minutes\n`);
+    console.log(`   Next run in 5 minutes\n`);
 
   } catch (error) {
     console.error('❌ Error in automation job:', error);
@@ -304,15 +419,15 @@ const runAutomationJob = async () => {
 // Initialize scheduler
 export const startScheduler = () => {
   console.log('🚀 Starting automated meeting calls scheduler...');
-  console.log('⏱️  Schedule: Every 10 minutes');
+  console.log('⏱️  Schedule: Every 5 minutes');
 
-  // Run every 10 minutes: */10 * * * *
-  cron.schedule('*/10 * * * *', () => {
+  // Run every 5 minutes: */5 * * * *
+  cron.schedule('*/5 * * * *', () => {
     runAutomationJob();
   });
 
   console.log('✅ Scheduler started successfully!');
-  console.log('💡 Tip: First run will happen in 10 minutes\n');
+  console.log('💡 Tip: First run will happen in 5 minutes\n');
 
   // Optionally run immediately on startup for testing
   // Uncomment the line below to run immediately when server starts

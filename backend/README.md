@@ -16,7 +16,7 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
 - 📞 **Automated Calls** - Pre-meeting (T-15) and post-meeting (T+5) via ElevenLabs
 - 📅 **Meeting Management** - Fetch and manage user meetings from BarrierX
 - 🤖 **AI Voice Agents** - Pre-call preparation & post-call follow-up agents
-- 🔄 **Scheduler Service** - Automated call triggering every 3 minutes
+- 🔄 **Scheduler Service** - Automated call triggering every 5 minutes
 - 🎯 **Smart Data Handling** - Real API + dummy data fallback for resilience
 - 📊 **Batch Processing** - Efficient multi-user data fetching (5x faster)
 - 🔗 **BarrierX Integration** - Real-time deal, contact, and meeting data sync
@@ -72,6 +72,11 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
    BARRIERX_BASE_URL="https://platform.barrierx.ai"
    BARRIERX_API_KEY="bx_live_YOUR_API_KEY"
    USE_MOCK_BARRIERX=false  # Set to 'true' for development with mock data
+   
+   # Automation Mode Configuration
+   AUTOMATION_MODE=bulk                    # Options: 'authenticated' | 'bulk'
+   DEAL_UPDATE_WINDOW_DAYS=60              # Only fetch deals updated in last 60 days (reduces payload ~67%)
+   # TARGET_TENANT_SLUGS=agent-call        # Optional: comma-separated tenant slugs (leave empty for all)
    
    # ElevenLabs Integration
    ELEVENLABS_API_KEY="your_elevenlabs_api_key"
@@ -209,10 +214,52 @@ model User {
 
 ## 🔄 Scheduler Service
 
-Runs every **3 minutes** to automatically trigger calls:
+Runs every **5 minutes** to automatically trigger calls.
 
-1. **Fetches** all authenticated & enabled users from database
-2. **Batch fetches** their deals/meetings from BarrierX (1 API call for all users)
+### 🔀 Automation Modes
+
+The scheduler supports **two modes** controlled by `AUTOMATION_MODE`:
+
+#### **1. Authenticated Mode** (Default)
+- Uses **database users** (logged in via frontend)
+- Requires users to authenticate first
+- Processes only enabled users
+- Best for: User-specific, permission-based workflows
+
+```env
+AUTOMATION_MODE=authenticated
+```
+
+**Flow:**
+1. Fetch authenticated & enabled users from database
+2. Batch fetch their deals from BarrierX using user IDs
+3. Process meetings for each user
+
+#### **2. Bulk Mode** (Wildcard) ⭐ NEW
+- Fetches **ALL users** from **ALL tenants** in **ONE API call**
+- No database or login required
+- Automatic user discovery
+- Best for: Backend-only deployment, automated systems
+
+```env
+AUTOMATION_MODE=bulk
+# TARGET_TENANT_SLUGS=agent-call,morphyn  # Optional: filter specific tenants
+```
+
+**Flow:**
+1. Single API call: `GET /api/external/tenants/bulk` (no `user_ids` param)
+2. Returns ALL tenants + ALL deals + ALL users
+3. Process meetings for all discovered users
+
+**Advantages of Bulk Mode:**
+- ✅ **87.5% fewer API calls** (1 call vs 8 calls)
+- ✅ **No user onboarding** required
+- ✅ **Always fresh data** from source of truth
+- ✅ **Auto-discovery** of new tenants/users
+- ✅ **Simpler deployment** (backend-only)
+
+### 📋 Processing Steps (Both Modes)
+
 3. **Filters** meetings:
    - **Pre-call**: Meetings starting in 13-17 minutes (T-15 ±2 min buffer)
    - **Post-call**: Meetings ended 3-7 minutes ago (T+5 ±2 min buffer)
@@ -220,9 +267,10 @@ Runs every **3 minutes** to automatically trigger calls:
 5. **Logs** results with detailed console output
 
 **Configuration:**
-- Interval: 3 minutes
+- Interval: 5 minutes
 - Concurrency protection: Built-in lock mechanism
 - Error handling: Continues on individual failures
+- Timeout: 60 seconds for bulk mode API calls
 
 ---
 
@@ -297,7 +345,7 @@ USE_MOCK_BARRIERX=true
 ### Testing Calls
 
 1. **Manual Trigger**: Use Pre-Call/Post-Call buttons in frontend
-2. **Scheduled Calls**: Wait for scheduler (runs every 3 minutes)
+2. **Scheduled Calls**: Wait for scheduler (runs every 5 minutes)
 3. **Webhook Testing**: Send POST to `/api/webhook/elevenlabs`
 
 ### Console Logs

@@ -13,9 +13,25 @@ import {
 } from './dummyDataGenerators';
 
 /**
+ * Debug flag for transformer logs - set to true to enable verbose logging
+ */
+const DEBUG_TRANSFORMERS = false;
+
+/**
  * Default phone number to use when owner phone is not available
  */
 const DEFAULT_PHONE = '+251914373107';
+
+/**
+ * Format phone number by removing hyphens, spaces, and parentheses
+ * Keeps the + sign for international format
+ * Example: "+251-914373107" → "+251914373107"
+ */
+const formatPhoneNumber = (phone: string): string => {
+  if (!phone) return phone;
+  // Remove hyphens, spaces, and parentheses, but keep the + sign
+  return phone.replace(/[-\s()]/g, '');
+};
 
 /**
  * Transform a single BarrierX tenant's deals to AgentX Deal format
@@ -58,6 +74,9 @@ const transformSingleDeal = (deal: any, userId: string, tenant: any): Deal => {
     ownerId: userId,
     ownerName: owner.name,
     ownerPhone: owner.phone,
+    ownerEmail: owner.email,
+    ownerHubspotId: owner.hubspotId,
+    tenantSlug: tenant?.slug || tenant?.name || 'unknown',
     contacts,
     meetings,
     summary: deal.summary || `Deal: ${deal.dealName}`,
@@ -72,7 +91,7 @@ const transformSingleDeal = (deal: any, userId: string, tenant: any): Deal => {
  */
 const transformContacts = (deal: any): Contact[] => {
   if (!deal.contacts || deal.contacts.length === 0) {
-    console.log(`  📝 No contacts for deal ${deal.id}, generating dummy data`);
+    if (DEBUG_TRANSFORMERS) console.log(`  📝 No contacts for deal ${deal.id}, generating dummy data`);
     return generateDummyContacts(deal);
   }
 
@@ -92,7 +111,7 @@ const transformContacts = (deal: any): Contact[] => {
  */
 const transformMeetings = (deal: any, contacts: Contact[]): Meeting[] => {
   if (!deal.meetings || deal.meetings.length === 0) {
-    console.log(`  📅 No meetings for deal ${deal.id}, generating dummy data`);
+    if (DEBUG_TRANSFORMERS) console.log(`  📅 No meetings for deal ${deal.id}, generating dummy data`);
     // return generateDummyMeetings(deal, contacts);
     return []
   }
@@ -120,7 +139,7 @@ const transformMeetings = (deal: any, contacts: Contact[]): Meeting[] => {
  */
 const transformRiskScores = (deal: any): any => {
   if (!deal.userDealRiskScores) {
-    console.log(`  ⚠️  No risk scores for deal ${deal.id}, generating dummy data`);
+    if (DEBUG_TRANSFORMERS) console.log(`  ⚠️  No risk scores for deal ${deal.id}, generating dummy data`);
     return generateDummyRiskScores(deal);
   }
 
@@ -129,7 +148,7 @@ const transformRiskScores = (deal: any): any => {
   const totalRisk = deal.userDealRiskScores.totalDealRisk;
 
   if (status === 'calculating' || status === 'pending' || totalRisk === 0) {
-    console.log(`  ⚠️  Risk calculation ${status} for deal ${deal.id}, using dummy data`);
+    if (DEBUG_TRANSFORMERS) console.log(`  ⚠️  Risk calculation ${status} for deal ${deal.id}, using dummy data`);
     return generateDummyRiskScores(deal);
   }
 
@@ -142,26 +161,35 @@ const transformRiskScores = (deal: any): any => {
  * Provides sensible defaults if owner info is missing
  * Uses default phone number if not available
  */
-const transformOwner = (deal: any): { name: string; phone: string; id?: string } => {
+const transformOwner = (deal: any): {
+  name: string;
+  phone: string;
+  email: string;
+  hubspotId?: string;
+} => {
   const ownerName = deal.owner?.name || 'Unknown Owner';
-  const ownerId = deal.owner?.hubspotId || deal.owner?.id || deal.ownerId;
-  const ownerPhone = deal.owner?.phone || DEFAULT_PHONE;
+  const ownerEmail = deal.owner?.email || '';
+  const ownerHubspotId = deal.owner?.hubspotId || deal.owner?.id || deal.ownerId;
+  const ownerPhone = formatPhoneNumber(deal.owner?.phone || DEFAULT_PHONE);
 
   // Debug logging for owner data
-  if (deal.owner) {
+  if (DEBUG_TRANSFORMERS && deal.owner) {
     console.log(`  👤 Owner data for deal ${deal.id}:`, JSON.stringify({
       name: deal.owner.name,
+      email: deal.owner.email,
       hubspotId: deal.owner.hubspotId,
       id: deal.owner.id,
-      phone: deal.owner.phone || `(using default: ${DEFAULT_PHONE})`,
-      extracted_ownerId: ownerId
+      phone_raw: deal.owner.phone || `(using default: ${DEFAULT_PHONE})`,
+      phone_formatted: ownerPhone,
+      extracted_hubspotId: ownerHubspotId
     }, null, 2));
   }
 
   return {
     name: ownerName,
     phone: ownerPhone,
-    id: ownerId,
+    email: ownerEmail,
+    hubspotId: ownerHubspotId,
   };
 };
 
@@ -187,10 +215,7 @@ const determineStatus = (meeting: any): 'scheduled' | 'in_progress' | 'completed
 
 /**
  * Transform bulk tenant response to user-deals map
- * Maps multiple tenants to their respective users
- * 
- * Note: Since BarrierX API doesn't return members array consistently,
- * we assign all tenant deals to all requesting users.
+ * Maps each deal to its actual owner based on deal.owner.hubspotId
  */
 export const transformBulkResponse = (
   tenantsData: any[],
@@ -209,12 +234,21 @@ export const transformBulkResponse = (
 
     console.log(`  📦 Processing ${tenant.deals.length} deals from tenant ${tenant.name || tenant.slug}`);
 
-    // Since members array is not available, assign all deals to all users
-    // Each user will see all deals from all tenants they have access to
-    userIds.forEach(userId => {
-      const deals = transformBarrierXDeals(tenant, userId);
-      const existingDeals = dealsMap.get(userId) || [];
-      dealsMap.set(userId, [...existingDeals, ...deals]);
+    // Map each deal to its actual owner
+    tenant.deals.forEach((deal: any) => {
+      const ownerId = deal.owner?.hubspotId;
+
+      if (!ownerId) {
+        if (DEBUG_TRANSFORMERS) console.log(`    ⚠️  Deal ${deal.id} (${deal.dealName}) has no owner.hubspotId, skipping...`);
+        return;
+      }
+
+      // Only process deals for users we're tracking
+      if (dealsMap.has(ownerId)) {
+        const transformedDeal = transformSingleDeal(deal, ownerId, tenant);
+        const existingDeals = dealsMap.get(ownerId) || [];
+        dealsMap.set(ownerId, [...existingDeals, transformedDeal]);
+      }
     });
   });
 

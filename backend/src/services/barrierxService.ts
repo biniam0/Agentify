@@ -8,9 +8,9 @@ import mockUsersDataJson from '../data/mockUsers.json';
 import { generateDummyRecommendations } from './barrierx/dummyDataGenerators';
 
 export interface Tenant {
-    id: string;
+  id: string;
   slug: string;
-    name: string;
+  name: string;
 }
 
 export interface BarrierXLoginResponse {
@@ -49,6 +49,9 @@ export interface Deal {
   ownerId: string;
   ownerName: string;
   ownerPhone?: string;
+  ownerEmail?: string;
+  ownerHubspotId?: string;
+  tenantSlug?: string;
   contacts: Contact[];
   meetings: Meeting[];
   summary?: string;
@@ -155,6 +158,7 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
           user_ids: userId,
           include_deals: true,
           include_members: false,
+          sync_engagements: true,
           page: 1,
           limit: 100,
         },
@@ -224,6 +228,7 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
           user_ids: userIds.join(','),  // Comma-separated
           include_deals: true,
           include_members: true,
+          sync_engagements: true,
           page: 1,
           limit: 500,  // Max allowed
         },
@@ -268,6 +273,114 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
         })
       );
       return dealsMap;
+    }
+
+    return new Map();
+  }
+};
+
+/**
+ * Get ALL deals from ALL tenants and ALL users in ONE call
+ * Uses wildcard approach (no user_ids parameter) to fetch everything
+ * Perfect for bulk automation mode
+ */
+export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
+  // Use mock data if flag is enabled
+  if (config.barrierx.useMockData) {
+    console.log(`🔧 Using MOCK data for wildcard request`);
+    // For mock, just return empty map or all mock users
+    return new Map();
+  }
+
+  try {
+    // 🔥 OPTIMIZATION: Only fetch deals updated in last X days (default: 60)
+    // This reduces payload by ~67% while still catching all active deals
+    const updateWindowDays = config.automation.dealUpdateWindowDays;
+    const dealUpdatedSince = new Date(Date.now() - updateWindowDays * 24 * 60 * 60 * 1000).toISOString();
+
+    console.log(`🌐 Fetching deals updated in last ${updateWindowDays} days (since ${dealUpdatedSince})...`);
+
+    const response = await axios.get(
+      `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
+      {
+        params: {
+          // 🌟 NO user_ids = wildcard "give me everything"!
+          // 🔥 BUT filter by update time to reduce payload
+          deal_updated_since: dealUpdatedSince,
+
+          // Inclusion settings
+          include_deals: true,
+          include_members: false,  // Don't need members - we get users from deal owners
+          sync_engagements: true,
+
+          // Pagination
+          page: 1,
+          limit: 1000,  // Max limit for large datasets
+        },
+        headers: {
+          'Authorization': `Bearer ${config.barrierx.apiKey}`,
+          'Accept': 'application/json',
+        },
+        timeout: 30000,  // 30 seconds (reduced from 60s due to smaller payload)
+      }
+    );
+
+    if (!response.data.ok || !response.data.tenants) {
+      console.error('❌ Wildcard bulk API failed');
+      return new Map();
+    }
+
+    const tenants = response.data.tenants;
+    console.log(`✅ Got ${tenants.length} tenants with wildcard`);
+    console.log(`📊 Total tenants in system: ${response.data.total || response.data.count || tenants.length}`);
+
+    // Filter tenants if TARGET_TENANT_SLUGS is specified
+    const filteredTenants = config.automation.targetTenants.length > 0
+      ? tenants.filter((t: any) => config.automation.targetTenants.includes(t.slug))
+      : tenants;
+
+    if (filteredTenants.length < tenants.length) {
+      console.log(`🎯 Filtered to ${filteredTenants.length} target tenants: ${config.automation.targetTenants.join(', ')}`);
+    }
+
+    // Extract all unique user IDs from deal owners across all tenants
+    const allUserIds = new Set<string>();
+    let totalDeals = 0;
+
+    filteredTenants.forEach((tenant: any) => {
+      if (tenant.deals) {
+        totalDeals += tenant.deals.length;
+        tenant.deals.forEach((deal: any) => {
+          if (deal.owner?.hubspotId) {
+            allUserIds.add(deal.owner.hubspotId);
+          }
+        });
+      }
+    });
+
+    console.log(`👥 Found ${allUserIds.size} unique users from deal owners`);
+    console.log(`📦 Total deals across all tenants: ${totalDeals}`);
+
+    // Transform bulk response
+    const { transformBulkResponse } = await import('./barrierx/dataTransformers');
+    const dealsMap = transformBulkResponse(filteredTenants, Array.from(allUserIds));
+
+    console.log(`✅ Wildcard fetch complete: ${dealsMap.size} users mapped`);
+
+    // Log summary per user
+    dealsMap.forEach((deals, userId) => {
+      console.log(`   User ${userId.substring(0, 12)}...: ${deals.length} deals`);
+    });
+
+    return dealsMap;
+
+  } catch (error: any) {
+    console.error('❌ Wildcard bulk API error:', error.response?.data || error.message);
+
+    // Fallback to mock data in development
+    if (config.nodeEnv === 'development') {
+      console.log(`🔧 Falling back to MOCK data for wildcard request`);
+      return new Map();
     }
 
     return new Map();
@@ -502,225 +615,72 @@ export const createCompany = async (payload: {
 }): Promise<{ success: boolean; companyId: string }> => {
   await new Promise(resolve => setTimeout(resolve, 300));
 
-    return {
-      success: true,
+  return {
+    success: true,
     companyId: `company-${Date.now()}`,
   };
 };
 
 // Get risks for a specific deal
+// Returns simple mock risks until BarrierX API provides real risk data
 export const getRisks = async (dealId: string): Promise<{
   success: boolean;
   dealId: string;
   risks: Array<{ category: string; score: number; description: string }>;
 }> => {
-  await new Promise(resolve => setTimeout(resolve, 200));
+  // Simple mock risks - useful for ElevenLabs agent context
+  const mockRisks = [
+    {
+      category: 'Champion',
+      score: 6,
+      description: 'Champion engagement needs improvement. Consider scheduling a direct touchpoint with the decision maker.',
+    },
+    {
+      category: 'Timeline',
+      score: 5,
+      description: 'Deal velocity is tracking slightly behind schedule. Monitor the close date and create urgency.',
+    },
+    {
+      category: 'Competition',
+      score: 4,
+      description: 'Competitive activity detected in this account. Be prepared to differentiate your solution.',
+    },
+  ];
 
-  // Find deal in mockUsers.json to get risk scores
-  const typedMockUsers = mockUsersDataJson as { [key: string]: any };
-  let dealRiskScores = null;
-
-  // Search through all users to find the deal
-  for (const userId in typedMockUsers) {
-    const userData = typedMockUsers[userId];
-    const deal = userData.deals?.find((d: any) => d.id === dealId);
-    if (deal) {
-      dealRiskScores = deal.userDealRiskScores;
-      break;
-    }
-  }
-
-  // Generate risks based on scores
-  const risks = [];
-
-  if (dealRiskScores) {
-    const subRisks = dealRiskScores.subCategoryRisk || {};
-
-    // Competition Risks
-    if (subRisks.CompetitionRisks > 10) {
-      risks.push({
-        category: 'CompetitionRisks',
-        score: subRisks.CompetitionRisks,
-        description: `High competition risk detected with score of ${subRisks.CompetitionRisks}. Multiple competitors identified in the deal.`,
-      });
-    } else if (subRisks.CompetitionRisks > 5) {
-      risks.push({
-        category: 'CompetitionRisks',
-        score: subRisks.CompetitionRisks,
-        description: `Moderate competition risk (score: ${subRisks.CompetitionRisks}). Some competitive pressure exists.`,
-      });
-    }
-
-    // Champion Risks
-    if (subRisks.ChampionRisks > 10) {
-      risks.push({
-        category: 'ChampionRisks',
-        score: subRisks.ChampionRisks,
-        description: `Champion engagement is low (score: ${subRisks.ChampionRisks}). Limited contact with key decision maker.`,
-      });
-    } else if (subRisks.ChampionRisks > 5) {
-      risks.push({
-        category: 'ChampionRisks',
-        score: subRisks.ChampionRisks,
-        description: `Champion engagement needs attention (score: ${subRisks.ChampionRisks}).`,
-      });
-    }
-
-    // Contractual/Legal Risks
-    if (subRisks.ContractualLegalRisks > 5) {
-      risks.push({
-        category: 'ContractualLegalRisks',
-        score: subRisks.ContractualLegalRisks,
-        description: `Contract review pending with risk score ${subRisks.ContractualLegalRisks}. Legal concerns may delay closure.`,
-      });
-    }
-
-    // Deal Velocity
-    if (subRisks.DealVelocity > 5) {
-      risks.push({
-        category: 'DealVelocity',
-        score: subRisks.DealVelocity,
-        description: `Deal velocity is slower than expected (score: ${subRisks.DealVelocity}). Timeline may be at risk.`,
-      });
-    }
-  }
-
-  // Fill with defaults if less than 3 risks
-  while (risks.length < 3) {
-    if (risks.length === 0) {
-      risks.push({
-        category: 'General',
-        score: 0,
-        description: 'Deal is tracking well with minimal risks identified. All key metrics are positive.',
-      });
-    } else {
-      risks.push({
-        category: 'General',
-        score: 0,
-        description: 'No additional significant risks detected at this time.',
-      });
-    }
-  }
-
-    return {
-      success: true,
+  return {
+    success: true,
     dealId,
-    risks: risks.slice(0, 3),
+    risks: mockRisks,
   };
 };
 
 // Get recommendations for a specific deal
+// Returns simple mock recommendations until BarrierX API provides real data
 export const getRecommendations = async (dealId: string): Promise<{
   success: boolean;
   dealId: string;
   recommendations: Array<{ action: string; priority: string }>;
 }> => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-
-  // Find deal in mockUsers.json to get risk scores and deal data
-  const typedMockUsers = mockUsersDataJson as { [key: string]: any };
-  let dealRiskScores = null;
-  let dealData = null;
-
-  // Search through all users to find the deal
-  for (const userId in typedMockUsers) {
-    const userData = typedMockUsers[userId];
-    const deal = userData.deals?.find((d: any) => d.id === dealId);
-    if (deal) {
-      dealRiskScores = deal.userDealRiskScores;
-      dealData = deal;
-      break;
-    }
-  }
-
-  // Generate recommendations based on risks
-  const recommendations: Array<{ action: string; priority: string }> = [];
-
-  if (dealRiskScores) {
-    const subRisks = dealRiskScores.subCategoryRisk || {};
-
-    // Competition-based recommendations
-    if (subRisks.CompetitionRisks > 10) {
-      recommendations.push({
-        action: 'Schedule competitive analysis call with champion and prepare differentiation materials.',
-        priority: 'high',
-      });
-    } else if (subRisks.CompetitionRisks > 5) {
-      recommendations.push({
-        action: 'Highlight unique value propositions and schedule product comparison session.',
-        priority: 'medium',
-      });
-    }
-
-    // Champion-based recommendations
-    if (subRisks.ChampionRisks > 10) {
-      recommendations.push({
-        action: 'Increase touchpoints with champion and schedule one-on-one executive briefing.',
-        priority: 'high',
-      });
-    } else if (subRisks.ChampionRisks > 5) {
-      recommendations.push({
-        action: 'Build stronger relationship through regular check-ins and value demonstrations.',
-        priority: 'medium',
-      });
-    }
-
-    // Contractual recommendations
-    if (subRisks.ContractualLegalRisks > 5) {
-      recommendations.push({
-        action: 'Engage legal teams early and provide contract redlines for faster review.',
-        priority: 'high',
-      });
-    }
-
-    // Velocity recommendations
-    if (subRisks.DealVelocity > 5) {
-      recommendations.push({
-        action: 'Create urgency through limited-time offers and expedite decision-making process.',
-        priority: 'medium',
-      });
-    }
-
-    // Arena/Control recommendations
-    if (dealRiskScores.arenaRisk > 10) {
-      recommendations.push({
-        action: 'Conduct comprehensive deal review and adjust strategy accordingly.',
-        priority: 'high',
-      });
-    }
-  }
-
-  // If no recommendations from risks, use dummy generator
-  if (recommendations.length === 0 && dealData) {
-    console.log(`  📝 No recommendations from risk scores, generating dummy recommendations for deal ${dealId}`);
-    const dummyRecs = generateDummyRecommendations(dealData);
-    dummyRecs.forEach(rec => {
-      recommendations.push({
-        action: rec,
-        priority: 'medium',
-      });
-    });
-  }
-
-  // Fill with generic defaults if still less than 3
-  while (recommendations.length < 3) {
-    if (recommendations.length === 0) {
-      recommendations.push({
-        action: 'Continue with standard sales process and maintain regular communication cadence.',
-        priority: 'low',
-      });
-    } else {
-      recommendations.push({
-        action: 'Proceed with planned next steps and monitor deal progress closely.',
-        priority: 'low',
-      });
-    }
-  }
+  // Simple mock recommendations - actionable items for the sales rep
+  const mockRecommendations = [
+    {
+      action: 'Confirm meeting attendance and prepare your key talking points before the call.',
+      priority: 'high',
+    },
+    {
+      action: 'Review recent customer communications and deal history to stay informed.',
+      priority: 'medium',
+    },
+    {
+      action: 'Prepare answers for potential objections and have clear next steps ready.',
+      priority: 'medium',
+    },
+  ];
 
   return {
     success: true,
     dealId,
-    recommendations: recommendations.slice(0, 3),
+    recommendations: mockRecommendations,
   };
 };
 

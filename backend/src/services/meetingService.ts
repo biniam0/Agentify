@@ -12,6 +12,7 @@ interface Deal {
   stage: string;
   amount: number;
   summary?: string;
+  tenantSlug?: string;  // Tenant slug for webhook calls
   userDealRiskScores?: any;
   attachments?: Array<{ id: string; name?: string; url?: string }>;
 }
@@ -33,10 +34,11 @@ interface User {
 
 interface Owner {
   id?: string;
+  hubspotId?: string;  // HubSpot owner ID
   name: string;
-  email: string;
+  email?: string;
   phone: string;
-  avatar: string;
+  avatar?: string;
 }
 
 interface PreCallPayload {
@@ -83,21 +85,34 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
 
     // Prepare dynamic variables for ElevenLabs
     const dynamicVariables = {
+      // Meeting context
       customer_name: customer?.name || dealData.company || 'the prospect',
       company_name: dealData.company || 'their company',
       meeting_time: formatMeetingTime(meetingData.startTime),
+      meeting_title: meetingData.title || 'Upcoming Meeting',
+      
+      // Deal context
       dealId: dealData.id,
+      deal_name: dealData.dealName || 'Deal',
       deal_value: dealData.amount?.toString() || 'TBD',
       deal_stage: dealData.stage || 'early stage',
+      deal_summary: dealData.summary || '',
+      
+      // Risk & Action recommendations
       risk_1: risks[0]?.description || 'No risks identified',
       risk_2: risks[1]?.description || '',
       risk_3: risks[2]?.description || '',
       action_1: recommendations[0]?.action || 'Proceed with standard process',
       action_2: recommendations[1]?.action || '',
       action_3: recommendations[2]?.action || '',
+      
+      // Owner (sales rep) context
+      owner_name: dealData.owner?.name || userData.name || 'Sales Rep',
+      owner_email: dealData.owner?.email || userData.email || '',
+      
       // ⭐ Required for note/meeting creation via webhook
-      hubspot_owner_id: dealData.owner?.id || ownerPhone,
-      tenant_slug: userData.tenantSlug || 'agent-call',
+      hubspot_owner_id: dealData.owner?.hubspotId || dealData.owner?.id || '',
+      tenant_slug: dealData.tenantSlug || userData.tenantSlug || 'unknown',
     };
 
     // Debug log critical webhook values
@@ -176,19 +191,28 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
 
     // Prepare dynamic variables for ElevenLabs (post-call needs meeting context)
     const dynamicVariables = {
+      // Meeting context (just completed)
       customer_name: dealData.company || customer?.name || 'the prospect',
-      deal_id: dealData.id,
-      hubspot_owner_id: dealData.owner?.id || ownerPhone,
       meeting_title: meetingData.title || 'Recent Meeting',
       meeting_date: new Date(meetingData.startTime).toLocaleDateString(),
       meeting_time: new Date(meetingData.startTime).toLocaleTimeString(),
       meeting_attendees: contacts?.map(c => c.name || c.email).join(', ') || 'No attendees listed',
+      
+      // Deal context
+      dealId: dealData.id,
+      deal_id: dealData.id,
       deal_name: dealData.dealName || 'Deal',
       deal_stage: dealData.stage || 'Unknown',
-      deal_amount: dealData.amount || 'Not specified',
+      deal_amount: dealData.amount?.toString() || 'Not specified',
+      deal_summary: dealData.summary || '',
+      
+      // Owner (sales rep) context
+      owner_name: dealData.owner?.name || userData.name || 'Sales Rep',
+      owner_email: dealData.owner?.email || userData.email || '',
+      
       // ⭐ Required for note/meeting creation via webhook
-      dealId: dealData.id,
-      tenant_slug: userData.tenantSlug || 'agent-call',
+      hubspot_owner_id: dealData.owner?.hubspotId || dealData.owner?.id || '',
+      tenant_slug: dealData.tenantSlug || userData.tenantSlug || 'unknown',
     };
 
     // Debug log critical webhook values
