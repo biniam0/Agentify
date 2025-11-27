@@ -18,6 +18,63 @@ interface Meeting extends Omit<MeetingTemplate, 'startTime' | 'endTime'> {
   endTime: string;
 }
 
+// ============================================
+// IN-MEMORY CALL TRACKING (Prevents Duplicates)
+// ============================================
+// Key format: meetingId_startTime_callType
+// This ensures:
+// - Same meeting + same time = SKIP (duplicate)
+// - Same meeting + different time (rescheduled) = ALLOW
+// ============================================
+
+interface CalledMeetingRecord {
+  calledAt: number;       // Timestamp when call was triggered
+  meetingStartTime: string; // Original meeting start time
+}
+
+// Store called meetings: key = "meetingId_startTime_callType"
+const calledMeetings = new Map<string, CalledMeetingRecord>();
+
+// Generate tracking key for a meeting call
+const getCallTrackingKey = (meetingId: string, startTime: string, callType: 'pre' | 'post'): string => {
+  return `${meetingId}_${startTime}_${callType}`;
+};
+
+// Check if a meeting call has already been triggered
+const hasBeenCalled = (meetingId: string, startTime: string, callType: 'pre' | 'post'): boolean => {
+  const key = getCallTrackingKey(meetingId, startTime, callType);
+  return calledMeetings.has(key);
+};
+
+// Mark a meeting call as triggered
+const markAsCalled = (meetingId: string, startTime: string, callType: 'pre' | 'post'): void => {
+  const key = getCallTrackingKey(meetingId, startTime, callType);
+  calledMeetings.set(key, {
+    calledAt: Date.now(),
+    meetingStartTime: startTime,
+  });
+  console.log(`       📝 Marked as called: ${key}`);
+};
+
+// Cleanup old entries (meetings that started more than 1 hour ago)
+const cleanupOldEntries = (): void => {
+  const oneHourAgo = Date.now() - (60 * 60 * 1000);
+  let cleanedCount = 0;
+  
+  calledMeetings.forEach((record, key) => {
+    const meetingTime = new Date(record.meetingStartTime).getTime();
+    // Remove if meeting started more than 1 hour ago
+    if (meetingTime < oneHourAgo) {
+      calledMeetings.delete(key);
+      cleanedCount++;
+    }
+  });
+  
+  if (cleanedCount > 0) {
+    console.log(`🧹 Cleaned up ${cleanedCount} old call tracking entries`);
+  }
+};
+
 // Helper function to replace time placeholders with actual timestamps
 const processTimeTemplates = (timeStr: string): string => {
   const now = Date.now();
@@ -154,6 +211,10 @@ const runAutomationJob = async () => {
     console.log('\n🔄 Running automated meeting calls job...');
     console.log('⏰ Time:', new Date().toISOString());
     console.log(`🔧 Automation Mode: ${config.automation.mode}`);
+    console.log(`📊 Tracked calls in memory: ${calledMeetings.size}`);
+
+    // Cleanup old call tracking entries
+    cleanupOldEntries();
 
     let dealsMap: Map<string, any[]>;
     let usersToProcess: Array<{ id: string; name: string; email: string; barrierxUserId: string; tenantSlug: string }> = [];
@@ -273,6 +334,12 @@ const runAutomationJob = async () => {
       if (preMeetings.length > 0) {
         console.log(`  📞 ${preMeetings.length} pre-meeting call(s) to trigger:`);
         for (const meeting of preMeetings) {
+          // Check if this meeting has already been called
+          if (hasBeenCalled(meeting.id, meeting.startTime, 'pre')) {
+            console.log(`     ⏭️  SKIP: ${meeting.title} (already called for this time slot)`);
+            continue;
+          }
+
           console.log(`     - ${meeting.title} (starts at ${new Date(meeting.startTime).toLocaleTimeString()})`);
 
           try {
@@ -290,6 +357,8 @@ const runAutomationJob = async () => {
               contacts: meeting.contacts,
             });
 
+            // Mark as called to prevent duplicates
+            markAsCalled(meeting.id, meeting.startTime, 'pre');
             totalPreMeetings++;
           } catch (error) {
             console.error(`       ❌ Failed to trigger call for ${meeting.title}`);
@@ -301,6 +370,12 @@ const runAutomationJob = async () => {
       if (postMeetings.length > 0) {
         console.log(`  📞 ${postMeetings.length} post-meeting call(s) to trigger:`);
         for (const meeting of postMeetings) {
+          // Check if this meeting has already been called
+          if (hasBeenCalled(meeting.id, meeting.startTime, 'post')) {
+            console.log(`     ⏭️  SKIP: ${meeting.title} (already called for this time slot)`);
+            continue;
+          }
+
           console.log(`     - ${meeting.title} (ended at ${new Date(meeting.endTime).toLocaleTimeString()})`);
 
           try {
@@ -318,6 +393,8 @@ const runAutomationJob = async () => {
               contacts: meeting.contacts,
             });
 
+            // Mark as called to prevent duplicates
+            markAsCalled(meeting.id, meeting.startTime, 'post');
             totalPostMeetings++;
           } catch (error) {
             console.error(`       ❌ Failed to trigger call for ${meeting.title}`);
