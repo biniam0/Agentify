@@ -5,6 +5,24 @@ import { formatMeetingTime } from '../utils/riskGenerator';
 import * as barrierxService from './barrierxService';
 import { Contact } from './barrierxService';
 
+/**
+ * Get phone number ID for tenant with fallback
+ * @param tenantPhoneNumberId - The tenant's phone_number_id (may be undefined/null/empty)
+ * @returns Valid phone number ID (tenant's or default fallback)
+ */
+const getPhoneNumberId = (tenantPhoneNumberId?: string): string => {
+  // Default/fallback phone number ID
+  const DEFAULT_PHONE_NUMBER_ID = 'phnum_5201kbbbevf8f9aspsmsbedkj7cb';
+
+  // Use tenant's phone_number_id if valid, otherwise use default
+  if (tenantPhoneNumberId && tenantPhoneNumberId.trim() !== '') {
+    return tenantPhoneNumberId;
+  }
+
+  console.log('       ℹ️  No tenant phone_number_id, using default:', DEFAULT_PHONE_NUMBER_ID);
+  return DEFAULT_PHONE_NUMBER_ID;
+};
+
 interface Deal {
   id: string;
   dealName: string;
@@ -46,6 +64,7 @@ interface PreCallPayload {
   dealData: Deal & { owner?: Owner };
   userData: User;
   contacts: Contact[];
+  tenantPhoneNumberId?: string;  // Tenant's ElevenLabs phone number ID
 }
 
 interface PostCallPayload {
@@ -53,6 +72,7 @@ interface PostCallPayload {
   dealData: Deal & { owner?: Owner };
   userData: User;
   contacts: Contact[];
+  tenantPhoneNumberId?: string;  // Tenant's ElevenLabs phone number ID
 }
 
 /**
@@ -90,14 +110,14 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       company_name: dealData.company || 'their company',
       meeting_time: formatMeetingTime(meetingData.startTime),
       meeting_title: meetingData.title || 'Upcoming Meeting',
-      
+
       // Deal context
       dealId: dealData.id,
       deal_name: dealData.dealName || 'Deal',
       deal_value: dealData.amount?.toString() || 'TBD',
       deal_stage: dealData.stage || 'early stage',
       deal_summary: dealData.summary || '',
-      
+
       // Risk & Action recommendations
       risk_1: risks[0]?.description || 'No risks identified',
       risk_2: risks[1]?.description || '',
@@ -105,11 +125,11 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       action_1: recommendations[0]?.action || 'Proceed with standard process',
       action_2: recommendations[1]?.action || '',
       action_3: recommendations[2]?.action || '',
-      
+
       // Owner (sales rep) context
       owner_name: dealData.owner?.name || userData.name || 'Sales Rep',
       owner_email: dealData.owner?.email || userData.email || '',
-      
+
       // ⭐ Required for note/meeting creation via webhook
       hubspot_owner_id: dealData.owner?.hubspotId || dealData.owner?.id || '',
       tenant_slug: dealData.tenantSlug || userData.tenantSlug || 'unknown',
@@ -134,8 +154,8 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       'https://api.elevenlabs.io/v1/convai/twilio/outbound-call',
       {
         agent_id: config.elevenlabs.preAgentId,
-        agent_phone_number_id: config.elevenlabs.phoneNumberId,
-        to_number: ownerPhone,  // Call the OWNER (sales rep), not customer
+        agent_phone_number_id: getPhoneNumberId(payload.tenantPhoneNumberId),
+        to_number: ownerPhone,  // Call the OWNER (sales rep)
         conversation_initiation_client_data: {
           dynamic_variables: dynamicVariables,
         },
@@ -156,7 +176,7 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       console.log(`       ⚠️  ElevenLabs call may have failed - missing IDs`);
       console.log(`       📋 Full response:`, JSON.stringify(response.data, null, 2));
     } else {
-      console.log(`       ✅ ElevenLabs POST-CALL initiated successfully!`);
+      console.log(`       ✅ ElevenLabs PRE-CALL initiated successfully!`);
       console.log(`       📞 Calling: ${ownerPhone}`);
       console.log(`       📞 Conversation ID: ${conversationId}`);
       console.log(`       📞 Twilio Call SID: ${callSid}`);
@@ -197,7 +217,7 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
       meeting_date: new Date(meetingData.startTime).toLocaleDateString(),
       meeting_time: new Date(meetingData.startTime).toLocaleTimeString(),
       meeting_attendees: contacts?.map(c => c.name || c.email).join(', ') || 'No attendees listed',
-      
+
       // Deal context
       dealId: dealData.id,
       deal_id: dealData.id,
@@ -205,11 +225,11 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
       deal_stage: dealData.stage || 'Unknown',
       deal_amount: dealData.amount?.toString() || 'Not specified',
       deal_summary: dealData.summary || '',
-      
+
       // Owner (sales rep) context
       owner_name: dealData.owner?.name || userData.name || 'Sales Rep',
       owner_email: dealData.owner?.email || userData.email || '',
-      
+
       // ⭐ Required for note/meeting creation via webhook
       hubspot_owner_id: dealData.owner?.hubspotId || dealData.owner?.id || '',
       tenant_slug: dealData.tenantSlug || userData.tenantSlug || 'unknown',
@@ -234,7 +254,7 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
       'https://api.elevenlabs.io/v1/convai/twilio/outbound-call',
       {
         agent_id: config.elevenlabs.postAgentId,
-        agent_phone_number_id: config.elevenlabs.phoneNumberId,
+        agent_phone_number_id: getPhoneNumberId(payload.tenantPhoneNumberId),
         to_number: ownerPhone,  // Call the OWNER (sales rep), not customer
         conversation_initiation_client_data: {
           dynamic_variables: dynamicVariables,
