@@ -5,6 +5,7 @@ import * as barrierxService from '../services/barrierxService';
 import { config } from '../config/env';
 import { verifyElevenLabsSignature } from '../utils/webhookVerification';
 import { CLIENT_RENEG_LIMIT } from 'tls';
+import { handleCallInitiationFailure, markCallAsSuccessful } from '../services/callRetryService';
 
 export const handleElevenLabsWebhook = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -28,6 +29,33 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
 
     const { type, event_timestamp, data } = req.body;
 
+    // Handle call initiation failures (for retry logic)
+    if (type === 'call_initiation_failed') {
+      console.log(`\n📞 Call initiation FAILED webhook received`);
+      console.log(`   ❌ Failure Reason: ${data?.failure_reason}`);
+      console.log(`   📞 Phone: ${data?.metadata?.phone_call?.external_number || 'Unknown'}`);
+      console.log(`   🤖 Agent ID: ${data?.agent_id}`);
+
+      // Save failure webhook for debugging
+      try {
+        const filePath = join(__dirname, '../../webhooks', 'elevenlabs-call-failure-latest.json');
+        await writeFile(filePath, JSON.stringify(req.body, null, 2), 'utf-8');
+        console.log(`   💾 Failure webhook saved to: elevenlabs-call-failure-latest.json`);
+      } catch (saveError) {
+        console.error('   ⚠️  Failed to save failure webhook:', saveError);
+      }
+
+      // Process retry logic (only retries on "no-answer")
+      await handleCallInitiationFailure(req.body);
+
+      res.status(200).json({
+        received: true,
+        type: 'call_initiation_failed',
+        failure_reason: data?.failure_reason,
+        retry_enabled: config.callRetry.enabled,
+      });
+      return;
+    }
 
     if (!data) {
       res.status(400).json({ error: 'Invalid webhook payload' });
@@ -143,6 +171,11 @@ Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
 
     // Optional: Create contact if new contact info is detected
     // Optional: Update deal if needed
+
+    // Mark call as successful to clear any pending retries
+    if (calledNumber && agentId && type === 'conversation.ended') {
+      markCallAsSuccessful(calledNumber, agentId);
+    }
 
     console.log('✅ Webhook processed successfully\n');
 

@@ -14,6 +14,7 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
 
 - 🔐 **Hybrid Authentication** - AgentX JWT (7-day) + BarrierX tokens (1-hour)
 - 📞 **Automated Calls** - Pre-meeting (T-15) and post-meeting (T+5) via ElevenLabs
+- 🔄 **Smart Call Retry** - Auto-retry on no-answer (3 attempts, 1 min interval)
 - 📅 **Meeting Management** - Fetch and manage user meetings from BarrierX
 - 🤖 **AI Voice Agents** - Pre-call preparation & post-call follow-up agents
 - 🔄 **Scheduler Service** - Automated call triggering every 5 minutes
@@ -84,6 +85,11 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
    ELEVENLABS_AGENT_ID_POST="your_post_call_agent_id"
    ELEVENLABS_PHONE_NUMBER_ID="your_phone_number_id"
    ELEVENLABS_WEBHOOK_SECRET="your_webhook_secret"
+   
+   # Call Retry (when user doesn't answer)
+   ENABLE_CALL_RETRY=true                # Enable/disable auto-retry
+   CALL_RETRY_MAX_ATTEMPTS=3             # Total attempts (default: 3)
+   CALL_RETRY_INTERVAL_MS=60000          # Interval between retries (default: 1 min)
    ```
 
 3. **Setup database:**
@@ -174,10 +180,13 @@ Content-Type: application/json
 
 ### Webhooks
 
-**ElevenLabs Webhook** (receives call completion data)
+**ElevenLabs Webhook** (receives call completion & failure data)
 ```http
 POST /api/webhook/elevenlabs
 ```
+Handles:
+- `conversation.ended` - Call completed, creates HubSpot note
+- `call_initiation_failed` - Call failed, triggers retry on "no-answer"
 
 **ElevenLabs Server Tools**
 ```http

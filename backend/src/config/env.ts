@@ -23,6 +23,11 @@ export const config = {
     phoneNumberId: process.env.ELEVENLABS_PHONE_NUMBER_ID || '',
     webhookSecret: process.env.ELEVENLABS_WEBHOOK_SECRET || '',
   },
+  callRetry: {
+    enabled: process.env.ENABLE_CALL_RETRY === 'true',
+    maxAttempts: parseInt(process.env.CALL_RETRY_MAX_ATTEMPTS || '3'),
+    intervalMs: parseInt(process.env.CALL_RETRY_INTERVAL_MS || '60000'), // 1 minute default
+  },
   automation: {
     // Toggle between 'authenticated' (DB users) or 'bulk' (all users from API)
     mode: (process.env.AUTOMATION_MODE || 'authenticated') as 'authenticated' | 'bulk',
