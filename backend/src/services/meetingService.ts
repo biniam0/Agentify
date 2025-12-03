@@ -122,9 +122,9 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       risk_1: risks[0]?.description || 'No risks identified',
       risk_2: risks[1]?.description || '',
       risk_3: risks[2]?.description || '',
-      action_1: recommendations[0]?.action || 'Proceed with standard process',
-      action_2: recommendations[1]?.action || '',
-      action_3: recommendations[2]?.action || '',
+      action_1: recommendations[0]?.note || 'Proceed with standard process',
+      action_2: recommendations[1]?.note || '',
+      action_3: recommendations[2]?.note || '',
 
       // Owner (sales rep) context
       owner_name: dealData.owner?.name || userData.name || 'Sales Rep',
