@@ -151,6 +151,8 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
   try {
     console.log(`🌐 Fetching deals from BarrierX for user: ${userId}`);
 
+    const startTime = Date.now();
+    
     const response = await axios.get(
       `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
       {
@@ -170,16 +172,18 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
       }
     );
 
+    const durationSeconds = ((Date.now() - startTime) / 1000).toFixed(2);
+
     if (!response.data.ok || !response.data.tenants?.length) {
-      console.log(`⚠️  No tenants found for user ${userId}, using mock data`);
+      console.log(`⚠️  No tenants found for user ${userId} (took ${durationSeconds}s)`);
       return mockGetUserDeals(userId);
     }
 
     // Transform BarrierX format to AgentX format
     const { transformBarrierXDeals } = await import('./barrierx/dataTransformers');
     const deals = transformBarrierXDeals(response.data.tenants[0], userId);
-
-    console.log(`✅ Successfully fetched ${deals.length} deals for user ${userId}`);
+    
+    console.log(`✅ Successfully fetched ${deals.length} deals for user ${userId} in ${durationSeconds}s`);
     return deals;
 
   } catch (error: any) {
@@ -221,6 +225,8 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
   try {
     console.log(`🌐 Batch fetching deals for ${userIds.length} users from BarrierX`);
 
+    const startTime = Date.now();
+    
     const response = await axios.get(
       `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
       {
@@ -240,8 +246,10 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
       }
     );
 
+    const durationSeconds = ((Date.now() - startTime) / 1000).toFixed(2);
+
     if (!response.data.ok || !response.data.tenants) {
-      console.log(`⚠️  Batch API returned no tenants, using mock data`);
+      console.log(`⚠️  Batch API returned no tenants (took ${durationSeconds}s)`);
       const dealsMap = new Map<string, Deal[]>();
       await Promise.all(
         userIds.map(async (id) => {
@@ -255,8 +263,8 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
     // Transform bulk response
     const { transformBulkResponse } = await import('./barrierx/dataTransformers');
     const dealsMap = transformBulkResponse(response.data.tenants, userIds);
-
-    console.log(`✅ Successfully batch fetched deals for ${dealsMap.size} users`);
+    
+    console.log(`✅ Successfully batch fetched deals for ${dealsMap.size} users in ${durationSeconds}s`);
     return dealsMap;
 
   } catch (error: any) {
@@ -300,6 +308,8 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
 
     console.log(`🌐 Fetching deals updated in last ${updateWindowDays} days (since ${dealUpdatedSince})...`);
 
+    const startTime = Date.now();
+    
     const response = await axios.get(
       `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
       {
@@ -321,9 +331,14 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
           'Accept': 'application/json',
         },
-        timeout: 30000,  // 30 seconds (reduced from 60s due to smaller payload)
+        timeout: 120000,  // 2 minutes (increased for sync_engagements)
       }
     );
+
+    const endTime = Date.now();
+    const durationSeconds = ((endTime - startTime) / 1000).toFixed(2);
+    
+    console.log(`⏱️  Bulk fetch completed in ${durationSeconds} seconds`);
 
     if (!response.data.ok || !response.data.tenants) {
       console.error('❌ Wildcard bulk API failed');
