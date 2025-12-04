@@ -5,24 +5,6 @@ import { formatMeetingTime } from '../utils/riskGenerator';
 import * as barrierxService from './barrierxService';
 import { Contact } from './barrierxService';
 
-/**
- * Get phone number ID for tenant with fallback
- * @param tenantPhoneNumberId - The tenant's phone_number_id (may be undefined/null/empty)
- * @returns Valid phone number ID (tenant's or default fallback)
- */
-const getPhoneNumberId = (tenantPhoneNumberId?: string): string => {
-  // Default/fallback phone number ID
-  const DEFAULT_PHONE_NUMBER_ID = 'phnum_5201kbbbevf8f9aspsmsbedkj7cb';
-
-  // Use tenant's phone_number_id if valid, otherwise use default
-  if (tenantPhoneNumberId && tenantPhoneNumberId.trim() !== '') {
-    return tenantPhoneNumberId;
-  }
-
-  console.log('       ℹ️  No tenant phone_number_id, using default:', DEFAULT_PHONE_NUMBER_ID);
-  return DEFAULT_PHONE_NUMBER_ID;
-};
-
 interface Deal {
   id: string;
   dealName: string;
@@ -149,12 +131,20 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       return { success: true, mock: true };
     }
 
+    // Use ElevenLabs phone number ID from env
+    const phoneNumberId = config.elevenlabs.phoneNumberId;
+
+    if (!phoneNumberId) {
+      console.log('       ⚠️  ELEVENLABS_PHONE_NUMBER_ID not configured in env, skipping PRE-CALL');
+      return { success: false, error: 'No phone_number_id configured' };
+    }
+
     // Make actual ElevenLabs API call
     const response = await axios.post(
       'https://api.elevenlabs.io/v1/convai/twilio/outbound-call',
       {
         agent_id: config.elevenlabs.preAgentId,
-        agent_phone_number_id: getPhoneNumberId(payload.tenantPhoneNumberId),
+        agent_phone_number_id: phoneNumberId,
         to_number: ownerPhone,  // Call the OWNER (sales rep)
         conversation_initiation_client_data: {
           dynamic_variables: dynamicVariables,
@@ -249,12 +239,20 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
       return { success: true, mock: true };
     }
 
+    // Use ElevenLabs phone number ID from env
+    const phoneNumberId = config.elevenlabs.phoneNumberId;
+
+    if (!phoneNumberId) {
+      console.log('       ⚠️  ELEVENLABS_PHONE_NUMBER_ID not configured in env, skipping POST-CALL');
+      return { success: false, error: 'No phone_number_id configured' };
+    }
+
     // Make actual ElevenLabs API call
     const response = await axios.post(
       'https://api.elevenlabs.io/v1/convai/twilio/outbound-call',
       {
         agent_id: config.elevenlabs.postAgentId,
-        agent_phone_number_id: getPhoneNumberId(payload.tenantPhoneNumberId),
+        agent_phone_number_id: phoneNumberId,
         to_number: ownerPhone,  // Call the OWNER (sales rep), not customer
         conversation_initiation_client_data: {
           dynamic_variables: dynamicVariables,
