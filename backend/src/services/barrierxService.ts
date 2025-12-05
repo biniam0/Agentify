@@ -670,25 +670,51 @@ export const getRisks = async (dealId: string): Promise<{
 };
 
 // Get recommendations for a specific deal
-// Returns simple mock recommendations until BarrierX API provides real data
+// Returns mock recommendations that mirror the BarrierX recommendation structure
 export const getRecommendations = async (dealId: string): Promise<{
   success: boolean;
   dealId: string;
-  recommendations: Array<{ action: string; priority: string }>;
+  recommendations: Array<{
+    note: string;
+    title: string;
+    severity: string;
+    isAssigned: boolean;
+    indicatorId: string;
+    isCompleted: boolean;
+  }>;
 }> => {
-  // Simple mock recommendations - actionable items for the sales rep
   const mockRecommendations = [
     {
-      action: 'Confirm meeting attendance and prepare your key talking points before the call.',
-      priority: 'high',
+      note: 'Schedule a meeting with the economic buyer to explicitly confirm their budget approval authority and understand the complete approval process for the deal amount.',
+      title: 'Confirm Economic Buyer Budget Authority',
+      severity: 'Critical',
+      isAssigned: false,
+      indicatorId: 'mock-indicator-1',
+      isCompleted: false,
     },
     {
-      action: 'Review recent customer communications and deal history to stay informed.',
-      priority: 'medium',
+      note: 'Work with your champion to demonstrate their ability to secure budget commitments by preparing a business case that shows clear ROI and aligns with the economic buyer’s priorities.',
+      title: 'Secure Budget Commitment from Champion',
+      severity: 'Critical',
+      isAssigned: false,
+      indicatorId: 'mock-indicator-2',
+      isCompleted: false,
     },
     {
-      action: 'Prepare answers for potential objections and have clear next steps ready.',
-      priority: 'medium',
+      note: 'Document formal budget and resource commitments from the economic buyer and implementation team, ensuring all stakeholders are aligned on the target close date.',
+      title: 'Obtain Formal Budget and Resource Commitments',
+      severity: 'Critical',
+      isAssigned: false,
+      indicatorId: 'mock-indicator-3',
+      isCompleted: false,
+    },
+    {
+      note: 'Address all unresolved commercial terms in the contract that could delay the target close date, focusing on the most critical blockers first.',
+      title: 'Resolve Unresolved Commercial Terms',
+      severity: 'High',
+      isAssigned: false,
+      indicatorId: 'mock-indicator-4',
+      isCompleted: false,
     },
   ];
 
