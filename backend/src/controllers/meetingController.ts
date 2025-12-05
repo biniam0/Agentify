@@ -125,6 +125,7 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
         amount: deal.amount,
         owner: {
           id: deal.ownerId,
+          hubspotId: deal.ownerHubspotId,
           name: deal.ownerName,
           phone: deal.ownerPhone || '',
           email: dbUser.email,
@@ -230,6 +231,7 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
         amount: deal.amount,
         owner: {
           id: deal.ownerId,
+          hubspotId: deal.ownerHubspotId,
           name: deal.ownerName,
           phone: deal.ownerPhone || '',
           email: dbUser.email,

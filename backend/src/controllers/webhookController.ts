@@ -379,6 +379,41 @@ export const handleCreateMeeting = async (req: Request, res: Response): Promise<
     console.log(`  📅 Formatted Start Time: ${formattedStartTime}`);
     console.log(`  📅 Formatted End Time: ${formattedEndTime}`);
 
+    // Validate that owner ID is numeric (HubSpot format, not UUID)
+    if (!hubspot_owner_id || !/^\d+$/.test(hubspot_owner_id)) {
+      console.error('❌ Invalid HubSpot owner ID format:', hubspot_owner_id);
+      res.status(400).json({
+        success: false,
+        error: 'Invalid HubSpot owner ID: must be numeric',
+        received: { hubspot_owner_id },
+        expected_format: 'Numeric string (e.g., "84362397")',
+        note: 'Do not use UUID format (e.g., "b7a7c13d-..."). Use the numeric HubSpot owner ID from dynamic variables.',
+      });
+      return;
+    }
+
+    // Validate that end time is after start time (no zero-duration meetings)
+    const startMs = new Date(formattedStartTime).getTime();
+    const endMs = new Date(formattedEndTime).getTime();
+    const durationMinutes = (endMs - startMs) / 60000;
+
+    if (durationMinutes <= 0) {
+      console.error('❌ Invalid meeting duration: end time must be after start time');
+      res.status(400).json({
+        success: false,
+        error: 'Invalid meeting duration: end time must be after start time',
+        received: {
+          start: formattedStartTime,
+          end: formattedEndTime,
+          durationMinutes: durationMinutes.toFixed(2),
+        },
+        note: 'HubSpot requires meetings to have a positive duration.',
+      });
+      return;
+    }
+
+    console.log(`  ✅ Validation passed: Duration is ${durationMinutes.toFixed(0)} minutes`);
+
     // Create meeting in HubSpot via BarrierX
     console.log('🚀 Calling BarrierX to create meeting in HubSpot...');
     const result = await barrierxService.createMeetingEngagement({
