@@ -16,7 +16,340 @@ model User {
   tenantSlug     String
   isAuth         Boolean @default(false)
   isEnabled      Boolean @default(true)
+  role           UserRole @default(USER)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// LOGGING MODELS
+// ============================================
+
+// Activity Log - Master table for all backend activities
+model ActivityLog {
+  id String @id @default(uuid())
+  
+  // Core fields
+  activityType ActivityType
+  status       Status       @default(PENDING)
+  
+  // User & Context
+  userId       String?
+  userName     String?
+  userEmail    String?
+  
+  // Related entities
+  dealId       String?
+  dealName     String?
+  meetingId    String?
+  meetingTitle String?
+  conversationId String?
+  callSid      String?
+  
+  // Metadata
+  metadata     Json?
+  errorMessage String?
+  errorStack   String?      @db.Text
+  
+  // Performance tracking
+  duration     Int?
+  
+  // Timestamps
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  completedAt  DateTime?
+  
+  @@index([userId])
+  @@index([activityType])
+  @@index([status])
+  @@index([dealId])
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+// Call Log - Detailed call tracking
+model CallLog {
+  id String @id @default(uuid())
+  
+  // Call identification
+  conversationId String?    @unique
+  callSid        String?
+  callType       CallType
+  
+  // User & Deal context
+  userId         String
+  userName       String
+  userEmail      String
+  dealId         String
+  dealName       String
+  meetingId      String
+  meetingTitle   String
+  
+  // Call details
+  phoneNumber    String
+  ownerName      String?
+  agentId        String?
+  
+  // Trigger context
+  triggerSource  TriggerSource
+  triggerUserId  String?
+  
+  // Status & Timing
+  status         CallStatus @default(INITIATED)
+  initiatedAt    DateTime   @default(now())
+  answeredAt     DateTime?
+  completedAt    DateTime?
+  duration       Int?
+  
+  // Call outcome
+  callSuccessful Boolean?
+  failureReason  String?
+  transcriptSummary String? @db.Text
+  
+  // Retry tracking
+  retryAttempt   Int        @default(1)
+  maxRetries     Int        @default(3)
+  parentCallId   String?
+  
+  // Metadata
+  dynamicVariables Json?
+  webhookData      Json?
+  
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  
+  @@index([userId])
+  @@index([dealId])
+  @@index([callType])
+  @@index([status])
+  @@index([conversationId])
+  @@index([initiatedAt])
+}
+
+// CRM Action Log - Notes, Meetings, Contacts created via AI
+model CrmActionLog {
+  id String @id @default(uuid())
+  
+  // Action type
+  actionType     CrmActionType
+  
+  // Context
+  conversationId String?
+  dealId         String?
+  tenantSlug     String
+  ownerId        String
+  
+  // Action details
+  entityId       String?
+  title          String?
+  body           String?       @db.Text
+  
+  // Status
+  status         Status        @default(PENDING)
+  errorMessage   String?
+  
+  // Metadata
+  metadata       Json?
+  
+  // Timestamps
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  completedAt    DateTime?
+  
+  @@index([actionType])
+  @@index([status])
+  @@index([dealId])
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+// Webhook Log - All incoming webhooks
+model WebhookLog {
+  id String @id @default(uuid())
+  
+  // Webhook identification
+  webhookType   WebhookType
+  eventType     String
+  
+  // Context
+  conversationId String?
+  agentId        String?
+  
+  // Status
+  status         Status        @default(SUCCESS)
+  processingTime Int?
+  errorMessage   String?
+  
+  // Data
+  payload        Json
+  response       Json?
+  
+  // Headers (for security audit)
+  signature      String?
+  signatureValid Boolean?
+  
+  createdAt      DateTime      @default(now())
+  
+  @@index([webhookType])
+  @@index([eventType])
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+// Scheduler Log - Track automated runs
+model SchedulerLog {
+  id String @id @default(uuid())
+  
+  // Run details
+  jobType        SchedulerJobType
+  status         Status           @default(RUNNING)
+  
+  // Results
+  totalUsers     Int?
+  preCallsTriggered  Int?
+  postCallsTriggered Int?
+  errorsCount    Int?
+  
+  // Performance
+  startedAt      DateTime     @default(now())
+  completedAt    DateTime?
+  duration       Int?
+  
+  // Details
+  errorMessage   String?
+  metadata       Json?
+  
+  @@index([jobType])
+  @@index([status])
+  @@index([startedAt])
+}
+
+// Error Log - Centralized error tracking
+model ErrorLog {
+  id String @id @default(uuid())
+  
+  // Error context
+  errorType      ErrorType
+  severity       Severity
+  source         String
+  
+  // Error details
+  message        String
+  stack          String?      @db.Text
+  code           String?
+  
+  // Context
+  userId         String?
+  dealId         String?
+  endpoint       String?
+  method         String?
+  
+  // Request/Response
+  requestData    Json?
+  responseData   Json?
+  
+  // Resolution
+  isResolved     Boolean      @default(false)
+  resolvedAt     DateTime?
+  resolvedBy     String?
+  resolution     String?      @db.Text
+  
+  createdAt      DateTime     @default(now())
+  
+  @@index([errorType])
+  @@index([severity])
+  @@index([isResolved])
+  @@index([createdAt])
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum ActivityType {
+  USER_LOGIN
+  TOKEN_REFRESH
+  PRE_CALL_TRIGGER
+  POST_CALL_TRIGGER
+  NOTE_CREATED
+  MEETING_CREATED
+  CONTACT_CREATED
+  DEAL_CREATED
+  CALL_RETRY
+  WEBHOOK_RECEIVED
+  SCHEDULER_RUN
+  DATA_FETCH
+}
+
+enum Status {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum CallType {
+  PRE_CALL
+  POST_CALL
+}
+
+enum CallStatus {
+  INITIATED
+  RINGING
+  ANSWERED
+  COMPLETED
+  FAILED
+  NO_ANSWER
+  BUSY
+}
+
+enum TriggerSource {
+  MANUAL
+  SCHEDULED
+  RETRY
+  WEBHOOK
+}
+
+enum CrmActionType {
+  NOTE
+  MEETING
+  CONTACT
+  DEAL
+}
+
+enum WebhookType {
+  ELEVENLABS_CALL
+  ELEVENLABS_TOOL
+  BARRIERX
+}
+
+enum SchedulerJobType {
+  MEETING_AUTOMATION
+  CLEANUP
+  RETRY
+  HEALTH_CHECK
+}
+
+enum ErrorType {
+  API_ERROR
+  DATABASE_ERROR
+  EXTERNAL_SERVICE
+  VALIDATION_ERROR
+  AUTHENTICATION_ERROR
+  AUTHORIZATION_ERROR
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }

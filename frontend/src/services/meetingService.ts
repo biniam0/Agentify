@@ -33,33 +33,25 @@ export const triggerPostCall = async (
   return response.data;
 };
 
-// Admin trigger functions
+// Admin trigger functions - send complete data
 export const adminTriggerPreCall = async (
-  meetingId: string,
-  dealId: string,
-  ownerBarrierxUserId: string,
-  ownerTenantSlug?: string
+  meeting: any,
+  deal: any
 ): Promise<CallTriggerResponse> => {
   const response = await api.post<CallTriggerResponse>('/meetings/admin/trigger/pre-call', {
-    meetingId,
-    dealId,
-    ownerBarrierxUserId,
-    ownerTenantSlug,
+    meeting,
+    deal,
   });
   return response.data;
 };
 
 export const adminTriggerPostCall = async (
-  meetingId: string,
-  dealId: string,
-  ownerBarrierxUserId: string,
-  ownerTenantSlug?: string
+  meeting: any,
+  deal: any
 ): Promise<CallTriggerResponse> => {
   const response = await api.post<CallTriggerResponse>('/meetings/admin/trigger/post-call', {
-    meetingId,
-    dealId,
-    ownerBarrierxUserId,
-    ownerTenantSlug,
+    meeting,
+    deal,
   });
   return response.data;
 };

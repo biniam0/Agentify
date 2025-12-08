@@ -3,6 +3,7 @@ import prisma from '../config/database';
 import { config } from '../config/env';
 import * as barrierxService from './barrierxService';
 import * as meetingService from './meetingService';
+import * as loggingService from './loggingService';
 
 interface MeetingTemplate {
   id: string;
@@ -207,6 +208,9 @@ const runAutomationJob = async () => {
   // Set lock
   isJobRunning = true;
 
+  // Log scheduler start
+  const schedulerLogId = await loggingService.logSchedulerStart('MEETING_AUTOMATION');
+
   try {
     console.log('\n🔄 Running automated meeting calls job...');
     console.log('⏰ Time:', new Date().toISOString());
@@ -344,7 +348,7 @@ const runAutomationJob = async () => {
 
           try {
             // Trigger ElevenLabs pre-meeting call with full data
-            await meetingService.triggerPreMeetingCall({
+            const result = await meetingService.triggerPreMeetingCall({
               meetingData: {
                 id: meeting.id,
                 title: meeting.title,
@@ -356,6 +360,26 @@ const runAutomationJob = async () => {
               userData: meeting.user,
               contacts: meeting.contacts,
             });
+
+            // Log call initiation if successful
+            if (result?.conversation_id || result?.callSid) {
+              await loggingService.logCallInitiation({
+                callType: 'PRE_CALL',
+                userId: meeting.user.userId,
+                userName: meeting.user.name,
+                userEmail: meeting.user.email,
+                dealId: meeting.deal.id,
+                dealName: meeting.deal.dealName,
+                meetingId: meeting.id,
+                meetingTitle: meeting.title,
+                phoneNumber: meeting.deal.owner?.phone || '',
+                ownerName: meeting.deal.owner?.name || '',
+                agentId: result.agent_id,
+                triggerSource: 'SCHEDULED',
+                conversationId: result.conversation_id,
+                callSid: result.callSid,
+              });
+            }
 
             // Mark as called to prevent duplicates
             markAsCalled(meeting.id, meeting.startTime, 'pre');
@@ -380,7 +404,7 @@ const runAutomationJob = async () => {
 
           try {
             // Trigger ElevenLabs post-meeting call with full data
-            await meetingService.triggerPostMeetingCall({
+            const result = await meetingService.triggerPostMeetingCall({
               meetingData: {
                 id: meeting.id,
                 title: meeting.title,
@@ -392,6 +416,26 @@ const runAutomationJob = async () => {
               userData: meeting.user,
               contacts: meeting.contacts,
             });
+
+            // Log call initiation if successful
+            if (result?.conversation_id || result?.callSid) {
+              await loggingService.logCallInitiation({
+                callType: 'POST_CALL',
+                userId: meeting.user.userId,
+                userName: meeting.user.name,
+                userEmail: meeting.user.email,
+                dealId: meeting.deal.id,
+                dealName: meeting.deal.dealName,
+                meetingId: meeting.id,
+                meetingTitle: meeting.title,
+                phoneNumber: meeting.deal.owner?.phone || '',
+                ownerName: meeting.deal.owner?.name || '',
+                agentId: result.agent_id,
+                triggerSource: 'SCHEDULED',
+                conversationId: result.conversation_id,
+                callSid: result.callSid,
+              });
+            }
 
             // Mark as called to prevent duplicates
             markAsCalled(meeting.id, meeting.startTime, 'post');
@@ -408,8 +452,36 @@ const runAutomationJob = async () => {
     console.log(`   Post-meeting calls triggered: ${totalPostMeetings}`);
     console.log(`   Next run in 5 minutes\n`);
 
-  } catch (error) {
+    // Log scheduler completion
+    if (schedulerLogId) {
+      await loggingService.logSchedulerComplete(schedulerLogId.id, {
+        status: 'SUCCESS',
+        totalUsers: usersToProcess.length,
+        preCallsTriggered: totalPreMeetings,
+        postCallsTriggered: totalPostMeetings,
+        errorsCount: 0,
+      });
+    }
+
+  } catch (error: any) {
     console.error('❌ Error in automation job:', error);
+
+    // Log scheduler error
+    if (schedulerLogId) {
+      await loggingService.logSchedulerComplete(schedulerLogId.id, {
+        status: 'FAILED',
+        errorMessage: error.message || 'Unknown error in automation job',
+      });
+    }
+
+    // Log error
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'schedulerService.runAutomationJob',
+      message: error.message || 'Error in automation job',
+      stack: error.stack,
+    });
   } finally {
     // Always release the lock when job finishes (success or error)
     isJobRunning = false;

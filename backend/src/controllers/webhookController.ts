@@ -6,6 +6,7 @@ import { config } from '../config/env';
 import { verifyElevenLabsSignature } from '../utils/webhookVerification';
 import { CLIENT_RENEG_LIMIT } from 'tls';
 import { handleCallInitiationFailure, markCallAsSuccessful } from '../services/callRetryService';
+import * as loggingService from '../services/loggingService';
 
 export const handleElevenLabsWebhook = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -47,6 +48,31 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
 
       // Process retry logic (only retries on "no-answer")
       await handleCallInitiationFailure(req.body);
+
+      // Log the webhook
+      await loggingService.logWebhook({
+        webhookType: 'ELEVENLABS_CALL',
+        eventType: 'call_initiation_failed',
+        agentId: data?.agent_id,
+        status: 'SUCCESS',
+        payload: req.body,
+      });
+
+      // Update call log with failure
+      const phoneNumber = data?.metadata?.phone_call?.external_number;
+      if (phoneNumber && data?.agent_id) {
+        // Try to find and update the call log by phone + agent
+        // Note: We might not have conversationId for failed calls
+        await loggingService.logActivity({
+          activityType: 'WEBHOOK_RECEIVED',
+          status: 'SUCCESS',
+          metadata: {
+            webhookType: 'call_initiation_failed',
+            failureReason: data?.failure_reason,
+            phoneNumber,
+          },
+        });
+      }
 
       res.status(200).json({
         received: true,
@@ -177,6 +203,42 @@ Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
       markCallAsSuccessful(calledNumber, agentId);
     }
 
+    // Log the webhook
+    await loggingService.logWebhook({
+      webhookType: 'ELEVENLABS_CALL',
+      eventType: type,
+      conversationId: conversationId,
+      agentId: agentId,
+      status: 'SUCCESS',
+      payload: req.body,
+    });
+
+    // Update call log with completion data
+    if (conversationId) {
+      await loggingService.updateCallLog(conversationId, {
+        status: 'COMPLETED',
+        completedAt: new Date(event_timestamp * 1000),
+        duration: callDuration,
+        callSuccessful: callSuccessful === 'true',
+        transcriptSummary: transcriptSummary,
+        webhookData: req.body,
+      });
+    }
+
+    // Log note creation as CRM action
+    if (dealId && tenantSlug && hubspotOwnerId) {
+      await loggingService.logCrmAction({
+        actionType: 'NOTE',
+        conversationId: conversationId,
+        dealId: dealId,
+        tenantSlug: tenantSlug,
+        ownerId: hubspotOwnerId,
+        title: callSummaryTitle,
+        body: transcriptSummary,
+        status: 'SUCCESS',
+      });
+    }
+
     console.log('✅ Webhook processed successfully\n');
 
     res.json({
@@ -284,6 +346,28 @@ export const handleCreateNote = async (req: Request, res: Response): Promise<voi
 
     if (result.success) {
       console.log(`✅ Note created successfully! Engagement ID: ${result.engagementId}`);
+
+      // Log the CRM action
+      await loggingService.logCrmAction({
+        actionType: 'NOTE',
+        dealId: deal_id,
+        tenantSlug: tenant_slug,
+        ownerId: hubspot_owner_id,
+        entityId: result.engagementId,
+        body: hs_note_body,
+        status: 'SUCCESS',
+        metadata: req.body,
+      });
+
+      // Log webhook
+      await loggingService.logWebhook({
+        webhookType: 'ELEVENLABS_TOOL',
+        eventType: 'create_note',
+        status: 'SUCCESS',
+        payload: req.body,
+        response: { engagementId: result.engagementId },
+      });
+
       res.json({
         success: true,
         message: 'Note created in HubSpot via BarrierX',
@@ -298,6 +382,19 @@ export const handleCreateNote = async (req: Request, res: Response): Promise<voi
       });
     } else {
       console.error(`❌ Failed to create note: ${result.error}`);
+
+      // Log the failed CRM action
+      await loggingService.logCrmAction({
+        actionType: 'NOTE',
+        dealId: deal_id,
+        tenantSlug: tenant_slug,
+        ownerId: hubspot_owner_id,
+        body: hs_note_body,
+        status: 'FAILED',
+        errorMessage: result.error,
+        metadata: req.body,
+      });
+
       res.status(500).json({
         success: false,
         error: result.error || 'Failed to create note in HubSpot',

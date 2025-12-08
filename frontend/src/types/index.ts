@@ -39,6 +39,7 @@ export interface Meeting {
   } | null;
   // For admin mode
   ownerBarrierxUserId?: string;
+  ownerHubspotId?: string;
   ownerTenantSlug?: string;
 }
 
