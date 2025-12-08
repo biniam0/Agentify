@@ -3,6 +3,7 @@ import { AuthRequest } from '../middlewares/auth';
 import prisma from '../config/database';
 import * as barrierxService from '../services/barrierxService';
 import * as meetingService from '../services/meetingService';
+import * as loggingService from '../services/loggingService';
 
 export const getMeetings = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -149,6 +150,44 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
     // Call the meeting service
     const result = await meetingService.triggerPreMeetingCall(payload);
 
+    // Log the call initiation
+    if (result.conversation_id || result.callSid) {
+      await loggingService.logCallInitiation({
+        callType: 'PRE_CALL',
+        userId: userId,
+        userName: dbUser.name,
+        userEmail: dbUser.email,
+        dealId: deal.id,
+        dealName: deal.name,
+        meetingId: meeting.id,
+        meetingTitle: meeting.title,
+        phoneNumber: deal.ownerPhone || '',
+        ownerName: deal.ownerName,
+        agentId: result.agent_id,
+        triggerSource: 'MANUAL',
+        triggerUserId: userId,
+        conversationId: result.conversation_id,
+        callSid: result.callSid,
+        dynamicVariables: result.dynamicVariables,
+      });
+
+      // Log activity
+      await loggingService.logActivity({
+        activityType: 'PRE_CALL_TRIGGER',
+        status: 'SUCCESS',
+        userId: userId,
+        userName: dbUser.name,
+        userEmail: dbUser.email,
+        dealId: deal.id,
+        dealName: deal.name,
+        meetingId: meeting.id,
+        meetingTitle: meeting.title,
+        conversationId: result.conversation_id,
+        callSid: result.callSid,
+        metadata: { triggerSource: 'MANUAL' },
+      });
+    }
+
     res.json({
       success: true,
       message: 'Pre-meeting call triggered successfully',
@@ -157,6 +196,22 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
     });
   } catch (error: any) {
     console.error('Pre-meeting call error:', error);
+
+    // Log the error
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'meetingController.triggerPreMeetingCall',
+      message: error.message || 'Failed to trigger pre-meeting call',
+      stack: error.stack,
+      userId: req.user?.userId,
+      dealId: req.body.dealId,
+      endpoint: '/api/meetings/trigger/pre-call',
+      method: 'POST',
+      requestData: req.body,
+      responseData: error.response?.data,
+    });
+
     res.status(500).json({
       error: 'Failed to trigger pre-meeting call',
       details: error.response?.data || error.message,
@@ -255,6 +310,44 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
     // Call the meeting service
     const result = await meetingService.triggerPostMeetingCall(payload);
 
+    // Log the call initiation
+    if (result.conversation_id || result.callSid) {
+      await loggingService.logCallInitiation({
+        callType: 'POST_CALL',
+        userId: userId,
+        userName: dbUser.name,
+        userEmail: dbUser.email,
+        dealId: deal.id,
+        dealName: deal.name,
+        meetingId: meeting.id,
+        meetingTitle: meeting.title,
+        phoneNumber: deal.ownerPhone || '',
+        ownerName: deal.ownerName,
+        agentId: result.agent_id,
+        triggerSource: 'MANUAL',
+        triggerUserId: userId,
+        conversationId: result.conversation_id,
+        callSid: result.callSid,
+        dynamicVariables: result.dynamicVariables,
+      });
+
+      // Log activity
+      await loggingService.logActivity({
+        activityType: 'POST_CALL_TRIGGER',
+        status: 'SUCCESS',
+        userId: userId,
+        userName: dbUser.name,
+        userEmail: dbUser.email,
+        dealId: deal.id,
+        dealName: deal.name,
+        meetingId: meeting.id,
+        meetingTitle: meeting.title,
+        conversationId: result.conversation_id,
+        callSid: result.callSid,
+        metadata: { triggerSource: 'MANUAL' },
+      });
+    }
+
     res.json({
       success: true,
       message: 'Post-meeting call triggered successfully',
@@ -263,6 +356,22 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
     });
   } catch (error: any) {
     console.error('Post-meeting call error:', error);
+
+    // Log the error
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'meetingController.triggerPostMeetingCall',
+      message: error.message || 'Failed to trigger post-meeting call',
+      stack: error.stack,
+      userId: req.user?.userId,
+      dealId: req.body.dealId,
+      endpoint: '/api/meetings/trigger/post-call',
+      method: 'POST',
+      requestData: req.body,
+      responseData: error.response?.data,
+    });
+
     res.status(500).json({
       error: 'Failed to trigger post-meeting call',
       details: error.response?.data || error.message,
@@ -336,6 +445,7 @@ export const getAdminMeetings = async (req: AuthRequest, res: Response): Promise
             } : null,
             // IMPORTANT: Store the actual deal owner's info for triggering calls
             ownerBarrierxUserId: deal.ownerId,
+            ownerHubspotId: deal.ownerHubspotId,
             ownerTenantSlug: deal.tenantSlug,
           });
         });
@@ -362,7 +472,7 @@ export const getAdminMeetings = async (req: AuthRequest, res: Response): Promise
 export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
-    const { meetingId, dealId, ownerBarrierxUserId, ownerTenantSlug } = req.body;
+    const { meeting, deal } = req.body;
 
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -380,37 +490,17 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
       return;
     }
 
-    if (!meetingId || !dealId || !ownerBarrierxUserId) {
-      res.status(400).json({ error: 'meetingId, dealId, and ownerBarrierxUserId are required' });
+    if (!meeting || !deal) {
+      res.status(400).json({ error: 'meeting and deal data are required' });
       return;
     }
 
-    // Fetch the deal owner's deals (not the admin's deals)
-    const deals = await barrierxService.getUserDeals(ownerBarrierxUserId);
-
-    if (!deals || deals.length === 0) {
-      res.status(404).json({ error: 'No deals found for the meeting owner' });
-      return;
-    }
-
-    const deal = deals.find((d: any) => d.id === dealId);
-    if (!deal) {
-      res.status(404).json({ error: 'Deal not found' });
-      return;
-    }
-
-    const meeting = deal.meetings?.find((m: any) => m.id === meetingId);
-    if (!meeting) {
-      res.status(404).json({ error: 'Meeting not found' });
-      return;
-    }
-
-    // Build payload using the actual deal owner's info
+    // Build payload directly from provided data (no re-fetching needed!)
     const payload = {
       meetingData: {
         id: meeting.id,
         title: meeting.title,
-        body: meeting.agenda || '',
+        body: meeting.agenda || meeting.body || '',
         startTime: meeting.startTime,
         endTime: meeting.endTime,
       },
@@ -420,20 +510,22 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
         company: deal.company || 'Unknown Company',
         stage: deal.stage,
         amount: deal.amount,
-        owner: {
+        owner: deal.owner || {
           id: deal.ownerId,
+          hubspotId: deal.ownerHubspotId,
           name: deal.ownerName,
           phone: deal.ownerPhone || '',
           email: deal.ownerEmail || '',
           avatar: '',
         },
         userDealRiskScores: deal.userDealRiskScores,
+        tenantSlug: deal.tenantSlug,
       },
       userData: {
-        userId: ownerBarrierxUserId,
+        userId: deal.ownerBarrierxUserId || deal.ownerId,
         name: deal.ownerName,
         email: deal.ownerEmail || '',
-        tenantSlug: ownerTenantSlug || deal.tenantSlug || 'agent-call',
+        tenantSlug: deal.tenantSlug,
       },
       contacts: deal.contacts || [],
     };
@@ -444,6 +536,26 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
 
     const result = await meetingService.triggerPreMeetingCall(payload);
 
+    // Log the call
+    if (result.conversation_id || result.callSid) {
+      await loggingService.logCallInitiation({
+        callType: 'PRE_CALL',
+        userId: adminUser.email,
+        userName: adminUser.name,
+        userEmail: adminUser.email,
+        dealId: deal.id,
+        dealName: deal.name,
+        meetingId: meeting.id,
+        meetingTitle: meeting.title,
+        phoneNumber: deal.ownerPhone || '',
+        ownerName: deal.ownerName,
+        triggerSource: 'MANUAL',
+        triggerUserId: userId,
+        conversationId: result.conversation_id,
+        callSid: result.callSid,
+      });
+    }
+
     res.json({
       success: true,
       message: 'Pre-meeting call triggered successfully by admin',
@@ -452,6 +564,18 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
     });
   } catch (error: any) {
     console.error('👑 ❌ ADMIN PRE-CALL error:', error);
+
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'meetingController.adminTriggerPreMeetingCall',
+      message: error.message || 'Failed to trigger admin pre-meeting call',
+      stack: error.stack,
+      userId: req.user?.userId,
+      endpoint: '/api/meetings/admin/trigger/pre-call',
+      method: 'POST',
+    });
+
     res.status(500).json({
       error: 'Failed to trigger pre-meeting call',
       details: error.response?.data || error.message,
@@ -462,7 +586,7 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
 export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
-    const { meetingId, dealId, ownerBarrierxUserId, ownerTenantSlug } = req.body;
+    const { meeting, deal } = req.body;
 
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -480,37 +604,17 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
       return;
     }
 
-    if (!meetingId || !dealId || !ownerBarrierxUserId) {
-      res.status(400).json({ error: 'meetingId, dealId, and ownerBarrierxUserId are required' });
+    if (!meeting || !deal) {
+      res.status(400).json({ error: 'meeting and deal data are required' });
       return;
     }
 
-    // Fetch the deal owner's deals (not the admin's deals)
-    const deals = await barrierxService.getUserDeals(ownerBarrierxUserId);
-
-    if (!deals || deals.length === 0) {
-      res.status(404).json({ error: 'No deals found for the meeting owner' });
-      return;
-    }
-
-    const deal = deals.find((d: any) => d.id === dealId);
-    if (!deal) {
-      res.status(404).json({ error: 'Deal not found' });
-      return;
-    }
-
-    const meeting = deal.meetings?.find((m: any) => m.id === meetingId);
-    if (!meeting) {
-      res.status(404).json({ error: 'Meeting not found' });
-      return;
-    }
-
-    // Build payload using the actual deal owner's info
+    // Build payload directly from provided data (no re-fetching needed!)
     const payload = {
       meetingData: {
         id: meeting.id,
         title: meeting.title,
-        body: meeting.agenda || '',
+        body: meeting.agenda || meeting.body || '',
         startTime: meeting.startTime,
         endTime: meeting.endTime,
       },
@@ -520,20 +624,22 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
         company: deal.company || 'Unknown Company',
         stage: deal.stage,
         amount: deal.amount,
-        owner: {
+        owner: deal.owner || {
           id: deal.ownerId,
+          hubspotId: deal.ownerHubspotId,
           name: deal.ownerName,
           phone: deal.ownerPhone || '',
           email: deal.ownerEmail || '',
           avatar: '',
         },
         userDealRiskScores: deal.userDealRiskScores,
+        tenantSlug: deal.tenantSlug,
       },
       userData: {
-        userId: ownerBarrierxUserId,
+        userId: deal.ownerBarrierxUserId || deal.ownerId,
         name: deal.ownerName,
         email: deal.ownerEmail || '',
-        tenantSlug: ownerTenantSlug || deal.tenantSlug || 'agent-call',
+        tenantSlug: deal.tenantSlug,
       },
       contacts: deal.contacts || [],
     };
@@ -544,6 +650,26 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
 
     const result = await meetingService.triggerPostMeetingCall(payload);
 
+    // Log the call
+    if (result.conversation_id || result.callSid) {
+      await loggingService.logCallInitiation({
+        callType: 'POST_CALL',
+        userId: adminUser.email,
+        userName: adminUser.name,
+        userEmail: adminUser.email,
+        dealId: deal.id,
+        dealName: deal.name,
+        meetingId: meeting.id,
+        meetingTitle: meeting.title,
+        phoneNumber: deal.ownerPhone || '',
+        ownerName: deal.ownerName,
+        triggerSource: 'MANUAL',
+        triggerUserId: userId,
+        conversationId: result.conversation_id,
+        callSid: result.callSid,
+      });
+    }
+
     res.json({
       success: true,
       message: 'Post-meeting call triggered successfully by admin',
@@ -552,6 +678,18 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
     });
   } catch (error: any) {
     console.error('👑 ❌ ADMIN POST-CALL error:', error);
+
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'meetingController.adminTriggerPostMeetingCall',
+      message: error.message || 'Failed to trigger admin post-meeting call',
+      stack: error.stack,
+      userId: req.user?.userId,
+      endpoint: '/api/meetings/admin/trigger/post-call',
+      method: 'POST',
+    });
+
     res.status(500).json({
       error: 'Failed to trigger post-meeting call',
       details: error.response?.data || error.message,

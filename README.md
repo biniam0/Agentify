@@ -71,7 +71,7 @@ AgentX/
 │   ├── BULK_API_INTEGRATION.md     # Modular architecture docs
 │   └── README.md               # Backend documentation
 │
-├── frontend/                   # React + Vite + Shadcn UI (not tracked in git)
+├── frontend/                   # React + Vite + Shadcn UI
 │   ├── src/
 │   │   ├── components/         # UI components
 │   │   ├── lib/                # Utilities
@@ -122,9 +122,9 @@ npm run dev
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:4000`
 
-**Demo Login:**
-- Email: `tamiratkebede120@gmail.com`
-- Password: any password
+**Login:**
+- Use your BarrierX credentials (email & password)
+- Account will be automatically created on first login
 
 ---
 

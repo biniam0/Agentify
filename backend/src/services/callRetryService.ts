@@ -13,6 +13,7 @@
 
 import axios from 'axios';
 import { config } from '../config/env';
+import * as loggingService from './loggingService';
 
 // ============================================
 // TYPES
@@ -223,6 +224,20 @@ const executeRetryCall = async (retryKey: string): Promise<void> => {
     console.log(`   📞 Conversation ID: ${conversationId}`);
     console.log(`   📞 Twilio Call SID: ${callSid}`);
 
+    // Log the retry activity
+    await loggingService.logActivity({
+      activityType: 'CALL_RETRY',
+      status: 'SUCCESS',
+      conversationId: conversationId,
+      callSid: callSid,
+      metadata: {
+        phoneNumber,
+        callType,
+        retryAttempt: nextAttempt,
+        maxAttempts: config.callRetry.maxAttempts,
+      },
+    });
+
     // Note: Don't delete from queue yet - if this retry also fails,
     // we'll get another webhook and continue the retry process.
     // The record will be cleaned up when:
@@ -232,6 +247,22 @@ const executeRetryCall = async (retryKey: string): Promise<void> => {
 
   } catch (error: any) {
     console.error(`   ❌ Retry call failed:`, error.response?.data || error.message);
+
+    // Log the retry failure
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'MEDIUM',
+      source: 'callRetryService.executeRetryCall',
+      message: error.message || 'Retry call failed',
+      stack: error.stack,
+      code: error.response?.status?.toString(),
+      requestData: {
+        phoneNumber,
+        callType,
+        retryAttempt: nextAttempt,
+      },
+      responseData: error.response?.data,
+    });
 
     // On API error, remove from queue to prevent infinite retries
     // (The webhook system will handle retries for connection issues)

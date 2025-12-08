@@ -4,6 +4,7 @@ import authRoutes from './routes/authRoutes';
 import meetingRoutes from './routes/meetingRoutes';
 import webhookRoutes from './routes/webhookRoutes';
 import userRoutes from './routes/userRoutes';
+import loggingRoutes from './routes/loggingRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { config } from './config/env';
 
@@ -35,6 +36,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/logs', loggingRoutes); // Admin-only logging dashboard routes
 
 // Health check
 app.get('/health', (req, res) => {

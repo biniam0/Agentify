@@ -188,14 +188,9 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
 
   } catch (error: any) {
     console.error(`❌ BarrierX API error for user ${userId}:`, error.response?.data || error.message);
-
-    // Fallback to mock data in development
-    if (config.nodeEnv === 'development') {
-      console.log(`🔧 Falling back to MOCK data due to API error`);
-      return mockGetUserDeals(userId);
-    }
-
-    return [];
+    
+    // No fallback - let it fail
+    throw new Error(`Failed to fetch deals for user ${userId}: ${error.response?.data?.details || error.message}`);
   }
 };
 
