@@ -24,9 +24,8 @@ prisma/.env
 # Webhook payloads (may contain sensitive data)
 backend/webhooks/*.json
 
-# Frontend - not tracked in this repo
-/frontend/
-
-# Root level files - only tracking backend
-/SETUP.md
+# Frontend environment & build
+frontend/.env
+frontend/.env.local
+frontend/dist/
 
