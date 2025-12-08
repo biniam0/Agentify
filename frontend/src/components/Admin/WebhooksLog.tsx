@@ -2,7 +2,7 @@
  * Webhooks Log Component - Display webhook history
  */
 
-import { Webhook, Search, Filter, Download, CheckCircle2, XCircle } from 'lucide-react';
+import { Webhook, Filter, Download, CheckCircle2, XCircle } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';

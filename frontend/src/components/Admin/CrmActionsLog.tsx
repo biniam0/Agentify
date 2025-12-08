@@ -2,7 +2,7 @@
  * CRM Actions Log Component - Notes, meetings, contacts created
  */
 
-import { FileText, Search, Filter, Download, CheckCircle2, XCircle } from 'lucide-react';
+import { FileText, Filter, Download } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';

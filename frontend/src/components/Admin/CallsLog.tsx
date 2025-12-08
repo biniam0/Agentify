@@ -2,7 +2,7 @@
  * Calls Log Component - Display call logs with filtering
  */
 
-import { Phone, Search, Filter, Download } from 'lucide-react';
+import { Phone, Filter, Download } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';

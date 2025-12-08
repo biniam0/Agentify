@@ -2,7 +2,7 @@
  * Scheduler Log Component - Automated job runs
  */
 
-import { Timer, TrendingUp, Users, Phone, AlertCircle } from 'lucide-react';
+import { Timer, Users, Phone, AlertCircle } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';

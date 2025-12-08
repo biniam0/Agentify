@@ -2,7 +2,7 @@
  * Logs Overview Component - Dashboard with real data
  */
 
-import { Activity, AlertCircle, CheckCircle2, Clock, Phone, TrendingUp } from 'lucide-react';
+import { Activity, AlertCircle, Clock, Phone, TrendingUp } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
