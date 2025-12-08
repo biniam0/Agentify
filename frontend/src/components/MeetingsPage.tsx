@@ -29,6 +29,10 @@ import * as userService from '../services/userService';
 import { Meeting } from '../types';
 import LogsOverview from './Admin/LogsOverview';
 import CallsLog from './Admin/CallsLog';
+import WebhooksLog from './Admin/WebhooksLog';
+import CrmActionsLog from './Admin/CrmActionsLog';
+import SchedulerLog from './Admin/SchedulerLog';
+import ErrorsLog from './Admin/ErrorsLog';
 import { Alert, AlertDescription } from './ui/alert';
 import {
   AlertDialog,
@@ -862,50 +866,10 @@ const MeetingsPage: React.FC = () => {
             <div className="flex-1 min-w-0">
               {activeLogSection === 'overview' && <LogsOverview />}
               {activeLogSection === 'calls' && <CallsLog />}
-              {activeLogSection === 'webhooks' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Webhook Logs</CardTitle>
-                    <CardDescription>ElevenLabs and BarrierX webhooks</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">Webhook logs table coming soon...</p>
-                  </CardContent>
-                </Card>
-              )}
-              {activeLogSection === 'crm-actions' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>CRM Action Logs</CardTitle>
-                    <CardDescription>Notes and meetings created</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">CRM action logs table coming soon...</p>
-                  </CardContent>
-                </Card>
-              )}
-              {activeLogSection === 'scheduler' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Scheduler Logs</CardTitle>
-                    <CardDescription>Automated job runs</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">Scheduler logs table coming soon...</p>
-                  </CardContent>
-                </Card>
-              )}
-              {activeLogSection === 'errors' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Error Logs</CardTitle>
-                    <CardDescription>System errors and issues</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">Error logs table coming soon...</p>
-                  </CardContent>
-                </Card>
-              )}
+              {activeLogSection === 'webhooks' && <WebhooksLog />}
+              {activeLogSection === 'crm-actions' && <CrmActionsLog />}
+              {activeLogSection === 'scheduler' && <SchedulerLog />}
+              {activeLogSection === 'errors' && <ErrorsLog />}
             </div>
           </div>
         )}
