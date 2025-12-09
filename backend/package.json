@@ -4,7 +4,7 @@
   "description": "AgentX Backend - Intelligent sales meeting automation service",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "nodemon --watch src --watch .env --exec tsx src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
@@ -37,6 +37,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.5",
     "@types/node-cron": "^3.0.11",
+    "nodemon": "^3.1.11",
     "prisma": "^5.7.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"

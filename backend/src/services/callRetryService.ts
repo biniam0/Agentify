@@ -166,7 +166,7 @@ export const handleCallInitiationFailure = async (webhookPayload: CallInitiation
       clearTimeout(record.timeoutId);
     }
     retryQueue.delete(retryKey);
-    
+
     // Remove from Redis
     await retryCache.deleteRetryRecord(phoneNumber, agent_id);
 
@@ -324,7 +324,7 @@ export const markCallAsSuccessful = async (phoneNumber: string, agentId: string)
       clearTimeout(record.timeoutId);
     }
     retryQueue.delete(retryKey);
-    
+
     // Remove from Redis
     await retryCache.deleteRetryRecord(phoneNumber, agentId);
   }
@@ -410,7 +410,7 @@ export const restoreRetryStateFromRedis = async (): Promise<void> => {
       } else {
         // Retry time has passed - execute immediately
         console.log(`   🚀 Executing overdue retry for ${redisRecord.phoneNumber} immediately`);
-        
+
         // Execute in background
         executeRetryCall(retryKey).catch(error => {
           console.error(`   ❌ Failed to execute restored retry:`, error);
@@ -439,7 +439,7 @@ export const clearAllRetries = async (): Promise<void> => {
   });
 
   retryQueue.clear();
-  
+
   // Also clear from Redis
   const clearedCount = await retryCache.clearAllRetryRecords();
   console.log(`🧹 Cleared ${clearedCount} records from Redis`);
