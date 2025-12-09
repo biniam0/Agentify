@@ -36,5 +36,12 @@ export const config = {
     // Filter deals by update time (in days) - skips stale deals
     dealUpdateWindowDays: parseInt(process.env.DEAL_UPDATE_WINDOW_DAYS || '60'),
   },
+  redis: {
+    enabled: process.env.REDIS_ENABLED === 'true',
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    username: process.env.REDIS_USERNAME || 'default',
+    password: process.env.REDIS_PASSWORD || '',
+  },
 };
 
