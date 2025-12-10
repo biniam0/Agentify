@@ -1,7 +1,7 @@
 import app from './app';
 import { config } from './config/env';
 import prisma from './config/database';
-import { startScheduler } from './services/schedulerService';
+import { startScheduler, restoreCalledMeetingsFromRedis } from './services/schedulerService';
 import { getRedisClient, disconnectRedis } from './config/redis';
 import { restoreRetryStateFromRedis } from './services/callRetryService';
 
@@ -17,9 +17,12 @@ const startServer = async () => {
       const redisClient = await getRedisClient();
       if (redisClient) {
         console.log('✅ Redis cache initialized');
-
+        
         // Restore call retry state from Redis
         await restoreRetryStateFromRedis();
+        
+        // Restore called meetings tracking from Redis
+        await restoreCalledMeetingsFromRedis();
       } else {
         console.log('⚠️  Redis cache disabled - continuing without caching');
       }

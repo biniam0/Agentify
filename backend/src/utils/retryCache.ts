@@ -26,9 +26,10 @@ export interface RetryRecordData {
 
 /**
  * Cache configuration
+ * 10 minutes is sufficient since max retry duration is ~6 minutes (3 attempts × 2 min interval)
  */
 const RETRY_CACHE_CONFIG = {
-  TTL_SECONDS: 24 * 60 * 60, // 24 hours - retries don't live longer than this
+  TTL_SECONDS: 10 * 60, // 10 minutes
 } as const;
 
 /**
