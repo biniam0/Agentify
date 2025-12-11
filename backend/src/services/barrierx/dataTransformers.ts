@@ -2,25 +2,15 @@
  * Data Transformers for BarrierX Integration
  * 
  * These functions transform data from BarrierX API format to AgentX internal format.
- * Handles data mapping, validation, and fallback to dummy data when needed.
+ * Handles data mapping and validation - NO dummy/mock data for production caching.
  */
 
 import { Contact, Deal, Meeting } from '../barrierxService';
-import {
-  generateDummyContacts,
-  generateDummyMeetings,
-  generateDummyRiskScores,
-} from './dummyDataGenerators';
 
 /**
  * Debug flag for transformer logs - set to true to enable verbose logging
  */
 const DEBUG_TRANSFORMERS = false;
-
-/**
- * Default phone number to use when owner phone is not available
- */
-const DEFAULT_PHONE = '+251914373107';
 
 /**
  * Format phone number by removing hyphens, spaces, and parentheses
@@ -35,7 +25,7 @@ const formatPhoneNumber = (phone: string): string => {
 
 /**
  * Transform a single BarrierX tenant's deals to AgentX Deal format
- * Handles missing data gracefully with dummy data generation
+ * Uses only real data from BarrierX (NO dummy/mock data injection)
  */
 export const transformBarrierXDeals = (tenant: any, userId: string): Deal[] => {
   if (!tenant || !tenant.deals || tenant.deals.length === 0) {
@@ -50,16 +40,16 @@ export const transformBarrierXDeals = (tenant: any, userId: string): Deal[] => {
 
 /**
  * Transform a single BarrierX deal to AgentX format
- * Core transformation logic with dummy data fallbacks
+ * Core transformation logic - uses only real data from BarrierX
  */
 const transformSingleDeal = (deal: any, userId: string, tenant: any): Deal => {
-  // Transform contacts (use dummy if empty)
+  // Transform contacts (empty array if none)
   const contacts = transformContacts(deal);
 
-  // Transform meetings (use dummy if empty)
+  // Transform meetings (empty array if none)
   const meetings = transformMeetings(deal, contacts);
 
-  // Transform risk scores (use dummy if calculating/pending)
+  // Transform risk scores (actual values or empty object)
   const userDealRiskScores = transformRiskScores(deal);
 
   // Transform owner information
@@ -87,12 +77,12 @@ const transformSingleDeal = (deal: any, userId: string, tenant: any): Deal => {
 
 /**
  * Transform contacts from BarrierX format
- * Falls back to dummy data if contacts array is empty
+ * Returns empty array if no contacts (NO dummy data)
  */
 const transformContacts = (deal: any): Contact[] => {
   if (!deal.contacts || deal.contacts.length === 0) {
-    if (DEBUG_TRANSFORMERS) console.log(`  📝 No contacts for deal ${deal.id}, generating dummy data`);
-    return generateDummyContacts(deal);
+    if (DEBUG_TRANSFORMERS) console.log(`  📝 No contacts for deal ${deal.id}`);
+    return [];
   }
 
   return deal.contacts.map((c: any) => ({
@@ -106,14 +96,13 @@ const transformContacts = (deal: any): Contact[] => {
 
 /**
  * Transform meetings from BarrierX format
- * Falls back to dummy data if meetings array is empty
+ * Returns empty array if no meetings (NO dummy data)
  * Generates descriptive titles when meeting title is empty
  */
 const transformMeetings = (deal: any, contacts: Contact[]): Meeting[] => {
   if (!deal.meetings || deal.meetings.length === 0) {
-    if (DEBUG_TRANSFORMERS) console.log(`  📅 No meetings for deal ${deal.id}, generating dummy data`);
-    // return generateDummyMeetings(deal, contacts);
-    return []
+    if (DEBUG_TRANSFORMERS) console.log(`  📅 No meetings for deal ${deal.id}`);
+    return [];
   }
 
   return deal.meetings.map((m: any, index: number) => {
@@ -135,31 +124,22 @@ const transformMeetings = (deal: any, contacts: Contact[]): Meeting[] => {
 
 /**
  * Transform risk scores from BarrierX format
- * Falls back to dummy data if calculation is pending/failed
+ * Returns actual risk scores or empty object (NO dummy data)
  */
 const transformRiskScores = (deal: any): any => {
   if (!deal.userDealRiskScores) {
-    if (DEBUG_TRANSFORMERS) console.log(`  ⚠️  No risk scores for deal ${deal.id}, generating dummy data`);
-    return generateDummyRiskScores(deal);
+    if (DEBUG_TRANSFORMERS) console.log(`  ⚠️  No risk scores for deal ${deal.id}`);
+    return {};
   }
 
-  // Check if calculation is complete
-  const status = deal.calculationStatus;
-  const totalRisk = deal.userDealRiskScores.totalDealRisk;
-
-  if (status === 'calculating' || status === 'pending' || totalRisk === 0) {
-    if (DEBUG_TRANSFORMERS) console.log(`  ⚠️  Risk calculation ${status} for deal ${deal.id}, using dummy data`);
-    return generateDummyRiskScores(deal);
-  }
-
-  // Use real risk scores
+  // Return actual risk scores regardless of calculation status
+  // This preserves real data from BarrierX, even if zeros
   return deal.userDealRiskScores;
 };
 
 /**
  * Transform owner information from BarrierX format
- * Provides sensible defaults if owner info is missing
- * Uses default phone number if not available
+ * Uses only actual data from BarrierX (NO dummy/default values)
  */
 const transformOwner = (deal: any): {
   name: string;
@@ -170,7 +150,8 @@ const transformOwner = (deal: any): {
   const ownerName = deal.owner?.name || 'Unknown Owner';
   const ownerEmail = deal.owner?.email || '';
   const ownerHubspotId = deal.owner?.hubspotId || deal.owner?.id || deal.ownerId;
-  const ownerPhone = formatPhoneNumber(deal.owner?.phone || DEFAULT_PHONE);
+  // Only use actual phone from BarrierX - NO default/dummy fallback
+  const ownerPhone = deal.owner?.phone ? formatPhoneNumber(deal.owner.phone) : '';
 
   // Debug logging for owner data
   if (DEBUG_TRANSFORMERS && deal.owner) {
@@ -179,7 +160,7 @@ const transformOwner = (deal: any): {
       email: deal.owner.email,
       hubspotId: deal.owner.hubspotId,
       id: deal.owner.id,
-      phone_raw: deal.owner.phone || `(using default: ${DEFAULT_PHONE})`,
+      phone_raw: deal.owner.phone || '(empty)',
       phone_formatted: ownerPhone,
       extracted_hubspotId: ownerHubspotId
     }, null, 2));

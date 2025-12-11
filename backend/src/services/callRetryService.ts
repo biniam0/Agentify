@@ -7,13 +7,16 @@
  * Features:
  * - Configurable via environment variables
  * - Max 3 retries with 1 minute interval (default)
- * - In-memory tracking (resets on server restart)
+ * - Redis-backed persistence (survives server restarts)
+ * - In-memory cache for performance + timeout management
  * - Automatic cleanup after max attempts or success
+ * - Multi-instance coordination via Redis
  */
 
 import axios from 'axios';
 import { config } from '../config/env';
 import * as loggingService from './loggingService';
+import * as retryCache from '../utils/retryCache';
 
 // ============================================
 // TYPES
@@ -107,10 +110,11 @@ export const handleCallInitiationFailure = async (webhookPayload: CallInitiation
   const callType = agent_id === config.elevenlabs.preAgentId ? 'pre' : 'post';
   const retryKey = getRetryKey(phoneNumber, agent_id);
 
-  // Get or create retry record
+  // Get or create retry record (check Redis first, then in-memory)
   let record = retryQueue.get(retryKey);
+  let redisRecord = await retryCache.getRetryRecord(phoneNumber, agent_id);
 
-  if (!record) {
+  if (!record && !redisRecord) {
     // First failure - create new record
     record = {
       phoneNumber,
@@ -122,11 +126,29 @@ export const handleCallInitiationFailure = async (webhookPayload: CallInitiation
     };
     retryQueue.set(retryKey, record);
     console.log(`   📝 Created retry record for ${phoneNumber} (${callType}-meeting call)`);
-  } else {
+  } else if (!record && redisRecord) {
+    // Record exists in Redis but not in memory (server was restarted)
+    record = {
+      phoneNumber: redisRecord.phoneNumber,
+      agentId: redisRecord.agentId,
+      callType: redisRecord.callType,
+      dynamicVariables: redisRecord.dynamicVariables,
+      attemptCount: redisRecord.attemptCount + 1,
+      lastAttemptAt: Date.now(),
+    };
+    retryQueue.set(retryKey, record);
+    console.log(`   📝 Restored retry record from Redis - attempt ${record.attemptCount}`);
+  } else if (record) {
     // Subsequent failure - increment count
     record.attemptCount++;
     record.lastAttemptAt = Date.now();
     console.log(`   📝 Updated retry record - attempt ${record.attemptCount}`);
+  }
+
+  // TypeScript guard: record should always be defined here
+  if (!record) {
+    console.error('   ❌ Unexpected error: retry record is undefined');
+    return;
   }
 
   const maxAttempts = config.callRetry.maxAttempts;
@@ -145,12 +167,15 @@ export const handleCallInitiationFailure = async (webhookPayload: CallInitiation
     }
     retryQueue.delete(retryKey);
 
-    // TODO: Optionally log to database, send notification, etc.
+    // Remove from Redis
+    await retryCache.deleteRetryRecord(phoneNumber, agent_id);
+
     return;
   }
 
   // Schedule retry
   const nextAttempt = record.attemptCount + 1;
+  const nextRetryAt = Date.now() + intervalMs;
   console.log(`   ⏰ Scheduling retry attempt ${nextAttempt} in ${intervalMs / 1000} seconds...`);
 
   // Clear any existing timeout (safety measure)
@@ -162,6 +187,19 @@ export const handleCallInitiationFailure = async (webhookPayload: CallInitiation
   record.timeoutId = setTimeout(async () => {
     await executeRetryCall(retryKey);
   }, intervalMs);
+
+  // Save to Redis for persistence across restarts
+  await retryCache.saveRetryRecord({
+    phoneNumber: record.phoneNumber,
+    agentId: record.agentId,
+    callType: record.callType,
+    dynamicVariables: record.dynamicVariables,
+    attemptCount: record.attemptCount,
+    lastAttemptAt: record.lastAttemptAt,
+    nextRetryAt,
+    maxAttempts,
+    intervalMs,
+  });
 
   console.log(`   ✅ Retry scheduled successfully\n`);
 };
@@ -267,6 +305,7 @@ const executeRetryCall = async (retryKey: string): Promise<void> => {
     // On API error, remove from queue to prevent infinite retries
     // (The webhook system will handle retries for connection issues)
     retryQueue.delete(retryKey);
+    await retryCache.deleteRetryRecord(phoneNumber, agentId);
   }
 };
 
@@ -274,7 +313,7 @@ const executeRetryCall = async (retryKey: string): Promise<void> => {
  * Mark a call as successful - removes from retry queue
  * Call this when a conversation.ended webhook is received successfully
  */
-export const markCallAsSuccessful = (phoneNumber: string, agentId: string): void => {
+export const markCallAsSuccessful = async (phoneNumber: string, agentId: string): Promise<void> => {
   const retryKey = getRetryKey(phoneNumber, agentId);
   const record = retryQueue.get(retryKey);
 
@@ -285,6 +324,9 @@ export const markCallAsSuccessful = (phoneNumber: string, agentId: string): void
       clearTimeout(record.timeoutId);
     }
     retryQueue.delete(retryKey);
+
+    // Remove from Redis
+    await retryCache.deleteRetryRecord(phoneNumber, agentId);
   }
 };
 
@@ -309,9 +351,85 @@ export const getRetryQueueStatus = (): { size: number; records: Array<{ phone: s
 };
 
 /**
+ * Restore retry state from Redis on server startup
+ * Rebuilds in-memory queue and reschedules pending retries
+ */
+export const restoreRetryStateFromRedis = async (): Promise<void> => {
+  if (!config.callRetry.enabled) {
+    return;
+  }
+
+  console.log('\n🔄 Restoring retry state from Redis...');
+
+  try {
+    const redisRecords = await retryCache.getAllRetryRecords();
+
+    if (redisRecords.length === 0) {
+      console.log('✅ No pending retries to restore\n');
+      return;
+    }
+
+    let restoredCount = 0;
+    let scheduledCount = 0;
+    const now = Date.now();
+
+    for (const redisRecord of redisRecords) {
+      const retryKey = getRetryKey(redisRecord.phoneNumber, redisRecord.agentId);
+
+      // Check if max attempts already reached
+      if (redisRecord.attemptCount >= redisRecord.maxAttempts) {
+        console.log(`   ⏭️  Skipping ${redisRecord.phoneNumber} - max attempts reached`);
+        await retryCache.deleteRetryRecord(redisRecord.phoneNumber, redisRecord.agentId);
+        continue;
+      }
+
+      // Restore in-memory record
+      const record: RetryRecord = {
+        phoneNumber: redisRecord.phoneNumber,
+        agentId: redisRecord.agentId,
+        callType: redisRecord.callType,
+        dynamicVariables: redisRecord.dynamicVariables,
+        attemptCount: redisRecord.attemptCount,
+        lastAttemptAt: redisRecord.lastAttemptAt,
+      };
+
+      retryQueue.set(retryKey, record);
+      restoredCount++;
+
+      // Calculate when the next retry should happen
+      const timeUntilRetry = redisRecord.nextRetryAt - now;
+
+      if (timeUntilRetry > 0) {
+        // Future retry - schedule it
+        record.timeoutId = setTimeout(async () => {
+          await executeRetryCall(retryKey);
+        }, timeUntilRetry);
+        scheduledCount++;
+
+        console.log(`   ✅ Scheduled retry for ${redisRecord.phoneNumber} in ${(timeUntilRetry / 1000).toFixed(0)}s`);
+      } else {
+        // Retry time has passed - execute immediately
+        console.log(`   🚀 Executing overdue retry for ${redisRecord.phoneNumber} immediately`);
+
+        // Execute in background
+        executeRetryCall(retryKey).catch(error => {
+          console.error(`   ❌ Failed to execute restored retry:`, error);
+        });
+        scheduledCount++;
+      }
+    }
+
+    console.log(`✅ Restored ${restoredCount} retry records, scheduled ${scheduledCount} retries\n`);
+
+  } catch (error: any) {
+    console.error('❌ Failed to restore retry state from Redis:', error.message);
+  }
+};
+
+/**
  * Clear all pending retries (for graceful shutdown)
  */
-export const clearAllRetries = (): void => {
+export const clearAllRetries = async (): Promise<void> => {
   console.log(`🧹 Clearing all pending retries (${retryQueue.size} records)`);
 
   retryQueue.forEach((record) => {
@@ -321,6 +439,10 @@ export const clearAllRetries = (): void => {
   });
 
   retryQueue.clear();
+
+  // Also clear from Redis
+  const clearedCount = await retryCache.clearAllRetryRecords();
+  console.log(`🧹 Cleared ${clearedCount} records from Redis`);
 };
 
 /**

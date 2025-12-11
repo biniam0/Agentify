@@ -6,6 +6,11 @@ import axios from 'axios';
 import { config } from '../config/env';
 import mockUsersDataJson from '../data/mockUsers.json';
 import { generateDummyRecommendations } from './barrierx/dummyDataGenerators';
+import { 
+  getBulkDealsFromCache, 
+  saveBulkDealsToCache, 
+  hasDataChanged 
+} from '../utils/redisCache';
 
 export interface Tenant {
   id: string;
@@ -337,6 +342,12 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
 
     if (!response.data.ok || !response.data.tenants) {
       console.error('❌ Wildcard bulk API failed');
+      // Try Redis cache as fallback
+      const cachedData = await getBulkDealsFromCache();
+      if (cachedData) {
+        console.log(`📦 Using Redis cache as fallback (${cachedData.size} users)`);
+        return cachedData;
+      }
       return new Map();
     }
 
@@ -382,10 +393,27 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
       console.log(`   User ${userId.substring(0, 12)}...: ${deals.length} deals`);
     });
 
+    // ✅ REDIS CACHING: Check if data changed, then cache it
+    const dataChanged = await hasDataChanged(dealsMap);
+    if (dataChanged) {
+      await saveBulkDealsToCache(dealsMap);
+    }
+
     return dealsMap;
 
   } catch (error: any) {
     console.error('❌ Wildcard bulk API error:', error.response?.data || error.message);
+
+    // ✅ REDIS CACHE FALLBACK: Try to get cached data
+    console.log('🔄 Attempting to use Redis cache...');
+    const cachedData = await getBulkDealsFromCache();
+    
+    if (cachedData && cachedData.size > 0) {
+      console.log(`📦 Using Redis cache as fallback (${cachedData.size} users)`);
+      return cachedData;
+    }
+
+    console.log('⚠️  No cached data available in Redis');
 
     // Fallback to mock data in development
     if (config.nodeEnv === 'development') {

@@ -2,12 +2,6 @@
 
 AI-powered sales automation backend that triggers intelligent pre-meeting and post-meeting calls via ElevenLabs AI voice agents.
 
-## 📚 Documentation
-
-- **[BarrierX Integration](./BARRIERX_INTEGRATION.md)** - Hybrid authentication & API integration
-- **[Bulk API Integration](./BULK_API_INTEGRATION.md)** - Modular architecture & data transformers
-- **[Webhooks](./webhooks/README.md)** - ElevenLabs webhook payload storage
-
 ---
 
 ## ✨ Features
@@ -19,6 +13,7 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
 - 🤖 **AI Voice Agents** - Pre-call preparation & post-call follow-up agents
 - 🔄 **Scheduler Service** - Automated call triggering every 5 minutes
 - 🎯 **Smart Data Handling** - Real API + dummy data fallback for resilience
+- 💾 **Redis Caching** - ⚡ NEW: Resilient operation during API outages with smart cache updates
 - 📊 **Batch Processing** - Efficient multi-user data fetching (5x faster)
 - 🔗 **BarrierX Integration** - Real-time deal, contact, and meeting data sync
 - 📝 **Webhook Processing** - ElevenLabs call completion webhooks with payload storage
@@ -30,11 +25,12 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
 - **Runtime**: Node.js 18+ with TypeScript
 - **Framework**: Express.js
 - **Database**: PostgreSQL (Neon) with Prisma ORM
+- **Cache**: Redis (optional, for resilience)
 - **Authentication**: JWT (7-day validity)
 - **External APIs**: 
   - BarrierX API (CRM data)
   - ElevenLabs API (AI voice calls)
-- **Scheduler**: node-cron (3-minute intervals)
+- **Scheduler**: node-cron (5-minute intervals)
 
 ---
 
@@ -90,7 +86,16 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
    ENABLE_CALL_RETRY=true                # Enable/disable auto-retry
    CALL_RETRY_MAX_ATTEMPTS=3             # Total attempts (default: 3)
    CALL_RETRY_INTERVAL_MS=60000          # Interval between retries (default: 1 min)
+   
+   # Redis Cache (Optional - for resilience during API outages)
+   REDIS_ENABLED=true                    # Enable/disable Redis caching
+   REDIS_HOST=your-redis-host.com        # Redis host
+   REDIS_PORT=6379                       # Redis port
+   REDIS_USERNAME=default                # Redis username
+   REDIS_PASSWORD=your-redis-password    # Redis password
    ```
+   
+   > 💡 **Redis Setup**: See [REDIS_SETUP.md](./REDIS_SETUP.md) for detailed Redis configuration and testing.
 
 3. **Setup database:**
    ```bash

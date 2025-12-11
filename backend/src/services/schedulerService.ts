@@ -4,6 +4,7 @@ import { config } from '../config/env';
 import * as barrierxService from './barrierxService';
 import * as meetingService from './meetingService';
 import * as loggingService from './loggingService';
+import * as calledMeetingsCache from '../utils/calledMeetingsCache';
 
 interface MeetingTemplate {
   id: string;
@@ -20,8 +21,9 @@ interface Meeting extends Omit<MeetingTemplate, 'startTime' | 'endTime'> {
 }
 
 // ============================================
-// IN-MEMORY CALL TRACKING (Prevents Duplicates)
+// HYBRID CALL TRACKING (Memory + Redis)
 // ============================================
+// Prevents duplicate calls even after server restarts
 // Key format: meetingId_startTime_callType
 // This ensures:
 // - Same meeting + same time = SKIP (duplicate)
@@ -33,7 +35,7 @@ interface CalledMeetingRecord {
   meetingStartTime: string; // Original meeting start time
 }
 
-// Store called meetings: key = "meetingId_startTime_callType"
+// In-memory cache for fast lookups (primary)
 const calledMeetings = new Map<string, CalledMeetingRecord>();
 
 // Generate tracking key for a meeting call
@@ -41,19 +43,42 @@ const getCallTrackingKey = (meetingId: string, startTime: string, callType: 'pre
   return `${meetingId}_${startTime}_${callType}`;
 };
 
-// Check if a meeting call has already been triggered
-const hasBeenCalled = (meetingId: string, startTime: string, callType: 'pre' | 'post'): boolean => {
+// Check if a meeting call has already been triggered (checks memory + Redis)
+const hasBeenCalled = async (meetingId: string, startTime: string, callType: 'pre' | 'post'): Promise<boolean> => {
   const key = getCallTrackingKey(meetingId, startTime, callType);
-  return calledMeetings.has(key);
+  
+  // Check in-memory first (fast)
+  if (calledMeetings.has(key)) {
+    return true;
+  }
+  
+  // Check Redis as fallback (survives restarts)
+  const redisRecord = await calledMeetingsCache.getCalledMeeting(meetingId, startTime, callType);
+  
+  if (redisRecord) {
+    // Found in Redis but not in memory - restore to memory
+    calledMeetings.set(key, redisRecord);
+    return true;
+  }
+  
+  return false;
 };
 
-// Mark a meeting call as triggered
-const markAsCalled = (meetingId: string, startTime: string, callType: 'pre' | 'post'): void => {
+// Mark a meeting call as triggered (saves to both memory + Redis)
+const markAsCalled = async (meetingId: string, startTime: string, callType: 'pre' | 'post'): Promise<void> => {
   const key = getCallTrackingKey(meetingId, startTime, callType);
-  calledMeetings.set(key, {
+  
+  const record: CalledMeetingRecord = {
     calledAt: Date.now(),
     meetingStartTime: startTime,
-  });
+  };
+  
+  // Save to in-memory (fast access)
+  calledMeetings.set(key, record);
+  
+  // Save to Redis (persistence)
+  await calledMeetingsCache.saveCalledMeeting(meetingId, startTime, callType);
+  
   console.log(`       📝 Marked as called: ${key}`);
 };
 
@@ -73,6 +98,36 @@ const cleanupOldEntries = (): void => {
   
   if (cleanedCount > 0) {
     console.log(`🧹 Cleaned up ${cleanedCount} old call tracking entries`);
+  }
+};
+
+/**
+ * Restore called meetings state from Redis on server startup
+ * Prevents duplicate calls after server restarts
+ */
+export const restoreCalledMeetingsFromRedis = async (): Promise<void> => {
+  console.log('🔄 Restoring called meetings from Redis...');
+
+  try {
+    const redisRecords = await calledMeetingsCache.getAllCalledMeetings();
+
+    if (redisRecords.length === 0) {
+      console.log('✅ No called meetings to restore\n');
+      return;
+    }
+
+    let restoredCount = 0;
+
+    for (const { meetingId, startTime, callType, record } of redisRecords) {
+      const key = getCallTrackingKey(meetingId, startTime, callType);
+      calledMeetings.set(key, record);
+      restoredCount++;
+    }
+
+    console.log(`✅ Restored ${restoredCount} called meeting records from Redis\n`);
+
+  } catch (error: any) {
+    console.error('❌ Failed to restore called meetings from Redis:', error.message);
   }
 };
 
@@ -338,8 +393,8 @@ const runAutomationJob = async () => {
       if (preMeetings.length > 0) {
         console.log(`  📞 ${preMeetings.length} pre-meeting call(s) to trigger:`);
         for (const meeting of preMeetings) {
-          // Check if this meeting has already been called
-          if (hasBeenCalled(meeting.id, meeting.startTime, 'pre')) {
+          // Check if this meeting has already been called (checks memory + Redis)
+          if (await hasBeenCalled(meeting.id, meeting.startTime, 'pre')) {
             console.log(`     ⏭️  SKIP: ${meeting.title} (already called for this time slot)`);
             continue;
           }
@@ -381,8 +436,8 @@ const runAutomationJob = async () => {
               });
             }
 
-            // Mark as called to prevent duplicates
-            markAsCalled(meeting.id, meeting.startTime, 'pre');
+            // Mark as called to prevent duplicates (saves to memory + Redis)
+            await markAsCalled(meeting.id, meeting.startTime, 'pre');
             totalPreMeetings++;
           } catch (error) {
             console.error(`       ❌ Failed to trigger call for ${meeting.title}`);
@@ -394,8 +449,8 @@ const runAutomationJob = async () => {
       if (postMeetings.length > 0) {
         console.log(`  📞 ${postMeetings.length} post-meeting call(s) to trigger:`);
         for (const meeting of postMeetings) {
-          // Check if this meeting has already been called
-          if (hasBeenCalled(meeting.id, meeting.startTime, 'post')) {
+          // Check if this meeting has already been called (checks memory + Redis)
+          if (await hasBeenCalled(meeting.id, meeting.startTime, 'post')) {
             console.log(`     ⏭️  SKIP: ${meeting.title} (already called for this time slot)`);
             continue;
           }
@@ -437,8 +492,8 @@ const runAutomationJob = async () => {
               });
             }
 
-            // Mark as called to prevent duplicates
-            markAsCalled(meeting.id, meeting.startTime, 'post');
+            // Mark as called to prevent duplicates (saves to memory + Redis)
+            await markAsCalled(meeting.id, meeting.startTime, 'post');
             totalPostMeetings++;
           } catch (error) {
             console.error(`       ❌ Failed to trigger call for ${meeting.title}`);
