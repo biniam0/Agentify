@@ -26,7 +26,7 @@ export const config = {
   callRetry: {
     enabled: process.env.ENABLE_CALL_RETRY === 'true',
     maxAttempts: parseInt(process.env.CALL_RETRY_MAX_ATTEMPTS || '3'),
-    intervalMs: parseInt(process.env.CALL_RETRY_INTERVAL_MS || '60000'), // 1 minute default
+    intervalMs: parseInt(process.env.CALL_RETRY_INTERVAL_MS || '120000'), // 2 minutes default
   },
   automation: {
     // Toggle between 'authenticated' (DB users) or 'bulk' (all users from API)
@@ -35,6 +35,13 @@ export const config = {
     targetTenants: process.env.TARGET_TENANT_SLUGS?.split(',').filter(Boolean) || [],
     // Filter deals by update time (in days) - skips stale deals
     dealUpdateWindowDays: parseInt(process.env.DEAL_UPDATE_WINDOW_DAYS || '60'),
+  },
+  redis: {
+    enabled: process.env.REDIS_ENABLED === 'true',
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    username: process.env.REDIS_USERNAME || 'default',
+    password: process.env.REDIS_PASSWORD || '',
   },
 };
 
