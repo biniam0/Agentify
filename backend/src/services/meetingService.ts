@@ -5,6 +5,19 @@ import { formatMeetingTime } from '../utils/riskGenerator';
 import * as barrierxService from './barrierxService';
 import { Contact } from './barrierxService';
 
+/**
+ * Get timezone offset string (e.g., "+03:00", "-05:00")
+ */
+function getTimezoneOffset(timezone: string, date: Date): string {
+  const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+  const offset = (tzDate.getTime() - utcDate.getTime()) / (1000 * 60);
+  const hours = Math.floor(Math.abs(offset) / 60);
+  const minutes = Math.abs(offset) % 60;
+  const sign = offset >= 0 ? '+' : '-';
+  return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
 interface Deal {
   id: string;
   dealName: string;
@@ -39,6 +52,7 @@ interface Owner {
   email?: string;
   phone: string;
   avatar?: string;
+  timezone?: string;  // IANA timezone (e.g., "Africa/Addis_Ababa", "Europe/Madrid")
 }
 
 interface PreCallPayload {
@@ -199,6 +213,39 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
     // Get customer contact for context/variables
     const customer = contacts && contacts.length > 0 ? contacts[0] : null;
 
+    // Get owner's timezone (default to UTC if not provided)
+    const ownerTimezone = dealData.owner?.timezone || 'UTC';
+
+    // Log warning if timezone is missing
+    if (!dealData.owner?.timezone) {
+      console.log(`       ⚠️  No timezone found for owner ${dealData.owner?.name}, defaulting to UTC`);
+    }
+
+    // Get current time in both UTC and owner's local timezone
+    const now = new Date();
+    const utcDateTime = now.toISOString();
+
+    // Format current time in owner's timezone
+    const ownerLocalDate = now.toLocaleDateString('en-US', {
+      timeZone: ownerTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+
+    const ownerLocalTime = now.toLocaleTimeString('en-US', {
+      timeZone: ownerTimezone,
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    const ownerDayOfWeek = now.toLocaleDateString('en-US', {
+      timeZone: ownerTimezone,
+      weekday: 'long'
+    });
+
     // Prepare dynamic variables for ElevenLabs (post-call needs meeting context)
     const dynamicVariables = {
       // Meeting context (just completed)
@@ -223,6 +270,15 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
       // ⭐ Required for note/meeting creation via webhook
       hubspot_owner_id: dealData.owner?.hubspotId || dealData.owner?.id || '',
       tenant_slug: dealData.tenantSlug || userData.tenantSlug || 'unknown',
+
+      // 🌍 TIMEZONE-AWARE DATETIME VARIABLES for meeting scheduling
+      current_datetime_utc: utcDateTime,
+      current_date_local: ownerLocalDate,
+      current_time_local: ownerLocalTime,
+      current_day_of_week: ownerDayOfWeek,
+      current_timezone: ownerTimezone,
+      current_timezone_offset: getTimezoneOffset(ownerTimezone, now),
+      current_timestamp_ms: now.getTime().toString(),
     };
 
     // Debug log critical webhook values
@@ -230,6 +286,8 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
     console.log(`          dealId: ${dynamicVariables.dealId}`);
     console.log(`          hubspot_owner_id: ${dynamicVariables.hubspot_owner_id}`);
     console.log(`          tenant_slug: ${dynamicVariables.tenant_slug}`);
+    console.log(`          timezone: ${dynamicVariables.current_timezone} (${dynamicVariables.current_timezone_offset})`);
+    console.log(`          local_time: ${dynamicVariables.current_date_local} ${dynamicVariables.current_time_local}`);
 
     // Check if ElevenLabs is configured
     if (!config.elevenlabs.apiKey || !config.elevenlabs.postAgentId) {
