@@ -31,11 +31,13 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
     const { type, event_timestamp, data } = req.body;
 
     // Handle call initiation failures (for retry logic)
-    if (type === 'call_initiation_failed') {
+    // ElevenLabs sends 'call_initiation_failure' (without trailing 'd')
+    if (type === 'call_initiation_failure') {
       console.log(`\n📞 Call initiation FAILED webhook received`);
-      console.log(`   ❌ Failure Reason: ${data?.failure_reason}`);
-      console.log(`   📞 Phone: ${data?.metadata?.phone_call?.external_number || 'Unknown'}`);
+      console.log(`   ❌ Failure Reason: ${data?.failure_reason || 'Unknown'}`);
+      console.log(`   📞 Phone: ${data?.metadata?.phone_call?.external_number || data?.phone_number || 'Unknown'}`);
       console.log(`   🤖 Agent ID: ${data?.agent_id}`);
+      console.log(`   📋 Webhook structure - Type: ${type}, Has data: ${!!data}, Has metadata: ${!!data?.metadata}`);
 
       // Save failure webhook for debugging
       try {
@@ -52,7 +54,7 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
       // Log the webhook
       await loggingService.logWebhook({
         webhookType: 'ELEVENLABS_CALL',
-        eventType: 'call_initiation_failed',
+        eventType: 'call_initiation_failure',
         agentId: data?.agent_id,
         status: 'SUCCESS',
         payload: req.body,
@@ -67,7 +69,7 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
           activityType: 'WEBHOOK_RECEIVED',
           status: 'SUCCESS',
           metadata: {
-            webhookType: 'call_initiation_failed',
+            webhookType: 'call_initiation_failure',
             failureReason: data?.failure_reason,
             phoneNumber,
           },
@@ -76,7 +78,7 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
 
       res.status(200).json({
         received: true,
-        type: 'call_initiation_failed',
+        type: 'call_initiation_failure',
         failure_reason: data?.failure_reason,
         retry_enabled: config.callRetry.enabled,
       });
