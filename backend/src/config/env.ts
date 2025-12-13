@@ -16,7 +16,7 @@ export const config = {
     apiKey: process.env.BARRIERX_API_KEY || '',
     useMockData: process.env.USE_MOCK_BARRIERX === 'true',
   },
-  elevenlabs: {
+  elevenlabs: { 
     apiKey: process.env.ELEVENLABS_KEY || '',
     preAgentId: process.env.ELEVENLABS_PRE_AGENT_ID || '',
     postAgentId: process.env.ELEVENLABS_POST_AGENT_ID || '',

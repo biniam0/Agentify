@@ -33,7 +33,7 @@ interface RetryRecord {
 }
 
 interface CallInitiationFailedWebhook {
-  type: 'call_initiation_failed';
+  type: 'call_initiation_failure';
   event_timestamp: number;
   data: {
     agent_id: string;
@@ -79,14 +79,23 @@ export const handleCallInitiationFailure = async (webhookPayload: CallInitiation
   const { data } = webhookPayload;
   const { agent_id, failure_reason } = data;
 
-  // Extract phone number and dynamic variables
-  const phoneNumber = data.metadata?.phone_call?.external_number;
-  const dynamicVariables = data.conversation_initiation_client_data?.dynamic_variables || {};
+  // Extract phone number with fallback paths (ElevenLabs may use different field names)
+  const phoneNumber = 
+    data.metadata?.phone_call?.external_number ||
+    data.phone_number ||
+    data.to_number;
+
+  // Extract dynamic variables with fallback paths
+  const dynamicVariables = 
+    data.conversation_initiation_client_data?.dynamic_variables || 
+    data.dynamic_variables ||
+    {};
 
   console.log('\n🔄 Processing call initiation failure...');
   console.log(`   📞 Phone: ${phoneNumber || 'Unknown'}`);
-  console.log(`   ❌ Failure Reason: ${failure_reason}`);
+  console.log(`   ❌ Failure Reason: ${failure_reason || 'Unknown'}`);
   console.log(`   🤖 Agent ID: ${agent_id}`);
+  console.log(`   📋 Dynamic variables: ${Object.keys(dynamicVariables).length} fields available`);
 
   // Only retry on "no-answer" - user might become available
   if (failure_reason !== 'no-answer') {
