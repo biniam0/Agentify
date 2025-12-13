@@ -168,6 +168,10 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
           sync_engagements: true,
           page: 1,
           limit: 100,
+          // Add deal_pipeline filter if configured
+          ...(config.automation.dealPipelines.length > 0 && {
+            deal_pipeline: config.automation.dealPipelines.join(',')
+          }),
         },
         headers: {
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
@@ -237,6 +241,10 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
           sync_engagements: true,
           page: 1,
           limit: 500,  // Max allowed
+          // Add deal_pipeline filter if configured
+          ...(config.automation.dealPipelines.length > 0 && {
+            deal_pipeline: config.automation.dealPipelines.join(',')
+          }),
         },
         headers: {
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
@@ -326,6 +334,11 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
           // Pagination
           page: 1,
           limit: 1000,  // Max limit for large datasets
+          
+          // Add deal_pipeline filter if configured
+          ...(config.automation.dealPipelines.length > 0 && {
+            deal_pipeline: config.automation.dealPipelines.join(',')
+          }),
         },
         headers: {
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
