@@ -46,6 +46,10 @@ interface CallInitiationFailedWebhook {
         external_number?: string;
       };
     };
+    // Fallback properties (ElevenLabs may use different field names)
+    phone_number?: string;
+    to_number?: string;
+    dynamic_variables?: Record<string, any>;
   };
 }
 
