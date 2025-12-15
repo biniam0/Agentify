@@ -6,10 +6,10 @@ import axios from 'axios';
 import { config } from '../config/env';
 import mockUsersDataJson from '../data/mockUsers.json';
 import { generateDummyRecommendations } from './barrierx/dummyDataGenerators';
-import { 
-  getBulkDealsFromCache, 
-  saveBulkDealsToCache, 
-  hasDataChanged 
+import {
+  getBulkDealsFromCache,
+  saveBulkDealsToCache,
+  hasDataChanged
 } from '../utils/redisCache';
 
 export interface Tenant {
@@ -62,6 +62,14 @@ export interface Deal {
   summary?: string;
   userDealRiskScores?: any;
   closeDate?: string;
+  recommendations?: Array<{
+    note: string;
+    title: string;
+    severity: string;
+    isAssigned: boolean;
+    indicatorId: string;
+    isCompleted: boolean;
+  }>;
 }
 
 
@@ -157,7 +165,7 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
     console.log(`🌐 Fetching deals from BarrierX for user: ${userId}`);
 
     const startTime = Date.now();
-    
+
     const response = await axios.get(
       `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
       {
@@ -168,6 +176,10 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
           sync_engagements: true,
           page: 1,
           limit: 100,
+          // Add deal_pipeline filter if configured
+          ...(config.automation.dealPipelines.length > 0 && {
+            deal_pipeline: config.automation.dealPipelines.join(',')
+          }),
         },
         headers: {
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
@@ -187,13 +199,13 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
     // Transform BarrierX format to AgentX format
     const { transformBarrierXDeals } = await import('./barrierx/dataTransformers');
     const deals = transformBarrierXDeals(response.data.tenants[0], userId);
-    
+
     console.log(`✅ Successfully fetched ${deals.length} deals for user ${userId} in ${durationSeconds}s`);
     return deals;
 
   } catch (error: any) {
     console.error(`❌ BarrierX API error for user ${userId}:`, error.response?.data || error.message);
-    
+
     // No fallback - let it fail
     throw new Error(`Failed to fetch deals for user ${userId}: ${error.response?.data?.details || error.message}`);
   }
@@ -226,7 +238,7 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
     console.log(`🌐 Batch fetching deals for ${userIds.length} users from BarrierX`);
 
     const startTime = Date.now();
-    
+
     const response = await axios.get(
       `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
       {
@@ -237,6 +249,10 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
           sync_engagements: true,
           page: 1,
           limit: 500,  // Max allowed
+          // Add deal_pipeline filter if configured
+          ...(config.automation.dealPipelines.length > 0 && {
+            deal_pipeline: config.automation.dealPipelines.join(',')
+          }),
         },
         headers: {
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
@@ -263,7 +279,7 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
     // Transform bulk response
     const { transformBulkResponse } = await import('./barrierx/dataTransformers');
     const dealsMap = transformBulkResponse(response.data.tenants, userIds);
-    
+
     console.log(`✅ Successfully batch fetched deals for ${dealsMap.size} users in ${durationSeconds}s`);
     return dealsMap;
 
@@ -309,7 +325,7 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
     console.log(`🌐 Fetching deals updated in last ${updateWindowDays} days (since ${dealUpdatedSince})...`);
 
     const startTime = Date.now();
-    
+
     const response = await axios.get(
       `${config.barrierx.baseUrl}/api/external/tenants/bulk`,
       {
@@ -326,6 +342,11 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
           // Pagination
           page: 1,
           limit: 1000,  // Max limit for large datasets
+
+          // Add deal_pipeline filter if configured
+          ...(config.automation.dealPipelines.length > 0 && {
+            deal_pipeline: config.automation.dealPipelines.join(',')
+          }),
         },
         headers: {
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
@@ -337,7 +358,7 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
 
     const endTime = Date.now();
     const durationSeconds = ((endTime - startTime) / 1000).toFixed(2);
-    
+
     console.log(`⏱️  Bulk fetch completed in ${durationSeconds} seconds`);
 
     if (!response.data.ok || !response.data.tenants) {
@@ -407,7 +428,7 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
     // ✅ REDIS CACHE FALLBACK: Try to get cached data
     console.log('🔄 Attempting to use Redis cache...');
     const cachedData = await getBulkDealsFromCache();
-    
+
     if (cachedData && cachedData.size > 0) {
       console.log(`📦 Using Redis cache as fallback (${cachedData.size} users)`);
       return cachedData;
@@ -693,8 +714,11 @@ export const getRisks = async (dealId: string): Promise<{
 };
 
 // Get recommendations for a specific deal
-// Returns mock recommendations that mirror the BarrierX recommendation structure
-export const getRecommendations = async (dealId: string): Promise<{
+// Uses recommendations from deal if available, falls back to mock data
+export const getRecommendations = async (
+  dealId: string,
+  deal?: Deal
+): Promise<{
   success: boolean;
   dealId: string;
   recommendations: Array<{
@@ -706,6 +730,19 @@ export const getRecommendations = async (dealId: string): Promise<{
     isCompleted: boolean;
   }>;
 }> => {
+  // Check if deal has recommendations from BarrierX
+  if (deal?.recommendations && deal.recommendations.length > 0) {
+    console.log(`✅ Using ${deal.recommendations.length} real recommendations from BarrierX for deal ${dealId}`);
+    return {
+      success: true,
+      dealId,
+      recommendations: deal.recommendations,
+    };
+  }
+
+  // Fallback to mock recommendations
+  console.log(`🔧 Using mock recommendations for deal ${dealId} (no BarrierX recommendations available)`);
+
   const mockRecommendations = [
     {
       note: 'Schedule a meeting with the economic buyer to explicitly confirm their budget approval authority and understand the complete approval process for the deal amount.',
@@ -716,7 +753,7 @@ export const getRecommendations = async (dealId: string): Promise<{
       isCompleted: false,
     },
     {
-      note: 'Work with your champion to demonstrate their ability to secure budget commitments by preparing a business case that shows clear ROI and aligns with the economic buyer’s priorities.',
+      note: "Work with your champion to demonstrate their ability to secure budget commitments by preparing a business case that shows clear ROI and aligns with the economic buyer's priorities.",
       title: 'Secure Budget Commitment from Champion',
       severity: 'Critical',
       isAssigned: false,

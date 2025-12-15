@@ -74,6 +74,7 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
    AUTOMATION_MODE=bulk                    # Options: 'authenticated' | 'bulk'
    DEAL_UPDATE_WINDOW_DAYS=60              # Only fetch deals updated in last 60 days (reduces payload ~67%)
    # TARGET_TENANT_SLUGS=agent-call        # Optional: comma-separated tenant slugs (leave empty for all)
+   # DEAL_PIPELINES=1. Sales Pipeline,Sales Pipeline  # Optional: filter deals by specific pipelines (comma-separated)
    
    # ElevenLabs Integration
    ELEVENLABS_API_KEY="your_elevenlabs_api_key"
@@ -258,6 +259,7 @@ AUTOMATION_MODE=authenticated
 ```env
 AUTOMATION_MODE=bulk
 # TARGET_TENANT_SLUGS=agent-call,morphyn  # Optional: filter specific tenants
+# DEAL_PIPELINES=1. Sales Pipeline,Sales Pipeline  # Optional: filter specific pipelines
 ```
 
 **Flow:**
@@ -271,6 +273,27 @@ AUTOMATION_MODE=bulk
 - ✅ **Always fresh data** from source of truth
 - ✅ **Auto-discovery** of new tenants/users
 - ✅ **Simpler deployment** (backend-only)
+
+### 🎯 Deal Filtering
+
+You can optionally filter deals using these environment variables:
+
+- **`TARGET_TENANT_SLUGS`**: Filter by specific tenant slugs (comma-separated)
+  ```env
+  TARGET_TENANT_SLUGS=agent-call,morphyn
+  ```
+
+- **`DEAL_PIPELINES`**: Filter deals by specific pipelines (comma-separated)
+  ```env
+  DEAL_PIPELINES=1. Sales Pipeline,Sales Pipeline
+  ```
+
+- **`DEAL_UPDATE_WINDOW_DAYS`**: Only fetch deals updated within X days (default: 60)
+  ```env
+  DEAL_UPDATE_WINDOW_DAYS=30
+  ```
+
+If not specified or left empty, all tenants/pipelines will be included.
 
 ### 📋 Processing Steps (Both Modes)
 

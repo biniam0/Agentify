@@ -16,7 +16,7 @@ export const config = {
     apiKey: process.env.BARRIERX_API_KEY || '',
     useMockData: process.env.USE_MOCK_BARRIERX === 'true',
   },
-  elevenlabs: {
+  elevenlabs: { 
     apiKey: process.env.ELEVENLABS_KEY || '',
     preAgentId: process.env.ELEVENLABS_PRE_AGENT_ID || '',
     postAgentId: process.env.ELEVENLABS_POST_AGENT_ID || '',
@@ -35,6 +35,8 @@ export const config = {
     targetTenants: process.env.TARGET_TENANT_SLUGS?.split(',').filter(Boolean) || [],
     // Filter deals by update time (in days) - skips stale deals
     dealUpdateWindowDays: parseInt(process.env.DEAL_UPDATE_WINDOW_DAYS || '60'),
+    // Optional: comma-separated deal pipelines to filter (e.g., "1. Sales Pipeline,Sales Pipeline")
+    dealPipelines: process.env.DEAL_PIPELINES?.split(',').map(p => p.trim()).filter(Boolean) || [],
   },
   redis: {
     enabled: process.env.REDIS_ENABLED === 'true',
