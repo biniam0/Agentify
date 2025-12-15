@@ -72,6 +72,7 @@ const transformSingleDeal = (deal: any, userId: string, tenant: any): Deal => {
     summary: deal.summary || `Deal: ${deal.dealName}`,
     userDealRiskScores,
     closeDate: deal.closeDate,
+    recommendations: deal.recommendations || [],
   };
 };
 

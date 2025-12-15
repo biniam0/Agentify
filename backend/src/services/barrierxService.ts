@@ -62,6 +62,14 @@ export interface Deal {
   summary?: string;
   userDealRiskScores?: any;
   closeDate?: string;
+  recommendations?: Array<{
+    note: string;
+    title: string;
+    severity: string;
+    isAssigned: boolean;
+    indicatorId: string;
+    isCompleted: boolean;
+  }>;
 }
 
 
@@ -706,8 +714,11 @@ export const getRisks = async (dealId: string): Promise<{
 };
 
 // Get recommendations for a specific deal
-// Returns mock recommendations that mirror the BarrierX recommendation structure
-export const getRecommendations = async (dealId: string): Promise<{
+// Uses recommendations from deal if available, falls back to mock data
+export const getRecommendations = async (
+  dealId: string,
+  deal?: Deal
+): Promise<{
   success: boolean;
   dealId: string;
   recommendations: Array<{
@@ -719,6 +730,19 @@ export const getRecommendations = async (dealId: string): Promise<{
     isCompleted: boolean;
   }>;
 }> => {
+  // Check if deal has recommendations from BarrierX
+  if (deal?.recommendations && deal.recommendations.length > 0) {
+    console.log(`✅ Using ${deal.recommendations.length} real recommendations from BarrierX for deal ${dealId}`);
+    return {
+      success: true,
+      dealId,
+      recommendations: deal.recommendations,
+    };
+  }
+
+  // Fallback to mock recommendations
+  console.log(`🔧 Using mock recommendations for deal ${dealId} (no BarrierX recommendations available)`);
+  
   const mockRecommendations = [
     {
       note: 'Schedule a meeting with the economic buyer to explicitly confirm their budget approval authority and understand the complete approval process for the deal amount.',
@@ -729,7 +753,7 @@ export const getRecommendations = async (dealId: string): Promise<{
       isCompleted: false,
     },
     {
-      note: 'Work with your champion to demonstrate their ability to secure budget commitments by preparing a business case that shows clear ROI and aligns with the economic buyer’s priorities.',
+      note: 'Work with your champion to demonstrate their ability to secure budget commitments by preparing a business case that shows clear ROI and aligns with the economic buyer's priorities.',
       title: 'Secure Budget Commitment from Champion',
       severity: 'Critical',
       isAssigned: false,

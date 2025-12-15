@@ -90,10 +90,11 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
     // Get customer contact for context/variables
     const customer = contacts && contacts.length > 0 ? contacts[0] : null;
 
-    // Fetch risks and recommendations from BarrierX (mock for now)
+    // Fetch risks and recommendations from BarrierX
+    // Pass dealData to getRecommendations so it can use real recommendations if available
     const [risksData, recommendationsData] = await Promise.all([
       barrierxService.getRisks(dealData.id),
-      barrierxService.getRecommendations(dealData.id),
+      barrierxService.getRecommendations(dealData.id, dealData as any),
     ]);
 
     const risks = risksData.risks || [];
