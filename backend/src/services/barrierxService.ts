@@ -690,19 +690,19 @@ export const getRisks = async (dealId: string): Promise<{
   // Simple mock risks - useful for ElevenLabs agent context
   const mockRisks = [
     {
-      category: 'Champion',
+      category: 'Economic Buyer',
+      score: 7,
+      description: 'Economic buyer engagement is limited. Schedule a direct meeting to confirm budget authority and understand the approval process.',
+    },
+    {
+      category: 'Budget Authority',
       score: 6,
-      description: 'Champion engagement needs improvement. Consider scheduling a direct touchpoint with the decision maker.',
+      description: 'Budget approval process is unclear. Document the decision-making chain and identify all required approvers.',
     },
     {
-      category: 'Timeline',
+      category: 'Champion Strength',
       score: 5,
-      description: 'Deal velocity is tracking slightly behind schedule. Monitor the close date and create urgency.',
-    },
-    {
-      category: 'Competition',
-      score: 4,
-      description: 'Competitive activity detected in this account. Be prepared to differentiate your solution.',
+      description: 'Champion may lack influence to drive internal approval. Provide ROI materials and executive sponsor engagement to strengthen their position.',
     },
   ];
 
@@ -745,7 +745,7 @@ export const getRecommendations = async (
 
   const mockRecommendations = [
     {
-      note: 'Schedule a meeting with the economic buyer to explicitly confirm their budget approval authority and understand the complete approval process for the deal amount.',
+      note: 'Schedule a direct meeting with the economic buyer to confirm budget approval authority, understand the approval process, and verify allocated budget availability. Document confirmation and identify any remaining approval steps needed.',
       title: 'Confirm Economic Buyer Budget Authority',
       severity: 'Critical',
       isAssigned: false,
@@ -753,27 +753,35 @@ export const getRecommendations = async (
       isCompleted: false,
     },
     {
-      note: "Work with your champion to demonstrate their ability to secure budget commitments by preparing a business case that shows clear ROI and aligns with the economic buyer's priorities.",
-      title: 'Secure Budget Commitment from Champion',
+      note: 'Create a formal decision authority map identifying all stakeholders, their roles, approval levels, and required steps for deal approval. Share with the champion to ensure alignment and prevent delays from unclear authority.',
+      title: 'Document Decision-Making Authority and Process',
       severity: 'Critical',
       isAssigned: false,
       indicatorId: 'mock-indicator-2',
       isCompleted: false,
     },
     {
-      note: 'Document formal budget and resource commitments from the economic buyer and implementation team, ensuring all stakeholders are aligned on the target close date.',
-      title: 'Obtain Formal Budget and Resource Commitments',
+      note: 'Request written confirmation from the economic buyer committing budget and internal resources for implementation. Include specific resource allocation, timeline commitments, and participation requirements.',
+      title: 'Secure Formal Budget and Resource Commitment',
       severity: 'Critical',
       isAssigned: false,
       indicatorId: 'mock-indicator-3',
       isCompleted: false,
     },
     {
-      note: 'Address all unresolved commercial terms in the contract that could delay the target close date, focusing on the most critical blockers first.',
-      title: 'Resolve Unresolved Commercial Terms',
+      note: 'Develop and present a detailed ROI analysis quantifying business impact, cost savings, and payback period. Align metrics with the customer\'s strategic priorities and demonstrate clear value within 12 months.',
+      title: 'Prepare and Present Formal ROI Analysis',
       severity: 'High',
       isAssigned: false,
       indicatorId: 'mock-indicator-4',
+      isCompleted: false,
+    },
+    {
+      note: 'Send the formal contract with clear deliverables, timelines, and terms before month-end to capitalize on current budget availability and maintain deal momentum while stakeholders are engaged.',
+      title: 'Finalize Contract Terms Before Period Close',
+      severity: 'High',
+      isAssigned: false,
+      indicatorId: 'mock-indicator-5',
       isCompleted: false,
     },
   ];
