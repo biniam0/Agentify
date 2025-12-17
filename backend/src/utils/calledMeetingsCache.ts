@@ -19,13 +19,13 @@ export interface CalledMeetingRecord {
 
 /**
  * Cache configuration
- * 30 minutes is sufficient since:
+ * 60 minutes is sufficient since:
  * - Pre-call window: T-15 (13-17 min before start)
- * - Post-call window: T+5 (3-7 min after end)
- * - Total exposure: ~20 minutes max
- * - TTL of 30 min provides safety buffer
+ * - Post-call window: T+30 (27-33 min after end)
+ * - Total exposure: ~45 minutes max
+ * - TTL of 60 min provides safety buffer
  */
-const CALLED_MEETINGS_TTL_SECONDS = 30 * 60; // 30 minutes
+const CALLED_MEETINGS_TTL_SECONDS = 60 * 60; // 60 minutes
 
 /**
  * Save called meeting record to Redis

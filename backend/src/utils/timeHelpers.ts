@@ -20,13 +20,13 @@ export const getT15Window = (): TimeWindow => {
 };
 
 /**
- * Get time window for T+5 (5 minutes ago)
+ * Get time window for T+30 (30 minutes ago)
  * Used for post-meeting calls
  */
-export const getT5Window = (): TimeWindow => {
+export const getT30Window = (): TimeWindow => {
   const now = Date.now();
   return {
-    start: now - 5 * 60 * 1000, // 5 minutes ago
+    start: now - 30 * 60 * 1000, // 30 minutes ago
     end: now,
   };
 };
@@ -41,11 +41,11 @@ export const isInT15Window = (startTime: string): boolean => {
 };
 
 /**
- * Check if a meeting is in the T+5 window (ended within last 5 minutes)
+ * Check if a meeting is in the T+30 window (ended within last 30 minutes)
  */
-export const isInT5Window = (endTime: string): boolean => {
+export const isInT30Window = (endTime: string): boolean => {
   const meetingEnd = new Date(endTime).getTime();
-  const window = getT5Window();
+  const window = getT30Window();
   return meetingEnd >= window.start && meetingEnd <= window.end;
 };
 
@@ -60,10 +60,10 @@ export const isMeetingOngoing = (startTime: string, endTime: string): boolean =>
 };
 
 /**
- * Filter meetings based on T-15 and T+5 logic
+ * Filter meetings based on T-15 and T+30 logic
  * Returns meetings that are either:
  * - Starting within next 15 minutes (T-15)
- * - Ended within last 5 minutes (T+5)
+ * - Ended within last 30 minutes (T+30)
  * - Currently ongoing
  */
 export const filterMeetingsByTimeWindow = <T extends { startTime: string; endTime: string }>(
@@ -72,7 +72,7 @@ export const filterMeetingsByTimeWindow = <T extends { startTime: string; endTim
   return meetings.filter((meeting) => {
     return (
       isInT15Window(meeting.startTime) ||
-      isInT5Window(meeting.endTime) ||
+      isInT30Window(meeting.endTime) ||
       isMeetingOngoing(meeting.startTime, meeting.endTime)
     );
   });

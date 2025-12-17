@@ -7,7 +7,7 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
 ## ✨ Features
 
 - 🔐 **Hybrid Authentication** - AgentX JWT (7-day) + BarrierX tokens (1-hour)
-- 📞 **Automated Calls** - Pre-meeting (T-15) and post-meeting (T+5) via ElevenLabs
+- 📞 **Automated Calls** - Pre-meeting (T-15) and post-meeting (T+30) via ElevenLabs
 - 🔄 **Smart Call Retry** - Auto-retry on no-answer (3 attempts, 1 min interval)
 - 📅 **Meeting Management** - Fetch and manage user meetings from BarrierX
 - 🤖 **AI Voice Agents** - Pre-call preparation & post-call follow-up agents

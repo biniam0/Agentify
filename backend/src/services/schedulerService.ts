@@ -168,7 +168,7 @@ const processUserMeetings = (userData: any) => {
   // ✅ Cache time values - calculate once, reuse for all meetings
   const now = Date.now();
   const fifteenMinutesFromNow = now + 15 * 60 * 1000;
-  const fiveMinutesAgo = now - 5 * 60 * 1000;
+  const thirtyMinutesAgo = now - 30 * 60 * 1000;
 
   // Cache user info to avoid repeated access
   const userInfo = {
@@ -203,8 +203,8 @@ const processUserMeetings = (userData: any) => {
       // Check for pre-meeting (T-15: upcoming within next 15 minutes)
       const isPreMeeting = startTime >= now && startTime <= fifteenMinutesFromNow;
 
-      // Check for post-meeting (T+5: ended within last 5 minutes)
-      const isPostMeeting = endTime >= fiveMinutesAgo && endTime <= now;
+      // Check for post-meeting (T+30: ended within last 30 minutes)
+      const isPostMeeting = endTime >= thirtyMinutesAgo && endTime <= now;
 
       // ✅ Filter before building - only create objects for matching meetings
       if (isPreMeeting || isPostMeeting) {
@@ -445,7 +445,7 @@ const runAutomationJob = async () => {
         }
       }
 
-      // Trigger post-meeting calls (T+5)
+      // Trigger post-meeting calls (T+30)
       if (postMeetings.length > 0) {
         console.log(`  📞 ${postMeetings.length} post-meeting call(s) to trigger:`);
         for (const meeting of postMeetings) {
