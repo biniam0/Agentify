@@ -28,6 +28,14 @@ interface Deal {
   tenantSlug?: string;  // Tenant slug for webhook calls
   userDealRiskScores?: any;
   attachments?: Array<{ id: string; name?: string; url?: string }>;
+  recommendations?: Array<{
+    note: string;
+    title: string;
+    severity: string;
+    isAssigned: boolean;
+    indicatorId: string;
+    isCompleted: boolean;
+  }>;
 }
 
 interface Meeting {
