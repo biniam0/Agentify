@@ -562,6 +562,154 @@ export const handleCreateMeeting = async (req: Request, res: Response): Promise<
   }
 };
 
+export const handleCreateTask = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('\n✅ Received create_task command from ElevenLabs');
+    console.log('⏰ Time:', new Date().toISOString());
+    console.log('📋 Task Data:', JSON.stringify(req.body, null, 2));
+
+    const {
+      deal_id,
+      hubspot_owner_id,
+      tenant_slug,
+      hs_timestamp,
+      hs_task_subject,
+      hs_task_body,
+      hs_task_type,
+      hs_task_status,
+      hs_task_priority,
+    } = req.body;
+
+    console.log('\n📊 Extracted Fields:');
+    console.log(`  Task Subject: ${hs_task_subject || 'Not provided'}`);
+    console.log(`  Due Date: ${hs_timestamp || 'Not provided'}`);
+    console.log(`  Task Type: ${hs_task_type || 'TODO'}`);
+    console.log(`  Priority: ${hs_task_priority || 'Not specified'}`);
+    console.log(`  Status: ${hs_task_status || 'NOT_STARTED'}`);
+    console.log(`  Deal ID: ${deal_id || 'Not provided'}`);
+    console.log(`  Owner ID: ${hubspot_owner_id || 'Not provided'}`);
+    console.log(`  Tenant Slug: ${tenant_slug || 'Not provided'}`);
+
+    // Validate required fields
+    if (!deal_id || !hs_task_subject || !hubspot_owner_id || !tenant_slug || !hs_timestamp) {
+      console.error('❌ Missing required fields');
+      res.status(400).json({
+        success: false,
+        error: 'Missing required fields: deal_id, hs_task_subject, hs_timestamp, hubspot_owner_id, tenant_slug',
+        received: {
+          deal_id,
+          hs_task_subject: !!hs_task_subject,
+          hs_timestamp: !!hs_timestamp,
+          hubspot_owner_id,
+          tenant_slug
+        },
+      });
+      return;
+    }
+
+    // Convert ISO 8601 string to milliseconds timestamp
+    let taskTimestamp: number;
+    try {
+      taskTimestamp = new Date(hs_timestamp).getTime();
+      if (isNaN(taskTimestamp)) {
+        throw new Error('Invalid timestamp format');
+      }
+    } catch (error) {
+      console.error('❌ Invalid timestamp format:', hs_timestamp);
+      res.status(400).json({
+        success: false,
+        error: 'Invalid timestamp format. Expected ISO 8601 format (e.g., 2025-12-23T10:00:00Z)',
+        received: { hs_timestamp },
+      });
+      return;
+    }
+
+    // Create task in HubSpot via BarrierX
+    console.log('🚀 Calling BarrierX to create task in HubSpot...');
+    const result = await barrierxService.createTaskEngagement({
+      tenantSlug: tenant_slug,
+      dealId: deal_id,
+      ownerId: hubspot_owner_id,
+      subject: hs_task_subject,
+      body: hs_task_body,
+      timestamp: taskTimestamp,
+      taskType: hs_task_type || 'TODO',
+      status: hs_task_status || 'NOT_STARTED',
+      priority: hs_task_priority,
+    });
+
+    if (result.success) {
+      console.log(`✅ Task created successfully! Engagement ID: ${result.engagementId}`);
+
+      // Log the CRM action
+      await loggingService.logCrmAction({
+        actionType: 'TASK',
+        dealId: deal_id,
+        tenantSlug: tenant_slug,
+        ownerId: hubspot_owner_id,
+        entityId: result.engagementId,
+        title: hs_task_subject,
+        body: hs_task_body,
+        status: 'SUCCESS',
+        metadata: req.body,
+      });
+
+      // Log webhook
+      await loggingService.logWebhook({
+        webhookType: 'ELEVENLABS_TOOL',
+        eventType: 'create_task',
+        status: 'SUCCESS',
+        payload: req.body,
+        response: { engagementId: result.engagementId },
+      });
+
+      res.json({
+        success: true,
+        message: 'Task created in HubSpot via BarrierX',
+        engagementId: result.engagementId,
+        task: {
+          hs_task_subject,
+          hs_timestamp,
+          hs_task_type: hs_task_type || 'TODO',
+          hs_task_status: hs_task_status || 'NOT_STARTED',
+          hs_task_priority,
+          deal_id,
+          hubspot_owner_id,
+          tenant_slug,
+        },
+      });
+    } else {
+      console.error(`❌ Failed to create task: ${result.error}`);
+
+      // Log the failed CRM action
+      await loggingService.logCrmAction({
+        actionType: 'TASK',
+        dealId: deal_id,
+        tenantSlug: tenant_slug,
+        ownerId: hubspot_owner_id,
+        title: hs_task_subject,
+        body: hs_task_body,
+        status: 'FAILED',
+        errorMessage: result.error,
+        metadata: req.body,
+      });
+
+      res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to create task in HubSpot',
+        details: 'BarrierX API returned an error',
+      });
+    }
+  } catch (error) {
+    console.error('❌ Create task error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process create task command',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
 export const handleCreateDeal = async (req: Request, res: Response): Promise<void> => {
   try {
     console.log('\n💼 Received create_deal command from ElevenLabs');

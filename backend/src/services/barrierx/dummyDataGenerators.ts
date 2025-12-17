@@ -88,8 +88,8 @@ export const generateDummyMeetings = (deal: any, contacts: Contact[]): Meeting[]
     });
   }
 
-  // Follow-up meeting (5 minutes after current time for post-call testing)
-  const postMeetingTime = now + 5 * 60 * 1000;
+  // Follow-up meeting (30 minutes after current time for post-call testing)
+  const postMeetingTime = now + 30 * 60 * 1000;
   meetings.push({
     id: `m-${deal.id}-post`,
     title: `Follow-up: ${deal.dealName}`,
