@@ -59,6 +59,15 @@ export interface Deal {
   summary?: string;
   userDealRiskScores?: any;
   closeDate?: string;
+  /**
+   * Optional: BarrierX may include explicit risks in the bulk API response in the future.
+   * When present, these should be preferred over any fallback logic.
+   */
+  risks?: Array<{
+    category: string;
+    score: number;
+    description: string;
+  }>;
   recommendations?: Array<{
     note: string;
     title: string;
@@ -575,22 +584,49 @@ export const createCompany = async (payload: {
 };
 
 // Get risks for a specific deal
-// Returns empty array if no real risk data is available
-export const getRisks = async (dealId: string): Promise<{
+// Uses deal.risks if present (from real BarrierX bulk response); otherwise falls back to a static list for now.
+export const getRisks = async (
+  dealId: string,
+  deal?: Deal
+): Promise<{
   success: boolean;
   dealId: string;
   risks: Array<{ category: string; score: number; description: string }>;
 }> => {
-  // Return empty array - real risks should come from BarrierX API or deal data
-  return {
-    success: true,
-    dealId,
-    risks: [],
-  };
+  // ✅ Prefer real risks from BarrierX bulk response (when/if present)
+  if (deal?.risks && deal.risks.length > 0) {
+    console.log(`✅ Using ${deal.risks.length} real risks from BarrierX for deal ${dealId}`);
+    return { success: true, dealId, risks: deal.risks };
+  }
+
+  // Fallback risks (until BarrierX bulk response includes deal.risks)
+  const mockRisks = [
+    {
+      category: 'Economic Buyer',
+      score: 7,
+      description:
+        'Economic buyer engagement is limited. Schedule a direct meeting to confirm budget authority and understand the approval process.',
+    },
+    {
+      category: 'Budget Authority',
+      score: 6,
+      description:
+        'Budget approval process is unclear. Document the decision-making chain and identify all required approvers.',
+    },
+    {
+      category: 'Champion Strength',
+      score: 5,
+      description:
+        'Champion may lack influence to drive internal approval. Provide ROI materials and executive sponsor engagement to strengthen their position.',
+    },
+  ];
+
+  console.log(`🔧 Using fallback risks for deal ${dealId} (BarrierX bulk response has no deal.risks)`);
+  return { success: true, dealId, risks: mockRisks };
 };
 
 // Get recommendations for a specific deal
-// Uses recommendations from deal if available, returns empty array otherwise
+// Uses recommendations from deal if available (from real BarrierX bulk response); otherwise falls back to a static list.
 export const getRecommendations = async (
   dealId: string,
   deal?: Deal
@@ -616,12 +652,51 @@ export const getRecommendations = async (
     };
   }
 
-  // Return empty array if no real recommendations available
-  console.log(`⚠️  No recommendations available for deal ${dealId}`);
-  return {
-    success: true,
-    dealId,
-    recommendations: [],
-  };
+  // Fallback recommendations (only when real recommendations are missing/empty in the bulk response)
+  const mockRecommendations = [
+    {
+      note: 'Schedule a direct meeting with the economic buyer to confirm budget approval authority, understand the approval process, and verify allocated budget availability. Document confirmation and identify any remaining approval steps needed.',
+      title: 'Confirm Economic Buyer Budget Authority',
+      severity: 'Critical',
+      isAssigned: false,
+      indicatorId: 'mock-indicator-1',
+      isCompleted: false,
+    },
+    {
+      note: 'Create a formal decision authority map identifying all stakeholders, their roles, approval levels, and required steps for deal approval. Share with the champion to ensure alignment and prevent delays from unclear authority.',
+      title: 'Document Decision-Making Authority and Process',
+      severity: 'Critical',
+      isAssigned: false,
+      indicatorId: 'mock-indicator-2',
+      isCompleted: false,
+    },
+    {
+      note: 'Request written confirmation from the economic buyer committing budget and internal resources for implementation. Include specific resource allocation, timeline commitments, and participation requirements.',
+      title: 'Secure Formal Budget and Resource Commitment',
+      severity: 'Critical',
+      isAssigned: false,
+      indicatorId: 'mock-indicator-3',
+      isCompleted: false,
+    },
+    {
+      note: "Develop and present a detailed ROI analysis quantifying business impact, cost savings, and payback period. Align metrics with the customer's strategic priorities and demonstrate clear value within 12 months.",
+      title: 'Prepare and Present a Formal ROI Analysis',
+      severity: 'High',
+      isAssigned: false,
+      indicatorId: 'mock-indicator-4',
+      isCompleted: false,
+    },
+    {
+      note: 'Send the formal contract with clear deliverables, timelines, and terms before month-end to capitalize on current budget availability and maintain deal momentum while stakeholders are engaged.',
+      title: 'Finalize Contract Terms Before Period Close',
+      severity: 'High',
+      isAssigned: false,
+      indicatorId: 'mock-indicator-5',
+      isCompleted: false,
+    },
+  ];
+
+  console.log(`🔧 Using fallback recommendations for deal ${dealId} (BarrierX bulk response has no recommendations)`);
+  return { success: true, dealId, recommendations: mockRecommendations };
 };
 

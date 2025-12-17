@@ -101,7 +101,7 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
     // Fetch risks and recommendations from BarrierX
     // Pass dealData to getRecommendations so it can use real recommendations if available
     const [risksData, recommendationsData] = await Promise.all([
-      barrierxService.getRisks(dealData.id),
+      barrierxService.getRisks(dealData.id, dealData as any),
       barrierxService.getRecommendations(dealData.id, dealData as any),
     ]);
 
