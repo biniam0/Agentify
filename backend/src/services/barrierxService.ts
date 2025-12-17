@@ -1,11 +1,8 @@
 // BarrierX Service - Real API Integration
-// Uses real BarrierX API for authentication (login/refresh)
-// Falls back to mock data for deals in development mode
+// Uses real BarrierX API for authentication and data fetching
 
 import axios from 'axios';
 import { config } from '../config/env';
-import mockUsersDataJson from '../data/mockUsers.json';
-import { generateDummyRecommendations } from './barrierx/dummyDataGenerators';
 import {
   getBulkDealsFromCache,
   saveBulkDealsToCache,
@@ -125,41 +122,11 @@ export const refreshAccessToken = async (refreshToken: string): Promise<BarrierX
   }
 };
 
-// Process time templates like {{T+10}} or {{T-15}} into ISO dates
-// Used by mock data to generate dynamic meeting times
-const processTimeTemplates = (timeStr: string): string => {
-  const now = Date.now();
-
-  // Match {{T+X}} or {{T-X}} patterns
-  const match = timeStr.match(/\{\{T([+-])(\d+)\}\}/);
-
-  if (match) {
-    const operator = match[1];
-    const minutes = parseInt(match[2], 10);
-    const milliseconds = minutes * 60 * 1000;
-
-    const targetTime = operator === '+'
-      ? now + milliseconds
-      : now - milliseconds;
-
-    return new Date(targetTime).toISOString();
-  }
-
-  // If no template found, return as-is (might be an ISO date already)
-  return timeStr;
-};
-
 /**
  * Get deals for a specific user
- * Uses real BarrierX bulk API when available, falls back to mock data
+ * Uses real BarrierX bulk API
  */
 export const getUserDeals = async (userId: string): Promise<Deal[]> => {
-  // Use mock data if flag is enabled
-  if (config.barrierx.useMockData) {
-    console.log(`🔧 Using MOCK data for user ${userId}`);
-    return mockGetUserDeals(userId);
-  }
-
   // Real BarrierX API call
   try {
     console.log(`🌐 Fetching deals from BarrierX for user: ${userId}`);
@@ -193,7 +160,7 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
 
     if (!response.data.ok || !response.data.tenants?.length) {
       console.log(`⚠️  No tenants found for user ${userId} (took ${durationSeconds}s)`);
-      return mockGetUserDeals(userId);
+      return [];
     }
 
     // Transform BarrierX format to AgentX format
@@ -218,19 +185,6 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
 export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, Deal[]>> => {
   if (userIds.length === 0) {
     return new Map();
-  }
-
-  // Use mock data if flag is enabled
-  if (config.barrierx.useMockData) {
-    console.log(`🔧 Using MOCK data for ${userIds.length} users`);
-    const dealsMap = new Map<string, Deal[]>();
-    await Promise.all(
-      userIds.map(async (id) => {
-        const deals = await mockGetUserDeals(id);
-        dealsMap.set(id, deals);
-      })
-    );
-    return dealsMap;
   }
 
   // Real BarrierX batch API call
@@ -266,14 +220,7 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
 
     if (!response.data.ok || !response.data.tenants) {
       console.log(`⚠️  Batch API returned no tenants (took ${durationSeconds}s)`);
-      const dealsMap = new Map<string, Deal[]>();
-      await Promise.all(
-        userIds.map(async (id) => {
-          const deals = await mockGetUserDeals(id);
-          dealsMap.set(id, deals);
-        })
-      );
-      return dealsMap;
+      return new Map();
     }
 
     // Transform bulk response
@@ -285,20 +232,6 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
 
   } catch (error: any) {
     console.error(`❌ Batch API error:`, error.response?.data || error.message);
-
-    // Fallback to mock data in development
-    if (config.nodeEnv === 'development') {
-      console.log(`🔧 Falling back to MOCK data for batch request`);
-      const dealsMap = new Map<string, Deal[]>();
-      await Promise.all(
-        userIds.map(async (id) => {
-          const deals = await mockGetUserDeals(id);
-          dealsMap.set(id, deals);
-        })
-      );
-      return dealsMap;
-    }
-
     return new Map();
   }
 };
@@ -309,13 +242,6 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
  * Perfect for bulk automation mode
  */
 export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
-  // Use mock data if flag is enabled
-  if (config.barrierx.useMockData) {
-    console.log(`🔧 Using MOCK data for wildcard request`);
-    // For mock, just return empty map or all mock users
-    return new Map();
-  }
-
   try {
     // 🔥 OPTIMIZATION: Only fetch deals updated in last X days (default: 60)
     // This reduces payload by ~67% while still catching all active deals
@@ -435,71 +361,8 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
     }
 
     console.log('⚠️  No cached data available in Redis');
-
-    // Fallback to mock data in development
-    if (config.nodeEnv === 'development') {
-      console.log(`🔧 Falling back to MOCK data for wildcard request`);
-      return new Map();
-    }
-
     return new Map();
   }
-};
-
-/**
- * Mock implementation for getUserDeals
- * Used when USE_MOCK_BARRIERX=true or as fallback
-*/
-const mockGetUserDeals = async (userId: string): Promise<Deal[]> => {
-  await new Promise(resolve => setTimeout(resolve, 400));
-
-  const typedMockUsers = mockUsersDataJson as { [key: string]: any };
-  const userData = typedMockUsers[userId];
-
-  if (!userData || !userData.deals) {
-    return [];
-  }
-
-  // Convert mockUsers.json deal format to BarrierX Deal format
-  const deals: Deal[] = userData.deals.map((deal: any) => {
-    // Convert contacts from mockUsers.json format
-    const contacts: Contact[] = deal.contacts?.map((c: any) => ({
-      id: c.id,
-      name: c.properties.name,
-      email: c.properties.email,
-      phone: c.properties.phone,
-      company: deal.company,
-    })) || [];
-
-    // Convert meetings from mockUsers.json format
-    const meetings: Meeting[] = deal.meetings?.map((m: any) => ({
-      id: m.id,
-      title: m.title,
-      startTime: processTimeTemplates(m.startTime),
-      endTime: processTimeTemplates(m.endTime),
-      status: 'scheduled' as const,
-      agenda: m.body,
-      participants: contacts,
-    })) || [];
-
-    return {
-      id: deal.id,
-      name: deal.dealName,
-      amount: deal.amount,
-      stage: deal.stage,
-      company: deal.company,
-      ownerId: userId,
-      ownerName: userData.name,
-      ownerPhone: deal.owner?.phone,
-      contacts,
-      meetings,
-      summary: deal.summary,
-      userDealRiskScores: deal.userDealRiskScores,
-      closeDate: deal.closeDate,
-    };
-  });
-
-  return deals;
 };
 
 /**
@@ -712,40 +575,22 @@ export const createCompany = async (payload: {
 };
 
 // Get risks for a specific deal
-// Returns simple mock risks until BarrierX API provides real risk data
+// Returns empty array if no real risk data is available
 export const getRisks = async (dealId: string): Promise<{
   success: boolean;
   dealId: string;
   risks: Array<{ category: string; score: number; description: string }>;
 }> => {
-  // Simple mock risks - useful for ElevenLabs agent context
-  const mockRisks = [
-    {
-      category: 'Economic Buyer',
-      score: 7,
-      description: 'Economic buyer engagement is limited. Schedule a direct meeting to confirm budget authority and understand the approval process.',
-    },
-    {
-      category: 'Budget Authority',
-      score: 6,
-      description: 'Budget approval process is unclear. Document the decision-making chain and identify all required approvers.',
-    },
-    {
-      category: 'Champion Strength',
-      score: 5,
-      description: 'Champion may lack influence to drive internal approval. Provide ROI materials and executive sponsor engagement to strengthen their position.',
-    },
-  ];
-
+  // Return empty array - real risks should come from BarrierX API or deal data
   return {
     success: true,
     dealId,
-    risks: mockRisks,
+    risks: [],
   };
 };
 
 // Get recommendations for a specific deal
-// Uses recommendations from deal if available, falls back to mock data
+// Uses recommendations from deal if available, returns empty array otherwise
 export const getRecommendations = async (
   dealId: string,
   deal?: Deal
@@ -771,56 +616,12 @@ export const getRecommendations = async (
     };
   }
 
-  // Fallback to mock recommendations
-  console.log(`🔧 Using mock recommendations for deal ${dealId} (no BarrierX recommendations available)`);
-
-  const mockRecommendations = [
-    {
-      note: 'Schedule a direct meeting with the economic buyer to confirm budget approval authority, understand the approval process, and verify allocated budget availability. Document confirmation and identify any remaining approval steps needed.',
-      title: 'Confirm Economic Buyer Budget Authority',
-      severity: 'Critical',
-      isAssigned: false,
-      indicatorId: 'mock-indicator-1',
-      isCompleted: false,
-    },
-    {
-      note: 'Create a formal decision authority map identifying all stakeholders, their roles, approval levels, and required steps for deal approval. Share with the champion to ensure alignment and prevent delays from unclear authority.',
-      title: 'Document Decision-Making Authority and Process',
-      severity: 'Critical',
-      isAssigned: false,
-      indicatorId: 'mock-indicator-2',
-      isCompleted: false,
-    },
-    {
-      note: 'Request written confirmation from the economic buyer committing budget and internal resources for implementation. Include specific resource allocation, timeline commitments, and participation requirements.',
-      title: 'Secure Formal Budget and Resource Commitment',
-      severity: 'Critical',
-      isAssigned: false,
-      indicatorId: 'mock-indicator-3',
-      isCompleted: false,
-    },
-    {
-      note: 'Develop and present a detailed ROI analysis quantifying business impact, cost savings, and payback period. Align metrics with the customer\'s strategic priorities and demonstrate clear value within 12 months.',
-      title: 'Prepare and Present Formal ROI Analysis',
-      severity: 'High',
-      isAssigned: false,
-      indicatorId: 'mock-indicator-4',
-      isCompleted: false,
-    },
-    {
-      note: 'Send the formal contract with clear deliverables, timelines, and terms before month-end to capitalize on current budget availability and maintain deal momentum while stakeholders are engaged.',
-      title: 'Finalize Contract Terms Before Period Close',
-      severity: 'High',
-      isAssigned: false,
-      indicatorId: 'mock-indicator-5',
-      isCompleted: false,
-    },
-  ];
-
+  // Return empty array if no real recommendations available
+  console.log(`⚠️  No recommendations available for deal ${dealId}`);
   return {
     success: true,
     dealId,
-    recommendations: mockRecommendations,
+    recommendations: [],
   };
 };
 

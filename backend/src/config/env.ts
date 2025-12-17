@@ -8,15 +8,14 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL || '',
   jwtSecret: process.env.JWT_SECRET || 'default-secret-change-in-production',
   // CORS configuration
-  allowedOrigins: process.env.ALLOWED_ORIGINS 
+  allowedOrigins: process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
     : ['http://localhost:3000', 'http://localhost:5173'],
   barrierx: {
     baseUrl: process.env.BARRIERX_BASE_URL || 'https://platform.barrierx.ai',
     apiKey: process.env.BARRIERX_API_KEY || '',
-    useMockData: process.env.USE_MOCK_BARRIERX === 'true',
   },
-  elevenlabs: { 
+  elevenlabs: {
     apiKey: process.env.ELEVENLABS_KEY || '',
     preAgentId: process.env.ELEVENLABS_PRE_AGENT_ID || '',
     postAgentId: process.env.ELEVENLABS_POST_AGENT_ID || '',

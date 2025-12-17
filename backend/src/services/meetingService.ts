@@ -152,7 +152,7 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       console.log('       ⚠️  ElevenLabs not configured, skipping actual API call');
       console.log('       📋 Would call:', ownerPhone);
       console.log('       📋 Variables:', JSON.stringify(dynamicVariables, null, 2));
-      return { success: true, mock: true };
+      return { success: false, error: 'ElevenLabs not configured' };
     }
 
     // Use ElevenLabs phone number ID from env
@@ -304,7 +304,7 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
       console.log('       ⚠️  ElevenLabs not configured, skipping actual API call');
       console.log('       📋 Would call:', ownerPhone);
       console.log('       📋 Variables:', JSON.stringify(dynamicVariables, null, 2));
-      return { success: true, mock: true };
+      return { success: false, error: 'ElevenLabs not configured' };
     }
 
     // Use ElevenLabs phone number ID from env

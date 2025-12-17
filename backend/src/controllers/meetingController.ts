@@ -85,7 +85,7 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
       return;
     }
 
-    // Fetch user deals from BarrierX API (or mock data)
+    // Fetch user deals from BarrierX API
     const deals = await barrierxService.getUserDeals(dbUser.barrierxUserId);
 
     if (!deals || deals.length === 0) {
@@ -245,7 +245,7 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    // Fetch user deals from BarrierX API (or mock data)
+    // Fetch user deals from BarrierX API
     const deals = await barrierxService.getUserDeals(dbUser.barrierxUserId);
 
     if (!deals || deals.length === 0) {
