@@ -623,6 +623,37 @@ export const createMeetingEngagement = async (params: {
 };
 
 /**
+ * Helper: Create a TASK engagement in HubSpot
+ * Called from ElevenLabs webhook when sales rep instructs to create a task
+ */
+export const createTaskEngagement = async (params: {
+  tenantSlug: string;
+  dealId: string;
+  ownerId: string;
+  subject: string;
+  body?: string;
+  timestamp?: number;
+  taskType?: 'TODO' | 'EMAIL' | 'CALL';
+  status?: 'COMPLETED' | 'NOT_STARTED';
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+}): Promise<{ success: boolean; engagementId?: string; error?: string }> => {
+  return createHubSpotEngagement({
+    tenantSlug: params.tenantSlug,
+    dealId: params.dealId,
+    type: 'TASK',
+    ownerId: params.ownerId,
+    subject: params.subject,
+    body: params.body,
+    timestamp: params.timestamp,
+    metadata: {
+      task_type: params.taskType || 'TODO',
+      status: params.status || 'NOT_STARTED',
+      priority: params.priority,
+    },
+  });
+};
+
+/**
  * @deprecated Use createNoteEngagement instead
  * Kept for backward compatibility with existing webhook code
  */

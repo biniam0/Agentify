@@ -10,6 +10,7 @@ router.post('/elevenlabs', webhookController.handleElevenLabsWebhook);
 router.post('/create-contact', webhookController.handleCreateContact);
 router.post('/create-note', webhookController.handleCreateNote);
 router.post('/create-meeting', webhookController.handleCreateMeeting);
+router.post('/create-task', webhookController.handleCreateTask);
 router.post('/create-deal', webhookController.handleCreateDeal);
 
 export default router;
