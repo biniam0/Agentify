@@ -53,6 +53,7 @@ export interface Deal {
   ownerPhone?: string;
   ownerEmail?: string;
   ownerHubspotId?: string;
+  ownerTimezone?: string;
   tenantSlug?: string;
   contacts: Contact[];
   meetings: Meeting[];

@@ -372,6 +372,7 @@ const runAutomationJob = async () => {
             email: deal.ownerEmail,
             id: deal.ownerHubspotId,        // HubSpot owner ID for webhook
             hubspotId: deal.ownerHubspotId, // Alias for compatibility
+            timezone: deal.ownerTimezone,
           },
           tenantSlug: deal.tenantSlug,      // Pass tenant slug for each deal
           contacts: deal.contacts,

@@ -66,6 +66,7 @@ const transformSingleDeal = (deal: any, userId: string, tenant: any): Deal => {
     ownerPhone: owner.phone,
     ownerEmail: owner.email,
     ownerHubspotId: owner.hubspotId,
+    ownerTimezone: owner.timezone,
     tenantSlug: tenant?.slug || tenant?.name || 'unknown',
     contacts,
     meetings,
@@ -147,12 +148,14 @@ const transformOwner = (deal: any): {
   phone: string;
   email: string;
   hubspotId?: string;
+  timezone?: string;
 } => {
   const ownerName = deal.owner?.name || 'Unknown Owner';
   const ownerEmail = deal.owner?.email || '';
   const ownerHubspotId = deal.owner?.hubspotId || deal.owner?.id || deal.ownerId;
   // Only use actual phone from BarrierX - NO default/dummy fallback
   const ownerPhone = deal.owner?.phone ? formatPhoneNumber(deal.owner.phone) : '';
+  const ownerTimezone = deal.owner?.timezone || '';
 
   // Debug logging for owner data
   if (DEBUG_TRANSFORMERS && deal.owner) {
@@ -163,6 +166,7 @@ const transformOwner = (deal: any): {
       id: deal.owner.id,
       phone_raw: deal.owner.phone || '(empty)',
       phone_formatted: ownerPhone,
+      timezone: ownerTimezone,
       extracted_hubspotId: ownerHubspotId
     }, null, 2));
   }
@@ -172,6 +176,7 @@ const transformOwner = (deal: any): {
     phone: ownerPhone,
     email: ownerEmail,
     hubspotId: ownerHubspotId,
+    timezone: ownerTimezone,
   };
 };
 
