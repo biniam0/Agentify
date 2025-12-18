@@ -133,6 +133,8 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
           avatar: '',
         },
         userDealRiskScores: deal.userDealRiskScores,
+        recommendations: deal.recommendations,
+        risks: deal.risks,
       },
       userData: {
         userId: dbUser.barrierxUserId,
@@ -519,6 +521,8 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
           avatar: '',
         },
         userDealRiskScores: deal.userDealRiskScores,
+        recommendations: deal.recommendations,
+        risks: deal.risks,
         tenantSlug: deal.tenantSlug,
       },
       userData: {

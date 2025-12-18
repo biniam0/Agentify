@@ -688,7 +688,7 @@ export const getRecommendations = async (
     },
     {
       note: 'Send the formal contract with clear deliverables, timelines, and terms before month-end to capitalize on current budget availability and maintain deal momentum while stakeholders are engaged.',
-      title: 'Finalize Contract Terms Before Period Close',
+      title: 'Finalize Contract Terms Before Period Close(Dummy Data)',
       severity: 'High',
       isAssigned: false,
       indicatorId: 'mock-indicator-5',
