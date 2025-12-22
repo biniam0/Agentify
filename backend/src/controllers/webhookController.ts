@@ -221,7 +221,7 @@ Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
         status: 'COMPLETED',
         completedAt: new Date(event_timestamp * 1000),
         duration: callDuration,
-        callSuccessful: callSuccessful === 'true',
+        callSuccessful: callSuccessful === 'success',
         transcriptSummary: transcriptSummary,
         webhookData: req.body,
       });
