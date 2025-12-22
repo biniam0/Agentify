@@ -76,6 +76,7 @@ model CallLog {
   conversationId String?    @unique
   callSid        String?
   callType       CallType
+  callDirection  CallDirection @default(OUTBOUND)
   
   // User & Deal context
   userId         String
@@ -125,6 +126,7 @@ model CallLog {
   @@index([status])
   @@index([conversationId])
   @@index([initiatedAt])
+  @@index([phoneNumber])
 }
 
 // CRM Action Log - Notes, Meetings, Contacts created via AI
@@ -353,4 +355,9 @@ enum Severity {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum CallDirection {
+  OUTBOUND
+  INBOUND
 }
