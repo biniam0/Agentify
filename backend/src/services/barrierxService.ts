@@ -53,6 +53,7 @@ export interface Deal {
   ownerPhone?: string;
   ownerEmail?: string;
   ownerHubspotId?: string;
+  ownerTimezone?: string;
   tenantSlug?: string;
   contacts: Contact[];
   meetings: Meeting[];
@@ -509,6 +510,10 @@ export const createTaskEngagement = async (params: {
   status?: 'COMPLETED' | 'NOT_STARTED';
   priority?: 'LOW' | 'MEDIUM' | 'HIGH';
 }): Promise<{ success: boolean; engagementId?: string; error?: string }> => {
+  console.log('📅 Task Engagement Timestamps:');
+  console.log(`   Creation time: ${new Date(Date.now()).toISOString()}`);
+  console.log(`   Due date: ${params.timestamp ? new Date(params.timestamp).toISOString() : 'Not specified'}`);
+
   return createHubSpotEngagement({
     tenantSlug: params.tenantSlug,
     dealId: params.dealId,
@@ -516,11 +521,12 @@ export const createTaskEngagement = async (params: {
     ownerId: params.ownerId,
     subject: params.subject,
     body: params.body,
-    timestamp: params.timestamp,
+    timestamp: Date.now(),  // Task creation time (now)
     metadata: {
       task_type: params.taskType || 'TODO',
       status: params.status || 'NOT_STARTED',
       priority: params.priority,
+      due_date: params.timestamp,  // Task due date (from user input)
     },
   });
 };
