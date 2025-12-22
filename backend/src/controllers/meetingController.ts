@@ -85,7 +85,7 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
       return;
     }
 
-    // Fetch user deals from BarrierX API (or mock data)
+    // Fetch user deals from BarrierX API
     const deals = await barrierxService.getUserDeals(dbUser.barrierxUserId);
 
     if (!deals || deals.length === 0) {
@@ -131,8 +131,11 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
           phone: deal.ownerPhone || '',
           email: dbUser.email,
           avatar: '',
+          timezone: deal.ownerTimezone,
         },
         userDealRiskScores: deal.userDealRiskScores,
+        recommendations: deal.recommendations,
+        risks: deal.risks,
       },
       userData: {
         userId: dbUser.barrierxUserId,
@@ -245,7 +248,7 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    // Fetch user deals from BarrierX API (or mock data)
+    // Fetch user deals from BarrierX API
     const deals = await barrierxService.getUserDeals(dbUser.barrierxUserId);
 
     if (!deals || deals.length === 0) {
@@ -291,6 +294,7 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
           phone: deal.ownerPhone || '',
           email: dbUser.email,
           avatar: '',
+          timezone: deal.ownerTimezone,
         },
         userDealRiskScores: deal.userDealRiskScores,
       },
@@ -517,8 +521,11 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
           phone: deal.ownerPhone || '',
           email: deal.ownerEmail || '',
           avatar: '',
+          timezone: deal.ownerTimezone || deal.owner?.timezone,
         },
         userDealRiskScores: deal.userDealRiskScores,
+        recommendations: deal.recommendations,
+        risks: deal.risks,
         tenantSlug: deal.tenantSlug,
       },
       userData: {
@@ -631,6 +638,7 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
           phone: deal.ownerPhone || '',
           email: deal.ownerEmail || '',
           avatar: '',
+          timezone: deal.ownerTimezone || deal.owner?.timezone,
         },
         userDealRiskScores: deal.userDealRiskScores,
         tenantSlug: deal.tenantSlug,

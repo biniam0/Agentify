@@ -28,6 +28,14 @@ interface Deal {
   tenantSlug?: string;  // Tenant slug for webhook calls
   userDealRiskScores?: any;
   attachments?: Array<{ id: string; name?: string; url?: string }>;
+  recommendations?: Array<{
+    note: string;
+    title: string;
+    severity: string;
+    isAssigned: boolean;
+    indicatorId: string;
+    isCompleted: boolean;
+  }>;
 }
 
 interface Meeting {
@@ -93,7 +101,7 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
     // Fetch risks and recommendations from BarrierX
     // Pass dealData to getRecommendations so it can use real recommendations if available
     const [risksData, recommendationsData] = await Promise.all([
-      barrierxService.getRisks(dealData.id),
+      barrierxService.getRisks(dealData.id, dealData as any),
       barrierxService.getRecommendations(dealData.id, dealData as any),
     ]);
 
@@ -144,7 +152,7 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       console.log('       ⚠️  ElevenLabs not configured, skipping actual API call');
       console.log('       📋 Would call:', ownerPhone);
       console.log('       📋 Variables:', JSON.stringify(dynamicVariables, null, 2));
-      return { success: true, mock: true };
+      return { success: false, error: 'ElevenLabs not configured' };
     }
 
     // Use ElevenLabs phone number ID from env
@@ -296,7 +304,7 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
       console.log('       ⚠️  ElevenLabs not configured, skipping actual API call');
       console.log('       📋 Would call:', ownerPhone);
       console.log('       📋 Variables:', JSON.stringify(dynamicVariables, null, 2));
-      return { success: true, mock: true };
+      return { success: false, error: 'ElevenLabs not configured' };
     }
 
     // Use ElevenLabs phone number ID from env

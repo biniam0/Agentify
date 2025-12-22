@@ -6,6 +6,9 @@ const router = Router();
 // ElevenLabs post-call webhook (receives transcript after call ends)
 router.post('/elevenlabs', webhookController.handleElevenLabsWebhook);
 
+// Twilio inbound call personalization webhook
+router.post('/twilio/personalization', webhookController.handleTwilioPersonalizationWebhook);
+
 // ElevenLabs Server Tools (called during the call)
 router.post('/create-contact', webhookController.handleCreateContact);
 router.post('/create-note', webhookController.handleCreateNote);

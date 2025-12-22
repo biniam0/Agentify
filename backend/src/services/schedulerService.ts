@@ -46,39 +46,39 @@ const getCallTrackingKey = (meetingId: string, startTime: string, callType: 'pre
 // Check if a meeting call has already been triggered (checks memory + Redis)
 const hasBeenCalled = async (meetingId: string, startTime: string, callType: 'pre' | 'post'): Promise<boolean> => {
   const key = getCallTrackingKey(meetingId, startTime, callType);
-  
+
   // Check in-memory first (fast)
   if (calledMeetings.has(key)) {
     return true;
   }
-  
+
   // Check Redis as fallback (survives restarts)
   const redisRecord = await calledMeetingsCache.getCalledMeeting(meetingId, startTime, callType);
-  
+
   if (redisRecord) {
     // Found in Redis but not in memory - restore to memory
     calledMeetings.set(key, redisRecord);
     return true;
   }
-  
+
   return false;
 };
 
 // Mark a meeting call as triggered (saves to both memory + Redis)
 const markAsCalled = async (meetingId: string, startTime: string, callType: 'pre' | 'post'): Promise<void> => {
   const key = getCallTrackingKey(meetingId, startTime, callType);
-  
+
   const record: CalledMeetingRecord = {
     calledAt: Date.now(),
     meetingStartTime: startTime,
   };
-  
+
   // Save to in-memory (fast access)
   calledMeetings.set(key, record);
-  
+
   // Save to Redis (persistence)
   await calledMeetingsCache.saveCalledMeeting(meetingId, startTime, callType);
-  
+
   console.log(`       📝 Marked as called: ${key}`);
 };
 
@@ -86,7 +86,7 @@ const markAsCalled = async (meetingId: string, startTime: string, callType: 'pre
 const cleanupOldEntries = (): void => {
   const oneHourAgo = Date.now() - (60 * 60 * 1000);
   let cleanedCount = 0;
-  
+
   calledMeetings.forEach((record, key) => {
     const meetingTime = new Date(record.meetingStartTime).getTime();
     // Remove if meeting started more than 1 hour ago
@@ -95,7 +95,7 @@ const cleanupOldEntries = (): void => {
       cleanedCount++;
     }
   });
-  
+
   if (cleanedCount > 0) {
     console.log(`🧹 Cleaned up ${cleanedCount} old call tracking entries`);
   }
@@ -220,6 +220,7 @@ const processUserMeetings = (userData: any) => {
             tenantSlug: deal.tenantSlug,  // Include tenant slug for ElevenLabs webhook
             userDealRiskScores: deal.userDealRiskScores,
             attachments: deal.attachments,
+            recommendations: deal.recommendations,
           };
         }
 
@@ -371,6 +372,7 @@ const runAutomationJob = async () => {
             email: deal.ownerEmail,
             id: deal.ownerHubspotId,        // HubSpot owner ID for webhook
             hubspotId: deal.ownerHubspotId, // Alias for compatibility
+            timezone: deal.ownerTimezone,
           },
           tenantSlug: deal.tenantSlug,      // Pass tenant slug for each deal
           contacts: deal.contacts,
@@ -380,6 +382,7 @@ const runAutomationJob = async () => {
           })),
           summary: deal.summary,
           userDealRiskScores: deal.userDealRiskScores,
+          recommendations: deal.recommendations,
         })),
       };
 

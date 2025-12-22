@@ -221,7 +221,7 @@ Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
         status: 'COMPLETED',
         completedAt: new Date(event_timestamp * 1000),
         duration: callDuration,
-        callSuccessful: callSuccessful === 'true',
+        callSuccessful: callSuccessful === 'success',
         transcriptSummary: transcriptSummary,
         webhookData: req.body,
       });
@@ -761,5 +761,222 @@ export const handleCreateDeal = async (req: Request, res: Response): Promise<voi
       error: 'Failed to process create deal command',
       details: error instanceof Error ? error.message : 'Unknown error',
     });
+  }
+};
+
+/**
+ * Handle Twilio Personalization Webhook for Inbound Calls
+ * Called by ElevenLabs when someone calls back the Twilio number
+ * Returns personalized context based on the most recent post-meeting call
+ */
+export const handleTwilioPersonalizationWebhook = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('\n📞 ════════════════════════════════════════════════════');
+    console.log('📞 INBOUND CALL - Twilio Personalization Webhook');
+    console.log('📞 ════════════════════════════════════════════════════');
+    
+    const { caller_id, agent_id, called_number, call_sid } = req.body;
+    
+    console.log(`📱 Caller ID: ${caller_id}`);
+    console.log(`🎯 Agent ID: ${agent_id}`);
+    console.log(`📲 Called Number: ${called_number}`);
+    console.log(`🆔 Twilio Call SID: ${call_sid}`);
+    console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
+
+    // Find the MOST RECENT post-meeting call for this phone number
+    // (regardless of status - completed, failed, missed, etc.)
+    const prisma = (await import('../config/database')).default;
+    const recentCall = await prisma.callLog.findFirst({
+      where: {
+        phoneNumber: caller_id,
+        callType: 'POST_CALL',
+        // Only look at calls from last 7 days
+        initiatedAt: {
+          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        }
+      },
+      orderBy: {
+        initiatedAt: 'desc' // Most recent first
+      }
+    });
+
+    // No recent post-meeting call found - return generic greeting
+    if (!recentCall) {
+      console.log('⚠️  No recent post-meeting call found for this phone number');
+      console.log('📋 Returning generic greeting\n');
+      
+      const genericResponse = {
+        type: 'conversation_initiation_client_data',
+        dynamic_variables: {
+          caller_name: 'there',
+          has_context: 'false',
+          is_inbound_call: 'true',
+        },
+        conversation_config_override: {
+          agent: {
+            first_message: 'Hi! Thanks for calling back. How can I help you today?'
+          }
+        }
+      };
+
+      res.json(genericResponse);
+      return;
+    }
+
+    // Found a recent call - extract context
+    const originalVars = recentCall.dynamicVariables as any;
+    
+    console.log('\n✅ Found recent post-meeting call context:');
+    console.log(`   📅 Original Call Date: ${recentCall.initiatedAt.toLocaleString()}`);
+    console.log(`   📊 Call Status: ${recentCall.status}`);
+    console.log(`   💼 Deal: ${recentCall.dealName}`);
+    console.log(`   📋 Meeting: ${recentCall.meetingTitle}`);
+    console.log(`   👤 Owner: ${recentCall.ownerName}`);
+    console.log(`   🏢 Tenant: ${originalVars?.tenant_slug || 'N/A'}`);
+    
+    // Calculate time elapsed since original call
+    const timeDiff = Date.now() - new Date(recentCall.initiatedAt).getTime();
+    const hoursAgo = Math.floor(timeDiff / (1000 * 60 * 60));
+    const minutesAgo = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    console.log(`   ⏱️  Time since original call: ${hoursAgo}h ${minutesAgo}m ago`);
+
+    // Get current time in owner's timezone
+    const ownerTimezone = originalVars?.current_timezone || 'UTC';
+    const now = new Date();
+    
+    const currentDateLocal = now.toLocaleDateString('en-US', {
+      timeZone: ownerTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    
+    const currentTimeLocal = now.toLocaleTimeString('en-US', {
+      timeZone: ownerTimezone,
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    const currentDayOfWeek = now.toLocaleDateString('en-US', {
+      timeZone: ownerTimezone,
+      weekday: 'long'
+    });
+
+    // Build personalized response with full meeting/deal context
+    const response = {
+      type: 'conversation_initiation_client_data',
+      dynamic_variables: {
+        // Core context from original call
+        customer_name: originalVars?.customer_name || 'the customer',
+        owner_name: originalVars?.owner_name || recentCall.ownerName,
+        deal_name: originalVars?.deal_name || recentCall.dealName,
+        deal_amount: originalVars?.deal_amount || '',
+        deal_stage: originalVars?.deal_stage || '',
+        company_name: originalVars?.company_name || '',
+        
+        // Meeting context
+        meeting_title: originalVars?.meeting_title || recentCall.meetingTitle,
+        meeting_date: originalVars?.meeting_date || '',
+        meeting_time: originalVars?.meeting_time || '',
+        
+        // Risks and recommendations
+        risk_summary: originalVars?.risk_summary || '',
+        top_risk: originalVars?.top_risk || '',
+        top_risk_category: originalVars?.top_risk_category || '',
+        top_risk_score: originalVars?.top_risk_score || '',
+        recommendation_summary: originalVars?.recommendation_summary || '',
+        top_recommendation: originalVars?.top_recommendation || '',
+        
+        // Additional context
+        close_date: originalVars?.close_date || '',
+        
+        // Meta flags
+        has_context: 'true',
+        is_inbound_call: 'true',
+        previous_call_date: recentCall.initiatedAt.toLocaleDateString(),
+        previous_call_time: recentCall.initiatedAt.toLocaleTimeString(),
+        previous_call_status: recentCall.status,
+        time_since_call: `${hoursAgo} hours ${minutesAgo} minutes`,
+        
+        // CRM identifiers (for creating notes/tasks)
+        deal_id: originalVars?.deal_id || recentCall.dealId,
+        tenant_slug: originalVars?.tenant_slug || '',
+        hubspot_owner_id: originalVars?.hubspot_owner_id || '',
+        
+        // Current time context (in owner's timezone)
+        current_date_utc: now.toISOString().split('T')[0],
+        current_time_utc: now.toISOString(),
+        current_timezone: ownerTimezone,
+        current_timezone_offset: originalVars?.current_timezone_offset || '',
+        current_date_local: currentDateLocal,
+        current_time_local: currentTimeLocal,
+        current_day_of_week: currentDayOfWeek,
+      },
+      conversation_config_override: {
+        agent: {
+          prompt: {
+            prompt: `IMPORTANT: This is an INBOUND call. The sales rep (${originalVars?.owner_name || recentCall.ownerName}) is calling YOU back. 
+
+Previous call context: A post-meeting follow-up call was initiated on ${recentCall.initiatedAt.toLocaleDateString()} at ${recentCall.initiatedAt.toLocaleTimeString()} (status: ${recentCall.status}). That call was about the "${originalVars?.meeting_title}" meeting regarding the "${originalVars?.deal_name}" deal.
+
+Be warm, friendly, and helpful. Acknowledge that this is a return call and that you have information about their recent meeting. The sales rep is busy, so be concise but thorough.`
+          },
+          first_message: `Hi ${originalVars?.owner_name || 'there'}! Thanks for calling back. I have some updates about the ${originalVars?.meeting_title} meeting regarding the ${originalVars?.deal_name} deal. Do you have a few minutes to discuss?`
+        }
+      }
+    };
+
+    console.log('\n✅ Personalization data prepared');
+    console.log(`   🎯 Context: ${response.dynamic_variables.deal_name}`);
+    console.log(`   📋 Meeting: ${response.dynamic_variables.meeting_title}`);
+    console.log(`   👤 Greeting: ${response.dynamic_variables.owner_name}`);
+    
+    // Log this inbound call initiation
+    await loggingService.logCallInitiation({
+      callType: 'POST_CALL',
+      userId: recentCall.userId,
+      userName: recentCall.userName,
+      userEmail: recentCall.userEmail,
+      dealId: recentCall.dealId,
+      dealName: recentCall.dealName,
+      meetingId: recentCall.meetingId,
+      meetingTitle: recentCall.meetingTitle,
+      phoneNumber: caller_id,
+      ownerName: recentCall.ownerName ?? undefined,
+      agentId: agent_id,
+      triggerSource: 'WEBHOOK', // Inbound call via webhook
+      conversationId: undefined, // Will be populated by ElevenLabs later
+      callSid: call_sid,
+      dynamicVariables: response.dynamic_variables,
+      parentCallId: recentCall.id, // Link to original outbound call
+    });
+
+    console.log('✅ Inbound call logged to database');
+    console.log('📤 Sending personalization response to ElevenLabs\n');
+
+    res.json(response);
+
+  } catch (error) {
+    console.error('❌ Twilio personalization webhook error:', error);
+    console.error('   Stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    // Fail gracefully - return generic response so call doesn't drop
+    const fallbackResponse = {
+      type: 'conversation_initiation_client_data',
+      dynamic_variables: {
+        has_context: 'false',
+        is_inbound_call: 'true',
+      },
+      conversation_config_override: {
+        agent: {
+          first_message: 'Hi! Thanks for calling. How can I help you today?'
+        }
+      }
+    };
+    
+    console.log('⚠️  Returning fallback generic response\n');
+    res.json(fallbackResponse);
   }
 };
