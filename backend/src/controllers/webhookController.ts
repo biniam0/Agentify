@@ -849,12 +849,28 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     console.log(`   Is Continuation: ${isRealConversation ? 'Yes' : 'No'}`);
 
     // Step 4: Extract deal identifiers
-    const originalVars = recentCall.dynamicVariables as any;
-    const dealId = originalVars?.deal_id;
-    const tenantSlug = originalVars?.tenant_slug;
+    let originalVars = recentCall.dynamicVariables as any;
+    let dealId = originalVars?.deal_id;
+    let tenantSlug = originalVars?.tenant_slug;
+
+    // 🔥 FALLBACK: If dynamicVariables is null, extract from webhookData
+    if (!dealId && recentCall.webhookData) {
+      console.log('   ℹ️  dynamicVariables is null, checking webhookData...');
+      const webhookData = recentCall.webhookData as any;
+      const initData = webhookData?.data?.conversation_initiation_client_data?.dynamic_variables;
+      
+      if (initData) {
+        console.log('   ✅ Found dynamicVariables in webhookData (fallback successful)');
+        dealId = initData.deal_id || initData.dealId;
+        tenantSlug = initData.tenant_slug;
+        
+        // Use all variables from webhookData
+        originalVars = initData;
+      }
+    }
 
     if (!dealId || !tenantSlug) {
-      console.log('⚠️  Missing deal_id or tenant_slug');
+      console.log('⚠️  Missing deal_id or tenant_slug (checked both dynamicVariables and webhookData)');
       res.json({
         type: 'conversation_initiation_client_data',
         dynamic_variables: {

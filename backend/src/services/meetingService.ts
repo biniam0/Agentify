@@ -196,7 +196,12 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       console.log(`       📞 Twilio Call SID: ${callSid}`);
     }
 
-    return response.data;
+    // Return response data + the dynamicVariables we created
+    // This allows scheduler/controller to save them to CallLog
+    return {
+      ...response.data,
+      dynamicVariables: dynamicVariables,
+    };
 
   } catch (error: any) {
     console.error('       ❌ ElevenLabs API error:', error.response?.data || error.message);
@@ -348,7 +353,12 @@ export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<
       console.log(`       📞 Twilio Call SID: ${callSid}`);
     }
 
-    return response.data;
+    // Return response data + the dynamicVariables we created
+    // This allows scheduler/controller to save them to CallLog
+    return {
+      ...response.data,
+      dynamicVariables: dynamicVariables,
+    };
 
   } catch (error: any) {
     console.error('       ❌ ElevenLabs API error:', error.response?.data || error.message);
