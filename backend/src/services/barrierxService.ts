@@ -6,7 +6,8 @@ import { config } from '../config/env';
 import {
   getBulkDealsFromCache,
   saveBulkDealsToCache,
-  hasDataChanged
+  hasDataChanged,
+  refreshCacheTTL
 } from '../utils/redisCache';
 
 export interface Tenant {
@@ -350,10 +351,12 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
       console.log(`   User ${userId.substring(0, 12)}...: ${deals.length} deals`);
     });
 
-    // ✅ REDIS CACHING: Check if data changed, then cache it
+    // ✅ REDIS CACHING: Smart update - only write if changed, refresh TTL if not
     const dataChanged = await hasDataChanged(dealsMap);
     if (dataChanged) {
       await saveBulkDealsToCache(dealsMap);
+    } else {
+      await refreshCacheTTL();
     }
 
     return dealsMap;
