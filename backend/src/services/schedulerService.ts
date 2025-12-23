@@ -492,6 +492,7 @@ const runAutomationJob = async () => {
                 triggerSource: 'SCHEDULED',
                 conversationId: result.conversation_id,
                 callSid: result.callSid,
+                dynamicVariables: result.conversation_initiation_client_data?.dynamic_variables,
               });
             }
 
