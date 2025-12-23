@@ -6,7 +6,8 @@ import { config } from '../config/env';
 import {
   getBulkDealsFromCache,
   saveBulkDealsToCache,
-  hasDataChanged
+  hasDataChanged,
+  refreshCacheTTL
 } from '../utils/redisCache';
 
 export interface Tenant {
@@ -350,10 +351,12 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
       console.log(`   User ${userId.substring(0, 12)}...: ${deals.length} deals`);
     });
 
-    // ✅ REDIS CACHING: Check if data changed, then cache it
+    // ✅ REDIS CACHING: Smart update - only write if changed, refresh TTL if not
     const dataChanged = await hasDataChanged(dealsMap);
     if (dataChanged) {
       await saveBulkDealsToCache(dealsMap);
+    } else {
+      await refreshCacheTTL();
     }
 
     return dealsMap;
@@ -704,5 +707,92 @@ export const getRecommendations = async (
 
   console.log(`🔧 Using fallback recommendations for deal ${dealId} (BarrierX bulk response has no recommendations)`);
   return { success: true, dealId, recommendations: mockRecommendations };
+};
+
+/**
+ * Fetch fresh deal data with engagements for call continuation
+ * Makes parallel API calls to get current deal state + recent activities
+ * Used by inbound call webhook to provide up-to-date context to AI agent
+ */
+export const getDealContextForContinuation = async (
+  tenantSlug: string,
+  dealId: string
+): Promise<{
+  deal: any;
+  engagements: any[];
+  recentNotes: any[];
+  openTasks: any[];
+  recentMeetings: any[];
+}> => {
+  try {
+    console.log(`🔄 Fetching fresh deal context for continuation...`);
+    console.log(`   Deal ID: ${dealId}`);
+    console.log(`   Tenant: ${tenantSlug}`);
+    
+    const startTime = Date.now();
+
+    // Fetch both endpoints in parallel for performance
+    const [dealResponse, engagementsResponse] = await Promise.all([
+      // Endpoint #1: Get deal details
+      axios.get(
+        `${config.barrierx.baseUrl}/api/external/tenants/${tenantSlug}/deals/${dealId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${config.barrierx.apiKey}`,
+            'Accept': 'application/json',
+          },
+          timeout: 10000,
+        }
+      ),
+      // Endpoint #2: Get engagements
+      axios.get(
+        `${config.barrierx.baseUrl}/api/external/tenants/${tenantSlug}/deals/${dealId}/hubspot/engagements`,
+        {
+          headers: {
+            'Authorization': `Bearer ${config.barrierx.apiKey}`,
+            'Accept': 'application/json',
+          },
+          timeout: 10000,
+        }
+      ),
+    ]);
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+
+    // Extract data
+    const deal = dealResponse.data.deal;
+    const engagements = engagementsResponse.data.engagements || [];
+
+    // Parse and categorize engagements by type
+    const recentNotes = engagements
+      .filter((e: any) => e.type === 'NOTE')
+      .slice(0, 5); // Last 5 notes
+
+    const openTasks = engagements
+      .filter((e: any) => e.type === 'TASK')
+      .slice(0, 10); // Up to 10 tasks
+
+    const recentMeetings = engagements
+      .filter((e: any) => e.type === 'MEETING')
+      .slice(0, 3); // Last 3 meetings
+
+    console.log(`✅ Fresh context fetched in ${duration}s:`);
+    console.log(`   Deal: ${deal.dealName}`);
+    console.log(`   Stage: ${deal.stage}`);
+    console.log(`   Notes: ${recentNotes.length}`);
+    console.log(`   Tasks: ${openTasks.length}`);
+    console.log(`   Meetings: ${recentMeetings.length}`);
+
+    return {
+      deal,
+      engagements,
+      recentNotes,
+      openTasks,
+      recentMeetings,
+    };
+  } catch (error: any) {
+    console.error(`❌ Failed to fetch deal context:`, error.response?.data || error.message);
+    throw error;
+  }
 };
 
