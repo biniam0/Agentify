@@ -992,6 +992,8 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
       current_time_local: currentTimeLocal,
       current_day_of_week: currentDayOfWeek,
       current_timezone_offset: originalVars?.current_timezone_offset || '',
+      current_timestamp_ms: now.getTime().toString(),
+      current_datetime_utc: now.toISOString(),
     };
 
     // Step 7: Build customized first message based on scenario
