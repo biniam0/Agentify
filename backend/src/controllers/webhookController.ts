@@ -767,7 +767,12 @@ export const handleCreateDeal = async (req: Request, res: Response): Promise<voi
 /**
  * Handle Twilio Personalization Webhook for Inbound Calls
  * Called by ElevenLabs when someone calls back the Twilio number
- * Returns personalized context based on the most recent post-meeting call
+ * Returns personalized context with FRESH data from BarrierX
+ * 
+ * Features:
+ * - Detects voicemail vs real conversation
+ * - Fetches current deal state + recent activities
+ * - Differentiates between continuation, missed call, and voicemail
  */
 export const handleTwilioPersonalizationWebhook = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -783,65 +788,103 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     console.log(`🆔 Twilio Call SID: ${call_sid}`);
     console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
 
-    // Find the MOST RECENT post-meeting call for this phone number
-    // (regardless of status - completed, failed, missed, etc.)
     const prisma = (await import('../config/database')).default;
+    
+    // Step 1: Find most recent post-meeting call
     const recentCall = await prisma.callLog.findFirst({
       where: {
         phoneNumber: caller_id,
         callType: 'POST_CALL',
-        // Only look at calls from last 7 days
         initiatedAt: {
-          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // Last 7 days
         }
       },
       orderBy: {
-        initiatedAt: 'desc' // Most recent first
+        initiatedAt: 'desc'
       }
     });
 
-    // No recent post-meeting call found - return generic greeting
+    // No recent context at all
     if (!recentCall) {
-      console.log('⚠️  No recent post-meeting call found for this phone number');
+      console.log('⚠️  No recent post-meeting call found');
       console.log('📋 Returning generic greeting\n');
       
-      const genericResponse = {
+      res.json({
         type: 'conversation_initiation_client_data',
         dynamic_variables: {
-          caller_name: 'there',
           has_context: 'false',
           is_inbound_call: 'true',
         },
         conversation_config_override: {
           agent: {
-            first_message: 'Hi! Thanks for calling back. How can I help you today?'
+            first_message: 'Hi! Thanks for calling. How can I help you today?'
           }
         }
-      };
-
-      res.json(genericResponse);
+      });
       return;
     }
 
-    // Found a recent call - extract context
-    const originalVars = recentCall.dynamicVariables as any;
-    
-    console.log('\n✅ Found recent post-meeting call context:');
-    console.log(`   📅 Original Call Date: ${recentCall.initiatedAt.toLocaleString()}`);
-    console.log(`   📊 Call Status: ${recentCall.status}`);
-    console.log(`   💼 Deal: ${recentCall.dealName}`);
-    console.log(`   📋 Meeting: ${recentCall.meetingTitle}`);
-    console.log(`   👤 Owner: ${recentCall.ownerName}`);
-    console.log(`   🏢 Tenant: ${originalVars?.tenant_slug || 'N/A'}`);
-    
-    // Calculate time elapsed since original call
-    const timeDiff = Date.now() - new Date(recentCall.initiatedAt).getTime();
-    const hoursAgo = Math.floor(timeDiff / (1000 * 60 * 60));
-    const minutesAgo = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-    console.log(`   ⏱️  Time since original call: ${hoursAgo}h ${minutesAgo}m ago`);
+    console.log(`\n✅ Found recent call from ${recentCall.initiatedAt.toLocaleString()}`);
+    console.log(`   Status: ${recentCall.status}`);
+    console.log(`   Deal: ${recentCall.dealName}`);
 
+    // Step 2: Check if voicemail
+    const { isVoicemailCall } = await import('../utils/formatters');
+    const webhookData = recentCall.webhookData as any;
+    const callDuration = webhookData?.metadata?.call_duration_secs || 0;
+    const wasVoicemail = isVoicemailCall(
+      recentCall.transcriptSummary,
+      webhookData,
+      callDuration
+    );
+
+    console.log(`   Voicemail: ${wasVoicemail ? 'Yes' : 'No'}`);
+
+    // Step 3: Determine if TRUE continuation (real conversation, not voicemail)
+    const isRealConversation = 
+      recentCall.status === 'COMPLETED' &&
+      recentCall.transcriptSummary != null &&
+      !wasVoicemail;
+
+    console.log(`   Is Continuation: ${isRealConversation ? 'Yes' : 'No'}`);
+
+    // Step 4: Extract deal identifiers
+    const originalVars = recentCall.dynamicVariables as any;
+    const dealId = originalVars?.deal_id;
+    const tenantSlug = originalVars?.tenant_slug;
+
+    if (!dealId || !tenantSlug) {
+      console.log('⚠️  Missing deal_id or tenant_slug');
+      res.json({
+        type: 'conversation_initiation_client_data',
+        dynamic_variables: {
+          has_context: 'false',
+        },
+        conversation_config_override: {
+          agent: {
+            first_message: 'Hi! Thanks for calling. How can I help you today?'
+          }
+        }
+      });
+      return;
+    }
+
+    // Step 5: Fetch FRESH deal data from BarrierX
+    console.log(`\n🔄 Fetching fresh deal data from BarrierX...`);
+    let dealContext;
+    try {
+      dealContext = await barrierxService.getDealContextForContinuation(tenantSlug, dealId);
+    } catch (error) {
+      console.error('❌ Failed to fetch deal context, using stale data');
+      dealContext = null;
+    }
+
+    // Step 6: Build dynamic variables
+    const deal = dealContext?.deal || {};
+    const owner = deal.owner || {};
+    
     // Get current time in owner's timezone
-    const ownerTimezone = originalVars?.current_timezone || 'UTC';
+    const ownerTimezone = owner.timezone || originalVars?.current_timezone || 'UTC';
     const now = new Date();
     
     const currentDateLocal = now.toLocaleDateString('en-US', {
@@ -864,76 +907,109 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
       weekday: 'long'
     });
 
-    // Build personalized response with full meeting/deal context
+    // Format fresh context using formatters
+    const { 
+      formatRecentNotes, 
+      formatTasks, 
+      countOpenTasks,
+      getTimeElapsed 
+    } = await import('../utils/formatters');
+    
+    const recentNotesText = dealContext 
+      ? formatRecentNotes(dealContext.recentNotes)
+      : 'Unable to fetch recent notes';
+    
+    const openTasksList = dealContext
+      ? formatTasks(dealContext.openTasks)
+      : 'Unable to fetch tasks';
+    
+    const openTasksCount = dealContext
+      ? countOpenTasks(dealContext.openTasks)
+      : 0;
+
+    const dynamicVariables = {
+      // Fresh deal info
+      deal_name: deal.dealName || originalVars?.deal_name,
+      deal_stage: deal.stage || originalVars?.deal_stage,
+      deal_amount: deal.amount?.toString() || originalVars?.deal_amount,
+      close_date: deal.closeDate || originalVars?.close_date,
+      
+      // Owner info
+      owner_name: owner.name || originalVars?.owner_name,
+      owner_email: owner.email || originalVars?.owner_email,
+      owner_phone: owner.phone || originalVars?.owner_phone,
+      
+      // Fresh context from BarrierX
+      recent_notes_summary: recentNotesText,
+      open_tasks_list: openTasksList,
+      open_tasks_count: openTasksCount.toString(),
+      
+      // Risks
+      total_risk: deal.userDealRiskScores?.totalDealRisk?.toString() || '',
+      champion_health: deal.championHealth?.toString() || '',
+      
+      // Context flags
+      has_context: 'true',
+      has_fresh_data: dealContext ? 'true' : 'false',
+      is_continuation: isRealConversation ? 'true' : 'false',
+      is_voicemail_left: wasVoicemail ? 'true' : 'false',
+      is_missed_call_return: (!isRealConversation && !wasVoicemail) ? 'true' : 'false',
+      is_inbound_call: 'true',
+      
+      // Previous call info
+      last_call_date: recentCall.initiatedAt.toLocaleDateString(),
+      last_call_time: recentCall.initiatedAt.toLocaleTimeString(),
+      last_call_status: recentCall.status,
+      last_call_summary: isRealConversation ? (recentCall.transcriptSummary || '') : '',
+      time_since_last_call: getTimeElapsed(recentCall.initiatedAt),
+      
+      // CRM identifiers
+      deal_id: dealId,
+      tenant_slug: tenantSlug,
+      hubspot_owner_id: owner.hubspotId || originalVars?.hubspot_owner_id,
+      
+      // Current time
+      current_date_utc: now.toISOString().split('T')[0],
+      current_time_utc: now.toISOString(),
+      current_timezone: ownerTimezone,
+      current_date_local: currentDateLocal,
+      current_time_local: currentTimeLocal,
+      current_day_of_week: currentDayOfWeek,
+      current_timezone_offset: originalVars?.current_timezone_offset || '',
+    };
+
+    // Step 7: Build customized first message based on scenario
+    const ownerFirstName = (owner.name || originalVars?.owner_name || 'there').split(' ')[0];
+    const dealName = dynamicVariables.deal_name;
+    
+    let firstMessage = '';
+    if (isRealConversation) {
+      // TRUE CONTINUATION
+      firstMessage = `Hi ${ownerFirstName}! Following up on our conversation from ${dynamicVariables.last_call_date}. I see you have ${openTasksCount} outstanding task${openTasksCount === 1 ? '' : 's'} for the ${dealName} deal. Want to discuss?`;
+    } else if (wasVoicemail) {
+      // VOICEMAIL LEFT
+      firstMessage = `Hi ${ownerFirstName}! Thanks for calling back. I left you a voicemail earlier about the ${dealName} deal. Do you have a few minutes to discuss the follow-up?`;
+    } else {
+      // MISSED CALL
+      firstMessage = `Hi ${ownerFirstName}! Thanks for calling back. I tried reaching you earlier about the ${dealName} deal. Do you have time now?`;
+    }
+
     const response = {
       type: 'conversation_initiation_client_data',
-      dynamic_variables: {
-        // Core context from original call
-        customer_name: originalVars?.customer_name || 'the customer',
-        owner_name: originalVars?.owner_name || recentCall.ownerName,
-        deal_name: originalVars?.deal_name || recentCall.dealName,
-        deal_amount: originalVars?.deal_amount || '',
-        deal_stage: originalVars?.deal_stage || '',
-        company_name: originalVars?.company_name || '',
-        
-        // Meeting context
-        meeting_title: originalVars?.meeting_title || recentCall.meetingTitle,
-        meeting_date: originalVars?.meeting_date || '',
-        meeting_time: originalVars?.meeting_time || '',
-        
-        // Risks and recommendations
-        risk_summary: originalVars?.risk_summary || '',
-        top_risk: originalVars?.top_risk || '',
-        top_risk_category: originalVars?.top_risk_category || '',
-        top_risk_score: originalVars?.top_risk_score || '',
-        recommendation_summary: originalVars?.recommendation_summary || '',
-        top_recommendation: originalVars?.top_recommendation || '',
-        
-        // Additional context
-        close_date: originalVars?.close_date || '',
-        
-        // Meta flags
-        has_context: 'true',
-        is_inbound_call: 'true',
-        previous_call_date: recentCall.initiatedAt.toLocaleDateString(),
-        previous_call_time: recentCall.initiatedAt.toLocaleTimeString(),
-        previous_call_status: recentCall.status,
-        time_since_call: `${hoursAgo} hours ${minutesAgo} minutes`,
-        
-        // CRM identifiers (for creating notes/tasks)
-        deal_id: originalVars?.deal_id || recentCall.dealId,
-        tenant_slug: originalVars?.tenant_slug || '',
-        hubspot_owner_id: originalVars?.hubspot_owner_id || '',
-        
-        // Current time context (in owner's timezone)
-        current_date_utc: now.toISOString().split('T')[0],
-        current_time_utc: now.toISOString(),
-        current_timezone: ownerTimezone,
-        current_timezone_offset: originalVars?.current_timezone_offset || '',
-        current_date_local: currentDateLocal,
-        current_time_local: currentTimeLocal,
-        current_day_of_week: currentDayOfWeek,
-      },
+      dynamic_variables: dynamicVariables,
       conversation_config_override: {
         agent: {
-          prompt: {
-            prompt: `IMPORTANT: This is an INBOUND call. The sales rep (${originalVars?.owner_name || recentCall.ownerName}) is calling YOU back. 
-
-Previous call context: A post-meeting follow-up call was initiated on ${recentCall.initiatedAt.toLocaleDateString()} at ${recentCall.initiatedAt.toLocaleTimeString()} (status: ${recentCall.status}). That call was about the "${originalVars?.meeting_title}" meeting regarding the "${originalVars?.deal_name}" deal.
-
-Be warm, friendly, and helpful. Acknowledge that this is a return call and that you have information about their recent meeting. The sales rep is busy, so be concise but thorough.`
-          },
-          first_message: `Hi ${originalVars?.owner_name || 'there'}! Thanks for calling back. I have some updates about the ${originalVars?.meeting_title} meeting regarding the ${originalVars?.deal_name} deal. Do you have a few minutes to discuss?`
+          first_message: firstMessage
         }
       }
     };
 
-    console.log('\n✅ Personalization data prepared');
-    console.log(`   🎯 Context: ${response.dynamic_variables.deal_name}`);
-    console.log(`   📋 Meeting: ${response.dynamic_variables.meeting_title}`);
-    console.log(`   👤 Greeting: ${response.dynamic_variables.owner_name}`);
+    console.log('\n✅ Personalization response prepared');
+    console.log(`   Continuation: ${isRealConversation}`);
+    console.log(`   Fresh Data: ${!!dealContext}`);
+    console.log(`   Open Tasks: ${openTasksCount}`);
     
-    // Log this inbound call initiation
+    // Step 8: Log inbound call
     await loggingService.logCallInitiation({
       callType: 'POST_CALL',
       userId: recentCall.userId,
@@ -946,37 +1022,28 @@ Be warm, friendly, and helpful. Acknowledge that this is a return call and that 
       phoneNumber: caller_id,
       ownerName: recentCall.ownerName ?? undefined,
       agentId: agent_id,
-      triggerSource: 'WEBHOOK', // Inbound call via webhook
-      conversationId: undefined, // Will be populated by ElevenLabs later
+      triggerSource: 'WEBHOOK',
+      conversationId: undefined,
       callSid: call_sid,
       dynamicVariables: response.dynamic_variables,
-      parentCallId: recentCall.id, // Link to original outbound call
+      parentCallId: recentCall.id,
     });
 
-    console.log('✅ Inbound call logged to database');
-    console.log('📤 Sending personalization response to ElevenLabs\n');
-
+    console.log('📤 Sending response to ElevenLabs\n');
     res.json(response);
 
   } catch (error) {
-    console.error('❌ Twilio personalization webhook error:', error);
+    console.error('❌ Webhook error:', error);
     console.error('   Stack:', error instanceof Error ? error.stack : 'No stack trace');
     
-    // Fail gracefully - return generic response so call doesn't drop
-    const fallbackResponse = {
+    res.json({
       type: 'conversation_initiation_client_data',
-      dynamic_variables: {
-        has_context: 'false',
-        is_inbound_call: 'true',
-      },
+      dynamic_variables: { has_context: 'false' },
       conversation_config_override: {
         agent: {
           first_message: 'Hi! Thanks for calling. How can I help you today?'
         }
       }
-    };
-    
-    console.log('⚠️  Returning fallback generic response\n');
-    res.json(fallbackResponse);
+    });
   }
 };

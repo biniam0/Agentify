@@ -560,6 +560,7 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
         triggerUserId: userId,
         conversationId: result.conversation_id,
         callSid: result.callSid,
+        dynamicVariables: result.dynamicVariables,
       });
     }
 
@@ -675,6 +676,7 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
         triggerUserId: userId,
         conversationId: result.conversation_id,
         callSid: result.callSid,
+        dynamicVariables: result.dynamicVariables,
       });
     }
 
