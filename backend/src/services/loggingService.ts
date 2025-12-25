@@ -296,6 +296,18 @@ export const logSchedulerComplete = async (
   }
 };
 
+export const deleteSchedulerLog = async (id: string) => {
+  try {
+    await prisma.schedulerLog.delete({
+      where: { id },
+    });
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to delete scheduler log:', error);
+    return false;
+  }
+};
+
 // ============================================
 // ERROR LOGGING
 // ============================================
