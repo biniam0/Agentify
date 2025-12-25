@@ -791,6 +791,7 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     const prisma = (await import('../config/database')).default;
     
     // Step 1: Find most recent post-meeting call
+    // ⚡ OPTIMIZED: Only select fields we actually use (reduces data transfer)
     const recentCall = await prisma.callLog.findFirst({
       where: {
         phoneNumber: caller_id,
@@ -798,6 +799,22 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
         initiatedAt: {
           gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // Last 7 days
         }
+      },
+      select: {
+        id: true,
+        initiatedAt: true,
+        status: true,
+        dealId: true,
+        dealName: true,
+        transcriptSummary: true,
+        webhookData: true,
+        dynamicVariables: true,
+        userId: true,
+        userName: true,
+        userEmail: true,
+        meetingId: true,
+        meetingTitle: true,
+        ownerName: true,
       },
       orderBy: {
         initiatedAt: 'desc'

@@ -5,6 +5,7 @@ import prisma from '../config/database';
 import * as barrierxService from '../services/barrierxService';
 import { generateToken } from '../utils/jwt';
 import { AuthRequest } from '../middlewares/auth';
+import { invalidateUserCache } from '../utils/userCache';
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -72,6 +73,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           isEnabled: barrierxUser.isEnabled,
         },
       });
+      
+      // ⚡ Invalidate cache after update
+      invalidateUserCache(user.id);
     } else {
       // User doesn't exist - create new user
       user = await prisma.user.create({
