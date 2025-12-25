@@ -511,8 +511,9 @@ const runAutomationJob = async () => {
     console.log(`   Post-meeting calls triggered: ${totalPostMeetings}`);
     console.log(`   Next run in 5 minutes\n`);
 
-    // Log scheduler completion
-    if (schedulerLogId) {
+    // Log scheduler completion - ONLY if calls were triggered (Phase 1 optimization)
+    const totalCalls = totalPreMeetings + totalPostMeetings;
+    if (schedulerLogId && totalCalls > 0) {
       await loggingService.logSchedulerComplete(schedulerLogId.id, {
         status: 'SUCCESS',
         totalUsers: usersToProcess.length,
@@ -520,6 +521,11 @@ const runAutomationJob = async () => {
         postCallsTriggered: totalPostMeetings,
         errorsCount: 0,
       });
+      console.log(`📊 Scheduler run logged (${totalCalls} calls triggered)`);
+    } else if (schedulerLogId) {
+      // Delete the initial log entry since nothing happened
+      await loggingService.deleteSchedulerLog(schedulerLogId.id);
+      console.log(`🔇 Scheduler run not logged (0 calls, no activity)`);
     }
 
   } catch (error: any) {
