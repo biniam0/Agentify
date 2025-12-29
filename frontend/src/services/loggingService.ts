@@ -316,3 +316,79 @@ export const getDashboardStats = async (): Promise<{ success: boolean; data: Das
     return response.data;
 };
 
+// ============================================
+// USER-SPECIFIC API CALLS (Non-Admin)
+// ============================================
+
+/**
+ * Get call logs for the current authenticated user only
+ */
+export const getUserCallLogs = async (filters?: {
+    dealId?: string;
+    callType?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    offset?: number;
+}): Promise<PaginatedResponse<CallLog>> => {
+    const params = new URLSearchParams();
+    if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                params.append(key, value.toString());
+            }
+        });
+    }
+    const response = await api.get(`/logs/user/calls?${params.toString()}`);
+    return response.data;
+};
+
+/**
+ * Get activity logs for the current authenticated user only
+ */
+export const getUserActivityLogs = async (filters?: {
+    activityType?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    offset?: number;
+}): Promise<PaginatedResponse<ActivityLog>> => {
+    const params = new URLSearchParams();
+    if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                params.append(key, value.toString());
+            }
+        });
+    }
+    const response = await api.get(`/logs/user/activity?${params.toString()}`);
+    return response.data;
+};
+
+/**
+ * Get CRM action logs for the current authenticated user only
+ */
+export const getUserCrmActionLogs = async (filters?: {
+    actionType?: string;
+    conversationId?: string;
+    dealId?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    offset?: number;
+}): Promise<PaginatedResponse<CrmActionLog>> => {
+    const params = new URLSearchParams();
+    if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                params.append(key, value.toString());
+            }
+        });
+    }
+    const response = await api.get(`/logs/user/crm-actions?${params.toString()}`);
+    return response.data;
+};
+
