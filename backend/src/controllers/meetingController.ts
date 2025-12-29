@@ -4,6 +4,7 @@ import prisma from '../config/database';
 import * as barrierxService from '../services/barrierxService';
 import * as meetingService from '../services/meetingService';
 import * as loggingService from '../services/loggingService';
+import { getCachedUser } from '../utils/userCache';
 
 export const getMeetings = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -14,10 +15,10 @@ export const getMeetings = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // Get user from database to get barrierxUserId
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { barrierxUserId: true, email: true },
+    // ⚡ OPTIMIZED: Use cached user lookup
+    const dbUser = await getCachedUser(userId, {
+      barrierxUserId: true,
+      email: true,
     });
 
     if (!dbUser || !dbUser.barrierxUserId) {
@@ -74,10 +75,12 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
       return;
     }
 
-    // Get user from database to get barrierxUserId
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { barrierxUserId: true, name: true, email: true, tenantSlug: true },
+    // ⚡ OPTIMIZED: Use cached user lookup
+    const dbUser = await getCachedUser(userId, {
+      barrierxUserId: true,
+      name: true,
+      email: true,
+      tenantSlug: true,
     });
 
     if (!dbUser || !dbUser.barrierxUserId) {
@@ -237,10 +240,12 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    // Get user from database to get barrierxUserId
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { barrierxUserId: true, name: true, email: true, tenantSlug: true },
+    // ⚡ OPTIMIZED: Use cached user lookup
+    const dbUser = await getCachedUser(userId, {
+      barrierxUserId: true,
+      name: true,
+      email: true,
+      tenantSlug: true,
     });
 
     if (!dbUser || !dbUser.barrierxUserId) {
@@ -486,7 +491,7 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
     // Verify admin access
     const adminUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, name: true },
+      select: { id: true, email: true, name: true },
     });
 
     if (!adminUser || adminUser.email !== 'tamiratkebede120@gmail.com') {
@@ -547,7 +552,7 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
     if (result.conversation_id || result.callSid) {
       await loggingService.logCallInitiation({
         callType: 'PRE_CALL',
-        userId: adminUser.email,
+        userId: adminUser.id,
         userName: adminUser.name,
         userEmail: adminUser.email,
         dealId: deal.id,
@@ -604,7 +609,7 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
     // Verify admin access
     const adminUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, name: true },
+      select: { id: true, email: true, name: true },
     });
 
     if (!adminUser || adminUser.email !== 'tamiratkebede120@gmail.com') {
@@ -663,7 +668,7 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
     if (result.conversation_id || result.callSid) {
       await loggingService.logCallInitiation({
         callType: 'POST_CALL',
-        userId: adminUser.email,
+        userId: adminUser.id,
         userName: adminUser.name,
         userEmail: adminUser.email,
         dealId: deal.id,

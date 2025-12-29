@@ -590,31 +590,78 @@ export const getCallAnalytics = async (userId?: string, days: number = 7) => {
     };
     if (userId) where.userId = userId;
 
-    const calls = await prisma.callLog.findMany({ where });
+    // ⚡ OPTIMIZED: Use database aggregation instead of fetching all records
+    const [
+      total,
+      statusCounts,
+      typeCounts,
+      triggerCounts,
+      durationAggregate
+    ] = await Promise.all([
+      // Total count
+      prisma.callLog.count({ where }),
+      
+      // Group by status
+      prisma.callLog.groupBy({
+        by: ['status'],
+        where,
+        _count: { id: true },
+      }),
+      
+      // Group by type
+      prisma.callLog.groupBy({
+        by: ['callType'],
+        where,
+        _count: { id: true },
+      }),
+      
+      // Group by trigger source
+      prisma.callLog.groupBy({
+        by: ['triggerSource'],
+        where,
+        _count: { id: true },
+      }),
+      
+      // Aggregate duration
+      prisma.callLog.aggregate({
+        where,
+        _sum: { duration: true },
+        _avg: { duration: true },
+      }),
+    ]);
 
-    const successful = calls.filter(c => c.status === 'COMPLETED').length;
-    const failed = calls.filter(c => ['FAILED', 'NO_ANSWER', 'BUSY'].includes(c.status)).length;
-    const totalDuration = calls.reduce((sum, c) => sum + (c.duration || 0), 0);
+    // Process aggregated results efficiently
+    const statusMap = new Map(statusCounts.map(s => [s.status, s._count.id]));
+    const typeMap = new Map(typeCounts.map(t => [t.callType, t._count.id]));
+    const triggerMap = new Map(triggerCounts.map(t => [t.triggerSource, t._count.id]));
+
+    const successful = statusMap.get('COMPLETED') || 0;
+    const failed = (statusMap.get('FAILED') || 0) + 
+                   (statusMap.get('NO_ANSWER') || 0) + 
+                   (statusMap.get('BUSY') || 0);
+    const pending = (statusMap.get('INITIATED') || 0) + 
+                    (statusMap.get('RINGING') || 0) + 
+                    (statusMap.get('ANSWERED') || 0);
 
     return {
-      total: calls.length,
+      total,
       successful,
       failed,
-      successRate: calls.length > 0 ? (successful / calls.length) * 100 : 0,
-      avgDuration: calls.length > 0 ? totalDuration / calls.length : 0,
+      successRate: total > 0 ? (successful / total) * 100 : 0,
+      avgDuration: durationAggregate._avg.duration || 0,
       byType: {
-        preCalls: calls.filter(c => c.callType === 'PRE_CALL').length,
-        postCalls: calls.filter(c => c.callType === 'POST_CALL').length,
+        preCalls: typeMap.get('PRE_CALL') || 0,
+        postCalls: typeMap.get('POST_CALL') || 0,
       },
       byTrigger: {
-        manual: calls.filter(c => c.triggerSource === 'MANUAL').length,
-        scheduled: calls.filter(c => c.triggerSource === 'SCHEDULED').length,
-        retry: calls.filter(c => c.triggerSource === 'RETRY').length,
+        manual: triggerMap.get('MANUAL') || 0,
+        scheduled: triggerMap.get('SCHEDULED') || 0,
+        retry: triggerMap.get('RETRY') || 0,
       },
       byStatus: {
         completed: successful,
         failed,
-        pending: calls.filter(c => ['INITIATED', 'RINGING', 'ANSWERED'].includes(c.status)).length,
+        pending,
       },
     };
   } catch (error) {

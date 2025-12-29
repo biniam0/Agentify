@@ -9,6 +9,7 @@ import {
   hasDataChanged,
   refreshCacheTTL
 } from '../utils/redisCache';
+import * as loggingService from './loggingService';
 
 export interface Tenant {
   id: string;
@@ -104,6 +105,18 @@ export const login = async (email: string, password: string): Promise<BarrierXLo
     return response.data;
   } catch (error: any) {
     console.error('❌ BarrierX login error:', error.response?.data || error.message);
+
+    // Log authentication failure
+    await loggingService.logError({
+      errorType: 'AUTHENTICATION_ERROR',
+      severity: 'CRITICAL',
+      source: 'barrierxService.login',
+      message: error.message || 'BarrierX login failed',
+      stack: error.stack,
+      code: error.code,
+      responseData: error.response?.data,
+    });
+
     return null;
   }
 };
@@ -129,6 +142,18 @@ export const refreshAccessToken = async (refreshToken: string): Promise<BarrierX
     return response.data;
   } catch (error: any) {
     console.error('❌ BarrierX refresh error:', error.response?.data || error.message);
+
+    // Log token refresh failure
+    await loggingService.logError({
+      errorType: 'AUTHENTICATION_ERROR',
+      severity: 'HIGH',
+      source: 'barrierxService.refreshAccessToken',
+      message: error.message || 'BarrierX token refresh failed',
+      stack: error.stack,
+      code: error.code,
+      responseData: error.response?.data,
+    });
+
     return null;
   }
 };
@@ -163,7 +188,7 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
           'Accept': 'application/json',
         },
-        timeout: 15000,
+        timeout: 120000, // Increased from 15s to 120s to handle slow API responses
       }
     );
 
@@ -183,6 +208,18 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
 
   } catch (error: any) {
     console.error(`❌ BarrierX API error for user ${userId}:`, error.response?.data || error.message);
+
+    // Log API error
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'barrierxService.getUserDeals',
+      message: error.message || `Failed to fetch deals for user ${userId}`,
+      stack: error.stack,
+      code: error.code,
+      userId: userId,
+      responseData: error.response?.data,
+    });
 
     // No fallback - let it fail
     throw new Error(`Failed to fetch deals for user ${userId}: ${error.response?.data?.details || error.message}`);
@@ -223,7 +260,7 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
           'Accept': 'application/json',
         },
-        timeout: 30000,  // 30 seconds for batch
+        timeout: 120000,  // 120 seconds for batch
       }
     );
 
@@ -243,6 +280,19 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
 
   } catch (error: any) {
     console.error(`❌ Batch API error:`, error.response?.data || error.message);
+
+    // Log batch fetch error
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'barrierxService.getBatchUserDeals',
+      message: error.message || 'Failed to batch fetch deals',
+      stack: error.stack,
+      code: error.code,
+      requestData: { userCount: userIds.length },
+      responseData: error.response?.data,
+    });
+
     return new Map();
   }
 };
@@ -364,6 +414,17 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
   } catch (error: any) {
     console.error('❌ Wildcard bulk API error:', error.response?.data || error.message);
 
+    // Log wildcard fetch error
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'CRITICAL',
+      source: 'barrierxService.getAllDealsWildcard',
+      message: error.message || 'Failed to fetch all deals (wildcard)',
+      stack: error.stack,
+      code: error.code,
+      responseData: error.response?.data,
+    });
+
     // ✅ REDIS CACHE FALLBACK: Try to get cached data
     console.log('🔄 Attempting to use Redis cache...');
     const cachedData = await getBulkDealsFromCache();
@@ -421,7 +482,7 @@ export const createHubSpotEngagement = async (payload: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        timeout: 15000,
+        timeout: 120000, // Increased from 15s to 120s to handle slow API responses
       }
     );
 
@@ -441,6 +502,23 @@ export const createHubSpotEngagement = async (payload: {
     }
   } catch (error: any) {
     console.error(`❌ Failed to create ${payload.type} engagement:`, error.response?.data || error.message);
+
+    // Log engagement creation error
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'barrierxService.createEngagement',
+      message: error.message || `Failed to create ${payload.type} engagement`,
+      stack: error.stack,
+      code: error.code,
+      requestData: {
+        type: payload.type,
+        dealId: payload.dealId,
+        tenantSlug: payload.tenantSlug,
+      },
+      responseData: error.response?.data,
+    });
+
     return {
       success: false,
       error: error.response?.data?.error || error.message || 'Failed to create engagement',
@@ -728,7 +806,7 @@ export const getDealContextForContinuation = async (
     console.log(`🔄 Fetching fresh deal context for continuation...`);
     console.log(`   Deal ID: ${dealId}`);
     console.log(`   Tenant: ${tenantSlug}`);
-    
+
     const startTime = Date.now();
 
     // Fetch both endpoints in parallel for performance

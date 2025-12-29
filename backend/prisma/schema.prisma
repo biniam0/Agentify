@@ -21,6 +21,9 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // ⚡ Composite index for scheduler query optimization
+  @@index([isAuth, isEnabled])
 }
 
 // ============================================
@@ -67,6 +70,11 @@ model ActivityLog {
   @@index([dealId])
   @@index([conversationId])
   @@index([createdAt])
+  
+  // ⚡ Composite indexes for common query patterns
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([dealId, activityType])
+  @@index([status, createdAt(sort: Desc)])
 }
 
 // Call Log - Detailed call tracking
@@ -128,6 +136,12 @@ model CallLog {
   @@index([conversationId])
   @@index([initiatedAt])
   @@index([phoneNumber])
+  
+  // ⚡ Composite indexes for analytics and webhook queries
+  @@index([phoneNumber, callType, initiatedAt(sort: Desc)])
+  @@index([userId, initiatedAt(sort: Desc)])
+  @@index([status, initiatedAt])
+  @@index([callType, status])
 }
 
 // CRM Action Log - Notes, Meetings, Contacts created via AI
@@ -198,6 +212,9 @@ model WebhookLog {
   @@index([eventType])
   @@index([conversationId])
   @@index([createdAt])
+  
+  // ⚡ Composite index for webhook queries
+  @@index([conversationId, eventType, createdAt])
 }
 
 // Scheduler Log - Track automated runs
@@ -264,6 +281,10 @@ model ErrorLog {
   @@index([severity])
   @@index([isResolved])
   @@index([createdAt])
+  
+  // ⚡ Composite index for dashboard critical errors query
+  @@index([severity, isResolved, createdAt(sort: Desc)])
+  @@index([errorType, createdAt(sort: Desc)])
 }
 
 // ============================================

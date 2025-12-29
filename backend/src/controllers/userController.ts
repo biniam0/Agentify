@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import prisma from '../config/database';
+import { invalidateUserCache } from '../utils/userCache';
 
 export const toggleEnabled = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -23,6 +24,9 @@ export const toggleEnabled = async (req: AuthRequest, res: Response): Promise<vo
       where: { id: userId },
       data: { isEnabled },
     });
+    
+    // ⚡ Invalidate cache after update
+    invalidateUserCache(userId);
     
     console.log(`✅ User ${user.email} automation ${isEnabled ? 'ENABLED' : 'DISABLED'}`);
     
