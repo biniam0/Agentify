@@ -486,7 +486,7 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
     // Verify admin access
     const adminUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, name: true },
+      select: { id: true, email: true, name: true },
     });
 
     if (!adminUser || adminUser.email !== 'tamiratkebede120@gmail.com') {
@@ -547,7 +547,7 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
     if (result.conversation_id || result.callSid) {
       await loggingService.logCallInitiation({
         callType: 'PRE_CALL',
-        userId: adminUser.email,
+        userId: adminUser.id,
         userName: adminUser.name,
         userEmail: adminUser.email,
         dealId: deal.id,
@@ -604,7 +604,7 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
     // Verify admin access
     const adminUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, name: true },
+      select: { id: true, email: true, name: true },
     });
 
     if (!adminUser || adminUser.email !== 'tamiratkebede120@gmail.com') {
@@ -663,7 +663,7 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
     if (result.conversation_id || result.callSid) {
       await loggingService.logCallInitiation({
         callType: 'POST_CALL',
-        userId: adminUser.email,
+        userId: adminUser.id,
         userName: adminUser.name,
         userEmail: adminUser.email,
         dealId: deal.id,

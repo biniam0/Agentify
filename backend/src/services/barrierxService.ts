@@ -163,7 +163,7 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
           'Accept': 'application/json',
         },
-        timeout: 15000,
+        timeout: 120000, // Increased from 15s to 120s to handle slow API responses
       }
     );
 
@@ -223,7 +223,7 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
           'Accept': 'application/json',
         },
-        timeout: 30000,  // 30 seconds for batch
+        timeout: 120000,  // 120 seconds for batch
       }
     );
 
@@ -421,7 +421,7 @@ export const createHubSpotEngagement = async (payload: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        timeout: 15000,
+        timeout: 120000, // Increased from 15s to 120s to handle slow API responses
       }
     );
 
