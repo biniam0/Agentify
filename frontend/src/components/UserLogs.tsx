@@ -21,7 +21,6 @@ import {
   AlertCircle,
   RotateCcw,
   MessageSquare,
-  Filter,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';

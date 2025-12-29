@@ -252,8 +252,25 @@ Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
       noteCreated: !!dealId,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Webhook processing error:', error);
+    
+    // Log error to database
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'webhookController.handleElevenLabsWebhook',
+      message: error.message || 'Failed to process ElevenLabs webhook',
+      stack: error.stack,
+      endpoint: req.path,
+      method: req.method,
+      requestData: {
+        eventType: req.body?.type,
+        conversationId: req.body?.data?.conversation_id,
+        agentId: req.body?.data?.agent_id,
+      },
+    });
+    
     res.status(500).json({
       error: 'Failed to process webhook',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -295,8 +312,21 @@ export const handleCreateContact = async (req: Request, res: Response): Promise<
         phone,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Create contact error:', error);
+    
+    // Log error to database
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'MEDIUM',
+      source: 'webhookController.handleCreateContact',
+      message: error.message || 'Failed to create contact',
+      stack: error.stack,
+      endpoint: req.path,
+      method: req.method,
+      requestData: req.body,
+    });
+    
     res.status(500).json({
       error: 'Failed to process create contact command',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -403,8 +433,25 @@ export const handleCreateNote = async (req: Request, res: Response): Promise<voi
         details: 'BarrierX API returned an error',
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Create note error:', error);
+    
+    // Log error to database
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'webhookController.handleCreateNote',
+      message: error.message || 'Failed to create note',
+      stack: error.stack,
+      endpoint: req.path,
+      method: req.method,
+      requestData: {
+        dealId: req.body.deal_id,
+        tenantSlug: req.body.tenant_slug,
+        ownerId: req.body.hubspot_owner_id,
+      },
+    });
+    
     res.status(500).json({
       success: false,
       error: 'Failed to process create note command',
@@ -552,8 +599,25 @@ export const handleCreateMeeting = async (req: Request, res: Response): Promise<
         details: 'BarrierX API returned an error',
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Create meeting error:', error);
+    
+    // Log error to database
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'webhookController.handleCreateMeeting',
+      message: error.message || 'Failed to create meeting',
+      stack: error.stack,
+      endpoint: req.path,
+      method: req.method,
+      requestData: {
+        dealId: req.body.deal_id,
+        tenantSlug: req.body.tenant_slug,
+        ownerId: req.body.hubspot_owner_id,
+      },
+    });
+    
     res.status(500).json({
       success: false,
       error: 'Failed to process create meeting command',
@@ -614,8 +678,21 @@ export const handleCreateTask = async (req: Request, res: Response): Promise<voi
       if (isNaN(taskTimestamp)) {
         throw new Error('Invalid timestamp format');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Invalid timestamp format:', hs_timestamp);
+      
+      // Log validation error
+      await loggingService.logError({
+        errorType: 'VALIDATION_ERROR',
+        severity: 'LOW',
+        source: 'webhookController.handleCreateTask.timestampValidation',
+        message: `Invalid timestamp format: ${hs_timestamp}`,
+        stack: error.stack,
+        endpoint: req.path,
+        method: req.method,
+        requestData: { hs_timestamp, deal_id: req.body.deal_id },
+      });
+      
       res.status(400).json({
         success: false,
         error: 'Invalid timestamp format. Expected ISO 8601 format (e.g., 2025-12-23T10:00:00Z)',
@@ -700,8 +777,25 @@ export const handleCreateTask = async (req: Request, res: Response): Promise<voi
         details: 'BarrierX API returned an error',
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Create task error:', error);
+    
+    // Log error to database
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'webhookController.handleCreateTask',
+      message: error.message || 'Failed to create task',
+      stack: error.stack,
+      endpoint: req.path,
+      method: req.method,
+      requestData: {
+        dealId: req.body.deal_id,
+        tenantSlug: req.body.tenant_slug,
+        ownerId: req.body.hubspot_owner_id,
+      },
+    });
+    
     res.status(500).json({
       success: false,
       error: 'Failed to process create task command',
@@ -755,8 +849,21 @@ export const handleCreateDeal = async (req: Request, res: Response): Promise<voi
         hubspot_owner_id,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Create deal error:', error);
+    
+    // Log error to database
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'webhookController.handleCreateDeal',
+      message: error.message || 'Failed to create deal',
+      stack: error.stack,
+      endpoint: req.path,
+      method: req.method,
+      requestData: req.body,
+    });
+    
     res.status(500).json({
       error: 'Failed to process create deal command',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -890,8 +997,23 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     let dealContext;
     try {
       dealContext = await barrierxService.getDealContextForContinuation(tenantSlug, dealId);
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Failed to fetch deal context, using stale data');
+      
+      // Log deal context fetch failure (non-critical, we have fallback)
+      await loggingService.logError({
+        errorType: 'EXTERNAL_SERVICE',
+        severity: 'MEDIUM',
+        source: 'webhookController.handleTwilioPersonalizationWebhook.fetchDealContext',
+        message: error.message || 'Failed to fetch fresh deal context for inbound call',
+        stack: error.stack,
+        requestData: {
+          tenantSlug,
+          dealId,
+          callSid: req.body.call_sid,
+        },
+      });
+      
       dealContext = null;
     }
 
@@ -1050,9 +1172,25 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     console.log('📤 Sending response to ElevenLabs\n');
     res.json(response);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Webhook error:', error);
     console.error('   Stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    // Log critical inbound call error
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'CRITICAL',
+      source: 'webhookController.handleTwilioPersonalizationWebhook',
+      message: error.message || 'Failed to process inbound call personalization',
+      stack: error.stack,
+      endpoint: req.path,
+      method: req.method,
+      requestData: {
+        callSid: req.body.call_sid,
+        callerId: req.body.caller_id,
+        agentId: req.body.agent_id,
+      },
+    });
     
     res.json({
       type: 'conversation_initiation_client_data',
