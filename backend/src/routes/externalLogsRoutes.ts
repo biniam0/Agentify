@@ -1,16 +1,20 @@
 /**
  * External Logs API Routes
  * 
- * Phase 1: Test endpoint only
+ * Phase 2: Individual log endpoints
  */
 
 import { Router } from 'express';
 import { authenticateService, requireScope, ServiceAuthRequest } from '../middlewares/serviceAuth';
+import * as externalLogsController from '../controllers/externalLogsController';
 import { Response } from 'express';
 
 const router = Router();
 
-// Test endpoint to verify API key authentication
+// ============================================
+// TEST ENDPOINT
+// ============================================
+
 router.get(
   '/test',
   authenticateService,
@@ -24,6 +28,58 @@ router.get(
       timestamp: new Date().toISOString()
     });
   }
+);
+
+// ============================================
+// INDIVIDUAL USER LOG ENDPOINTS
+// ============================================
+
+// 1. Activity Logs
+router.get(
+  '/users/:userId/activity',
+  authenticateService,
+  requireScope('logs:read'),
+  externalLogsController.getUserActivityLogs
+);
+
+// 2. Call Logs
+router.get(
+  '/users/:userId/calls',
+  authenticateService,
+  requireScope('logs:read'),
+  externalLogsController.getUserCallLogs
+);
+
+// 3. CRM Action Logs
+router.get(
+  '/users/:userId/crm-actions',
+  authenticateService,
+  requireScope('logs:read'),
+  externalLogsController.getUserCrmActionLogs
+);
+
+// 4. Webhook Logs
+router.get(
+  '/users/:userId/webhooks',
+  authenticateService,
+  requireScope('logs:read'),
+  externalLogsController.getUserWebhookLogs
+);
+
+// 5. Scheduler Logs
+router.get(
+  '/users/:userId/scheduler',
+  authenticateService,
+  requireScope('logs:read'),
+  externalLogsController.getUserSchedulerLogs
+);
+
+// 6. Error Logs
+router.get(
+  '/users/:userId/errors',
+  authenticateService,
+  requireScope('logs:read'),
+  externalLogsController.getUserErrorLogs
 );
 
 export default router;
