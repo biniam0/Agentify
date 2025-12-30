@@ -2,6 +2,7 @@
  * External Logs API Routes
  * 
  * Phase 2: Individual log endpoints
+ * Phase 3: Batch endpoint with time-based filtering
  */
 
 import { Router } from 'express';
@@ -80,6 +81,18 @@ router.get(
   authenticateService,
   requireScope('logs:read'),
   externalLogsController.getUserErrorLogs
+);
+
+// ============================================
+// PHASE 3: BATCH ENDPOINT
+// ============================================
+
+// Batch: Get all logs for one user
+router.get(
+  '/users/:userId/all',
+  authenticateService,
+  requireScope('logs:read'),
+  externalLogsController.getAllUserLogs
 );
 
 export default router;
