@@ -33,7 +33,6 @@ import WebhooksLog from './Admin/WebhooksLog';
 import CrmActionsLog from './Admin/CrmActionsLog';
 import SchedulerLog from './Admin/SchedulerLog';
 import ErrorsLog from './Admin/ErrorsLog';
-import UserLogs from './UserLogs';
 import { Alert, AlertDescription } from './ui/alert';
 import {
   AlertDialog,
@@ -77,7 +76,6 @@ const MeetingsPage: React.FC = () => {
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [adminTab, setAdminTab] = useState<'meetings' | 'logs'>('meetings'); // NEW: Admin tab state
   const [activeLogSection, setActiveLogSection] = useState<'overview' | 'calls' | 'webhooks' | 'crm-actions' | 'scheduler' | 'errors'>('overview'); // NEW: Active log section
-  const [showUserLogs, setShowUserLogs] = useState(false); // NEW: User logs modal state
   const navigate = useNavigate();
   const user = authService.getUser();
 
@@ -510,7 +508,7 @@ const MeetingsPage: React.FC = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setShowUserLogs(true)} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => navigate('/my-logs')} className="cursor-pointer">
                     <FileText className="mr-2 h-4 w-4" />
                     <span>My Logs</span>
                   </DropdownMenuItem>
@@ -936,9 +934,6 @@ const MeetingsPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* User Logs Modal */}
-      {showUserLogs && <UserLogs onClose={() => setShowUserLogs(false)} />}
     </div>
   );
 };
