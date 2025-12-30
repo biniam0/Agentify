@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -12,16 +12,16 @@ model User {
   id String @id @default(uuid())
 
   name           String
-  email          String @unique
-  barrierxUserId String @unique
+  email          String   @unique
+  barrierxUserId String   @unique
   tenantSlug     String
-  isAuth         Boolean @default(false)
-  isEnabled      Boolean @default(true)
+  isAuth         Boolean  @default(false)
+  isEnabled      Boolean  @default(true)
   role           UserRole @default(USER)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // ⚡ Composite index for scheduler query optimization
   @@index([isAuth, isEnabled])
 }
@@ -33,44 +33,43 @@ model User {
 // Activity Log - Master table for all backend activities
 model ActivityLog {
   id String @id @default(uuid())
-  
+
   // Core fields
   activityType ActivityType
   status       Status       @default(PENDING)
-  
+
   // User & Context
-  userId       String?
-  userName     String?
-  userEmail    String?
-  
+  userId    String?
+  userName  String?
+  userEmail String?
+
   // Related entities
-  dealId       String?
-  dealName     String?
-  meetingId    String?
-  meetingTitle String?
+  dealId         String?
+  dealName       String?
+  meetingId      String?
+  meetingTitle   String?
   conversationId String?
-  callSid      String?
-  
+  callSid        String?
+
   // Metadata
   metadata     Json?
   errorMessage String?
-  errorStack   String?      @db.Text
-  
+  errorStack   String? @db.Text
+
   // Performance tracking
-  duration     Int?
-  
+  duration Int?
+
   // Timestamps
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  completedAt  DateTime?
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
   @@index([userId])
   @@index([activityType])
   @@index([status])
   @@index([dealId])
   @@index([conversationId])
   @@index([createdAt])
-  
   // ⚡ Composite indexes for common query patterns
   @@index([userId, createdAt(sort: Desc)])
   @@index([dealId, activityType])
@@ -80,55 +79,55 @@ model ActivityLog {
 // Call Log - Detailed call tracking
 model CallLog {
   id String @id @default(uuid())
-  
+
   // Call identification
-  conversationId String?    @unique
+  conversationId String?       @unique
   callSid        String?
   callType       CallType
   callDirection  CallDirection @default(OUTBOUND)
-  
+
   // User & Deal context
-  userId         String
-  userName       String
-  userEmail      String
-  dealId         String
-  dealName       String
-  meetingId      String
-  meetingTitle   String
-  
+  userId       String
+  userName     String
+  userEmail    String
+  dealId       String
+  dealName     String
+  meetingId    String
+  meetingTitle String
+
   // Call details
-  phoneNumber    String
-  ownerName      String?
-  agentId        String?
-  
+  phoneNumber String
+  ownerName   String?
+  agentId     String?
+
   // Trigger context
-  triggerSource  TriggerSource
-  triggerUserId  String?
-  
+  triggerSource TriggerSource
+  triggerUserId String?
+
   // Status & Timing
-  status         CallStatus @default(INITIATED)
-  initiatedAt    DateTime   @default(now())
-  answeredAt     DateTime?
-  completedAt    DateTime?
-  duration       Int?
-  
+  status      CallStatus @default(INITIATED)
+  initiatedAt DateTime   @default(now())
+  answeredAt  DateTime?
+  completedAt DateTime?
+  duration    Int?
+
   // Call outcome
-  callSuccessful Boolean?
-  failureReason  String?
-  transcriptSummary String? @db.Text
-  
+  callSuccessful    Boolean?
+  failureReason     String?
+  transcriptSummary String?  @db.Text
+
   // Retry tracking
-  retryAttempt   Int        @default(1)
-  maxRetries     Int        @default(3)
-  parentCallId   String?
-  
+  retryAttempt Int     @default(1)
+  maxRetries   Int     @default(3)
+  parentCallId String?
+
   // Metadata
   dynamicVariables Json?
   webhookData      Json?
-  
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([userId])
   @@index([dealId])
   @@index([callType])
@@ -136,7 +135,6 @@ model CallLog {
   @@index([conversationId])
   @@index([initiatedAt])
   @@index([phoneNumber])
-  
   // ⚡ Composite indexes for analytics and webhook queries
   @@index([phoneNumber, callType, initiatedAt(sort: Desc)])
   @@index([userId, initiatedAt(sort: Desc)])
@@ -147,33 +145,33 @@ model CallLog {
 // CRM Action Log - Notes, Meetings, Contacts created via AI
 model CrmActionLog {
   id String @id @default(uuid())
-  
+
   // Action type
-  actionType     CrmActionType
-  
+  actionType CrmActionType
+
   // Context
   conversationId String?
   dealId         String?
   tenantSlug     String
   ownerId        String
-  
+
   // Action details
-  entityId       String?
-  title          String?
-  body           String?       @db.Text
-  
+  entityId String?
+  title    String?
+  body     String? @db.Text
+
   // Status
-  status         Status        @default(PENDING)
-  errorMessage   String?
-  
+  status       Status  @default(PENDING)
+  errorMessage String?
+
   // Metadata
-  metadata       Json?
-  
+  metadata Json?
+
   // Timestamps
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  completedAt    DateTime?
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
   @@index([actionType])
   @@index([status])
   @@index([dealId])
@@ -184,35 +182,34 @@ model CrmActionLog {
 // Webhook Log - All incoming webhooks
 model WebhookLog {
   id String @id @default(uuid())
-  
+
   // Webhook identification
-  webhookType   WebhookType
-  eventType     String
-  
+  webhookType WebhookType
+  eventType   String
+
   // Context
   conversationId String?
   agentId        String?
-  
+
   // Status
-  status         Status        @default(SUCCESS)
+  status         Status  @default(SUCCESS)
   processingTime Int?
   errorMessage   String?
-  
+
   // Data
-  payload        Json
-  response       Json?
-  
+  payload  Json
+  response Json?
+
   // Headers (for security audit)
   signature      String?
   signatureValid Boolean?
-  
-  createdAt      DateTime      @default(now())
-  
+
+  createdAt DateTime @default(now())
+
   @@index([webhookType])
   @@index([eventType])
   @@index([conversationId])
   @@index([createdAt])
-  
   // ⚡ Composite index for webhook queries
   @@index([conversationId, eventType, createdAt])
 }
@@ -220,26 +217,26 @@ model WebhookLog {
 // Scheduler Log - Track automated runs
 model SchedulerLog {
   id String @id @default(uuid())
-  
+
   // Run details
-  jobType        SchedulerJobType
-  status         Status           @default(RUNNING)
-  
+  jobType SchedulerJobType
+  status  Status           @default(RUNNING)
+
   // Results
-  totalUsers     Int?
+  totalUsers         Int?
   preCallsTriggered  Int?
   postCallsTriggered Int?
-  errorsCount    Int?
-  
+  errorsCount        Int?
+
   // Performance
-  startedAt      DateTime     @default(now())
-  completedAt    DateTime?
-  duration       Int?
-  
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  duration    Int?
+
   // Details
-  errorMessage   String?
-  metadata       Json?
-  
+  errorMessage String?
+  metadata     Json?
+
   @@index([jobType])
   @@index([status])
   @@index([startedAt])
@@ -248,40 +245,39 @@ model SchedulerLog {
 // Error Log - Centralized error tracking
 model ErrorLog {
   id String @id @default(uuid())
-  
+
   // Error context
-  errorType      ErrorType
-  severity       Severity
-  source         String
-  
+  errorType ErrorType
+  severity  Severity
+  source    String
+
   // Error details
-  message        String
-  stack          String?      @db.Text
-  code           String?
-  
+  message String
+  stack   String? @db.Text
+  code    String?
+
   // Context
-  userId         String?
-  dealId         String?
-  endpoint       String?
-  method         String?
-  
+  userId   String?
+  dealId   String?
+  endpoint String?
+  method   String?
+
   // Request/Response
-  requestData    Json?
-  responseData   Json?
-  
+  requestData  Json?
+  responseData Json?
+
   // Resolution
-  isResolved     Boolean      @default(false)
-  resolvedAt     DateTime?
-  resolvedBy     String?
-  resolution     String?      @db.Text
-  
-  createdAt      DateTime     @default(now())
-  
+  isResolved Boolean   @default(false)
+  resolvedAt DateTime?
+  resolvedBy String?
+  resolution String?   @db.Text
+
+  createdAt DateTime @default(now())
+
   @@index([errorType])
   @@index([severity])
   @@index([isResolved])
   @@index([createdAt])
-  
   // ⚡ Composite index for dashboard critical errors query
   @@index([severity, isResolved, createdAt(sort: Desc)])
   @@index([errorType, createdAt(sort: Desc)])
@@ -328,7 +324,6 @@ model ServiceApiKey {
   @@index([serviceId])
   @@index([isActive])
 }
-
 
 // ============================================
 // ENUMS
@@ -427,4 +422,3 @@ enum CallDirection {
   OUTBOUND
   INBOUND
 }
-
