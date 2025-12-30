@@ -1,19 +1,14 @@
 import {
   Activity,
   AlertCircle,
-  Bell,
   Briefcase,
   Calendar,
   Clock,
   DollarSign,
   FileText,
-  LogOut,
-  Moon,
   Phone,
   Search,
-  Settings,
   Shield,
-  Sun,
   Timer,
   TrendingUp,
   Users,
@@ -21,7 +16,6 @@ import {
   Zap
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import * as authService from '../services/authService';
 import * as meetingService from '../services/meetingService';
@@ -33,6 +27,11 @@ import WebhooksLog from './Admin/WebhooksLog';
 import CrmActionsLog from './Admin/CrmActionsLog';
 import SchedulerLog from './Admin/SchedulerLog';
 import ErrorsLog from './Admin/ErrorsLog';
+import AppHeader from './Layout/AppHeader';
+import UserLogsOverview from '../pages/User/Logs/Overview';
+import UserCallsLog from '../pages/User/Logs/UserCallsLog';
+import UserActivityLog from '../pages/User/Logs/UserActivityLog';
+import UserCrmActionsLog from '../pages/User/Logs/UserCrmActionsLog';
 import { Alert, AlertDescription } from './ui/alert';
 import {
   AlertDialog,
@@ -44,18 +43,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+import { DropdownMenuItem } from './ui/dropdown-menu';
 import { Skeleton } from './ui/skeleton';
 import { Switch } from './ui/switch';
 const MeetingsPage: React.FC = () => {
@@ -76,8 +67,8 @@ const MeetingsPage: React.FC = () => {
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [adminTab, setAdminTab] = useState<'meetings' | 'logs'>('meetings'); // NEW: Admin tab state
   const [activeLogSection, setActiveLogSection] = useState<'overview' | 'calls' | 'webhooks' | 'crm-actions' | 'scheduler' | 'errors'>('overview'); // NEW: Active log section
-  const navigate = useNavigate();
-  const user = authService.getUser();
+  const [userView, setUserView] = useState<'meetings' | 'logs'>('meetings'); // NEW: User view state
+  const [activeUserLogSection, setActiveUserLogSection] = useState<'overview' | 'calls' | 'activity' | 'crm-actions'>('overview'); // NEW: Active user log section
 
   useEffect(() => {
     fetchMeetings(isAdminMode);
@@ -131,11 +122,6 @@ const MeetingsPage: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    authService.logout();
-    navigate('/login');
-  };
-
   const handleThemeToggle = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
@@ -145,6 +131,8 @@ const MeetingsPage: React.FC = () => {
 
   const handleAdminToggle = () => {
     setIsAdminMode(!isAdminMode);
+    // Reset to meetings view when toggling admin mode
+    setUserView('meetings');
   };
 
   const showConfirmation = (type: 'pre' | 'post', meeting: Meeting) => {
@@ -373,10 +361,9 @@ const MeetingsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-gradient-to-r from-card/95 via-primary/5 to-card/95 backdrop-blur-xl border-b border-primary/10 sticky top-0 z-50 shadow-lg">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex justify-between items-center gap-4">
-            {/* Left Section: Logo & Brand */}
+      <div className="bg-gradient-to-r from-card/95 via-primary/5 to-card/95 backdrop-blur-xl border-b border-primary/10 sticky top-0 z-50 shadow-lg mb-3">
+        <AppHeader
+          customTitle={
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
                 {/* Logo with gradient background */}
@@ -386,7 +373,6 @@ const MeetingsPage: React.FC = () => {
                     <Zap className="h-5 w-5 text-white" />
                   </div>
                 </div>
-
                 <div>
                   <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent leading-tight">
                     AgentX
@@ -394,147 +380,35 @@ const MeetingsPage: React.FC = () => {
                   <p className="text-[10px] text-muted-foreground leading-tight">AI Sales Automation</p>
                 </div>
               </div>
-
               {/* Divider */}
               <div className="h-8 w-px bg-border/50 hidden md:block" />
-
-              {/* Quick Stats Badge */}
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-                <Calendar className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-semibold text-primary">
-                  {getTodayMeetingsCount()} Today
-                </span>
-              </div>
-
-              {/* Admin Mode Toggle - Only visible for admin */}
-              {authService.isAdmin() && (
-                <Button
-                  onClick={handleAdminToggle}
-                  variant={isAdminMode ? "default" : "outline"}
-                  size="sm"
-                  className={`hidden md:flex items-center gap-2 ${isAdminMode
-                    ? 'bg-gradient-primary text-white'
-                    : 'border-primary/20 hover:bg-primary/5'
-                    }`}
-                >
-                  <Shield className="h-3.5 w-3.5" />
-                  {isAdminMode ? 'Admin Mode' : 'Admin'}
-                </Button>
-              )}
             </div>
-
-            {/* Right Section: Actions & User */}
-            <div className="flex items-center gap-3">
-              {/* Search Input */}
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border/50 hover:border-primary/50 transition-colors min-w-[200px] lg:min-w-[300px]">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search meetings..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <span className="text-xs">✕</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Notifications */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative hover:bg-primary/10 transition-colors"
-                onClick={() => toast.info('Notifications coming soon')}
-              >
-                <Bell className="h-4 w-4" />
-                {/* Notification badge */}
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-bold text-white flex items-center justify-center border-2 border-background">
-                  2
-                </span>
-              </Button>
-
-              {/* Divider */}
-              <div className="h-8 w-px bg-border/50" />
-
-              {/* User Avatar Menu with Status */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-primary/20 transition-all"
-                  >
-                    <div className="relative">
-                      <Avatar className="h-9 w-9 border-2 border-primary/20">
-                        {user?.avatar ? (
-                          <AvatarImage
-                            src={user.avatar}
-                            alt={user?.name || 'User'}
-                          />
-                        ) : null}
-                        <AvatarFallback className="bg-gradient-primary text-white font-semibold">
-                          {user?.name?.charAt(0).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-64" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex items-center gap-3 py-2">
-                      <Avatar className="h-12 w-12 border-2 border-primary/20">
-                        {user?.avatar ? (
-                          <AvatarImage src={user.avatar} alt={user?.name || 'User'} />
-                        ) : null}
-                        <AvatarFallback className="bg-gradient-primary text-white font-semibold text-lg">
-                          {user?.name?.charAt(0).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col flex-1">
-                        <p className="text-sm font-semibold leading-none mb-1">{user?.name || 'User'}</p>
-                        <p className="text-xs leading-none text-muted-foreground mb-1">
-                          {user?.email || 'user@example.com'}
-                        </p>
-                        <Badge className="w-fit text-[10px] h-5 bg-success/10 text-success border-success/20 hover:bg-success/10">
-                          <span className="mr-1">●</span> Online
-                        </Badge>
-                      </div>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/my-logs')} className="cursor-pointer">
-                    <FileText className="mr-2 h-4 w-4" />
-                    <span>My Logs</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => toast.info('Settings coming soon')} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleThemeToggle} className="cursor-pointer">
-                    {theme === 'light' ? (
-                      <Moon className="mr-2 h-4 w-4" />
-                    ) : (
-                      <Sun className="mr-2 h-4 w-4" />
-                    )}
-                    <span>{theme === 'light' ? 'Dark' : 'Light'} Mode</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Logout</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </header>
+          }
+          statsBadge={{
+            icon: Calendar,
+            label: `${getTodayMeetingsCount()} Today`,
+          }}
+          showSearch={userView === 'meetings'}
+          searchQuery={searchQuery}
+          searchPlaceholder="Search meetings..."
+          onSearchChange={setSearchQuery}
+          showNotifications={true}
+          notificationCount={2}
+          showAdminToggle={authService.isAdmin()}
+          isAdminMode={isAdminMode}
+          onAdminToggle={handleAdminToggle}
+          theme={theme}
+          onThemeToggle={handleThemeToggle}
+          additionalDropdownItems={
+            !isAdminMode ? (
+              <DropdownMenuItem onClick={() => setUserView('logs')}>
+                <FileText className="mr-2 h-4 w-4" />
+                My Logs
+              </DropdownMenuItem>
+            ) : undefined
+          }
+        />
+      </div>
 
       {/* Admin Tabs - Only show when admin mode is active */}
       {isAdminMode && (
@@ -564,10 +438,66 @@ const MeetingsPage: React.FC = () => {
         </div>
       )}
 
+      {/* User Logs Tabs - Only show when user view is 'logs' and NOT in admin mode */}
+      {!isAdminMode && userView === 'logs' && (
+        <div className="bg-card/50 border-b border-border mb-4">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <Button
+                  variant={activeUserLogSection === 'overview' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveUserLogSection('overview')}
+                  className="rounded-b-none"
+                >
+                  <Activity className="w-4 h-4 mr-2" />
+                  Overview
+                </Button>
+                <Button
+                  variant={activeUserLogSection === 'calls' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveUserLogSection('calls')}
+                  className="rounded-b-none"
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Calls
+                </Button>
+                <Button
+                  variant={activeUserLogSection === 'activity' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveUserLogSection('activity')}
+                  className="rounded-b-none"
+                >
+                  <Activity className="w-4 h-4 mr-2" />
+                  Activity
+                </Button>
+                <Button
+                  variant={activeUserLogSection === 'crm-actions' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveUserLogSection('crm-actions')}
+                  className="rounded-b-none"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  CRM Actions
+                </Button>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setUserView('meetings')}
+                className="rounded-b-none"
+              >
+                Back to Meetings
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {/* Show Meetings Content when adminTab is 'meetings' OR when not in admin mode */}
-        {(!isAdminMode || adminTab === 'meetings') && (
+        {/* Show Meetings Content when viewing meetings (both admin and regular users) */}
+        {((!isAdminMode && userView === 'meetings') || (isAdminMode && adminTab === 'meetings')) && (
           <>
             {/* Page Header with Automation Toggle */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
@@ -806,7 +736,7 @@ const MeetingsPage: React.FC = () => {
           </>
         )}
 
-        {/* Show Logs Content when admin mode is active AND adminTab is 'logs' */}
+        {/* Show Admin Logs Content when admin mode is active AND adminTab is 'logs' */}
         {isAdminMode && adminTab === 'logs' && (
           <div className="flex gap-6">
             {/* Logs Sidebar */}
@@ -874,6 +804,60 @@ const MeetingsPage: React.FC = () => {
               {activeLogSection === 'crm-actions' && <CrmActionsLog />}
               {activeLogSection === 'scheduler' && <SchedulerLog />}
               {activeLogSection === 'errors' && <ErrorsLog />}
+            </div>
+          </div>
+        )}
+
+        {/* Show User Logs Content when NOT in admin mode AND userView is 'logs' */}
+        {!isAdminMode && userView === 'logs' && (
+          <div className="flex gap-6">
+            {/* Logs Sidebar */}
+            <aside className="w-64 flex-shrink-0">
+              <Card className="p-4 sticky top-24">
+                <h2 className="text-lg font-semibold mb-4 px-2">My Logs</h2>
+                <nav className="space-y-1">
+                  <Button
+                    variant={activeUserLogSection === 'overview' ? 'default' : 'ghost'}
+                    className="w-full justify-start gap-3"
+                    onClick={() => setActiveUserLogSection('overview')}
+                  >
+                    <Activity className="w-4 h-4" />
+                    Overview
+                  </Button>
+                  <Button
+                    variant={activeUserLogSection === 'calls' ? 'default' : 'ghost'}
+                    className="w-full justify-start gap-3"
+                    onClick={() => setActiveUserLogSection('calls')}
+                  >
+                    <Phone className="w-4 h-4" />
+                    Calls
+                  </Button>
+                  <Button
+                    variant={activeUserLogSection === 'activity' ? 'default' : 'ghost'}
+                    className="w-full justify-start gap-3"
+                    onClick={() => setActiveUserLogSection('activity')}
+                  >
+                    <Activity className="w-4 h-4" />
+                    Activity
+                  </Button>
+                  <Button
+                    variant={activeUserLogSection === 'crm-actions' ? 'default' : 'ghost'}
+                    className="w-full justify-start gap-3"
+                    onClick={() => setActiveUserLogSection('crm-actions')}
+                  >
+                    <FileText className="w-4 h-4" />
+                    CRM Actions
+                  </Button>
+                </nav>
+              </Card>
+            </aside>
+
+            {/* Logs Main Content */}
+            <div className="flex-1 min-w-0">
+              {activeUserLogSection === 'overview' && <UserLogsOverview />}
+              {activeUserLogSection === 'calls' && <UserCallsLog />}
+              {activeUserLogSection === 'activity' && <UserActivityLog />}
+              {activeUserLogSection === 'crm-actions' && <UserCrmActionsLog />}
             </div>
           </div>
         )}
