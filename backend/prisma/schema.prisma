@@ -288,6 +288,49 @@ model ErrorLog {
 }
 
 // ============================================
+// SERVICE API KEY MANAGEMENT
+// ============================================
+
+// External Service Registration
+model Service {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+  isActive    Boolean @default(true)
+
+  apiKeys ServiceApiKey[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// API Keys for external services
+model ServiceApiKey {
+  id String @id @default(uuid())
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  name      String // e.g., "Production Key", "Staging Key"
+  keyHash   String @unique // SHA-256 hash of the API key
+  keyPrefix String // First 12 chars for identification (e.g., "sk_live_abc1")
+
+  scopes String[] // e.g., ["logs:read", "logs:read:batch"]
+
+  isActive   Boolean   @default(true)
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+  createdBy String? // Admin email who created the key
+
+  @@index([keyHash])
+  @@index([serviceId])
+  @@index([isActive])
+}
+
+
+// ============================================
 // ENUMS
 // ============================================
 
@@ -348,6 +391,7 @@ enum CrmActionType {
   CONTACT
   DEAL
   TASK
+  RECOMMENDATION_UPDATE
 }
 
 enum WebhookType {
@@ -383,3 +427,4 @@ enum CallDirection {
   OUTBOUND
   INBOUND
 }
+
