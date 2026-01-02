@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertCircle,
+  ArrowLeft,
   Briefcase,
   Calendar,
   Clock,
@@ -438,62 +439,6 @@ const MeetingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* User Logs Tabs - Only show when user view is 'logs' and NOT in admin mode */}
-      {!isAdminMode && userView === 'logs' && (
-        <div className="bg-card/50 border-b border-border mb-4">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-2">
-                <Button
-                  variant={activeUserLogSection === 'overview' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setActiveUserLogSection('overview')}
-                  className="rounded-b-none"
-                >
-                  <Activity className="w-4 h-4 mr-2" />
-                  Overview
-                </Button>
-                <Button
-                  variant={activeUserLogSection === 'calls' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setActiveUserLogSection('calls')}
-                  className="rounded-b-none"
-                >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Calls
-                </Button>
-                <Button
-                  variant={activeUserLogSection === 'activity' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setActiveUserLogSection('activity')}
-                  className="rounded-b-none"
-                >
-                  <Activity className="w-4 h-4 mr-2" />
-                  Activity
-                </Button>
-                <Button
-                  variant={activeUserLogSection === 'crm-actions' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setActiveUserLogSection('crm-actions')}
-                  className="rounded-b-none"
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  CRM Actions
-                </Button>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setUserView('meetings')}
-                className="rounded-b-none"
-              >
-                Back to Meetings
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {/* Show Meetings Content when viewing meetings (both admin and regular users) */}
@@ -814,7 +759,16 @@ const MeetingsPage: React.FC = () => {
             {/* Logs Sidebar */}
             <aside className="w-64 flex-shrink-0">
               <Card className="p-4 sticky top-24">
-                <h2 className="text-lg font-semibold mb-4 px-2">My Logs</h2>
+                <div className="flex items-center gap-2 mb-4 px-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setUserView('meetings')}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                  <h2 className="text-lg font-semibold">My Logs</h2>
+                </div>
                 <nav className="space-y-1">
                   <Button
                     variant={activeUserLogSection === 'overview' ? 'default' : 'ghost'}
