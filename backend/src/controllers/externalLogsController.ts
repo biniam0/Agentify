@@ -16,7 +16,7 @@ import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, Webhoo
 const verifyUser = async (userId: string) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true, barrierxUserId: true }
+    select: { id: true, email: true, name: true, barrierxUserId: true, hubspotOwnerId: true }
   });
   return user;
 };
@@ -139,9 +139,11 @@ export const getUserCrmActionLogs = async (req: ServiceAuthRequest, res: Respons
       offset: 0,
     });
 
-    // Filter by user's barrierxUserId
-    const userLogs = result.logs.filter((log: any) => log.ownerId === user.barrierxUserId);
-    
+    // Filter by user's HubSpot owner ID (fallback to barrierxUserId for backward compatibility)
+    const userLogs = result.logs.filter((log: any) =>
+      log.ownerId === user.hubspotOwnerId || log.ownerId === user.barrierxUserId
+    );
+
     // Paginate after filtering
     const paginatedLogs = userLogs.slice(
       parseInt(offset as string),
@@ -189,7 +191,7 @@ export const getUserWebhookLogs = async (req: ServiceAuthRequest, res: Response)
       select: { conversationId: true },
       distinct: ['conversationId'],
     });
-    
+
     const conversationIds = userCalls
       .map(c => c.conversationId)
       .filter(Boolean) as string[];
@@ -218,7 +220,7 @@ export const getUserWebhookLogs = async (req: ServiceAuthRequest, res: Response)
     });
 
     // Filter to only user's conversations
-    const userWebhooks = result.logs.filter((log: any) => 
+    const userWebhooks = result.logs.filter((log: any) =>
       conversationIds.includes(log.conversationId)
     );
 
@@ -320,7 +322,7 @@ export const getUserErrorLogs = async (req: ServiceAuthRequest, res: Response): 
 
     // Filter by userId
     const userErrors = result.logs.filter((log: any) => log.userId === userId);
-    
+
     // Paginate
     const paginatedErrors = userErrors.slice(
       parseInt(offset as string),
@@ -386,13 +388,13 @@ const fetchUserCallLogs = async (userId: string, startDate: Date, limit: number 
 /**
  * Helper: Fetch CRM action logs for a user within date range
  */
-const fetchUserCrmLogs = async (barrierxUserId: string, startDate: Date, limit: number = 100) => {
+const fetchUserCrmLogs = async (hubspotOwnerId: string, startDate: Date, limit: number = 100) => {
   const result = await loggingService.getCrmActionLogs({
     startDate,
     limit,
   });
-  // Filter by barrierxUserId
-  return result.logs.filter((log: any) => log.ownerId === barrierxUserId);
+  // Filter by HubSpot owner ID (matches CrmActionLog.ownerId)
+  return result.logs.filter((log: any) => log.ownerId === hubspotOwnerId);
 };
 
 /**
@@ -405,7 +407,7 @@ const fetchUserWebhookLogs = async (userId: string, startDate: Date, limit: numb
     select: { conversationId: true },
     distinct: ['conversationId'],
   });
-  
+
   const conversationIds = userCalls
     .map(c => c.conversationId)
     .filter(Boolean) as string[];
@@ -420,7 +422,7 @@ const fetchUserWebhookLogs = async (userId: string, startDate: Date, limit: numb
   });
 
   // Filter to user's conversations
-  return result.logs.filter((log: any) => 
+  return result.logs.filter((log: any) =>
     conversationIds.includes(log.conversationId)
   );
 };
@@ -490,7 +492,7 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
     ] = await Promise.all([
       fetchUserActivityLogs(userId, startDate),
       fetchUserCallLogs(userId, startDate),
-      fetchUserCrmLogs(user.barrierxUserId, startDate),
+      fetchUserCrmLogs(user.hubspotOwnerId || user.barrierxUserId, startDate),
       fetchUserWebhookLogs(userId, startDate),
       fetchUserErrorLogs(userId, startDate),
       fetchSchedulerLogs(startDate),
@@ -520,8 +522,8 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
         totalWebhooks: webhookLogs.length,
         totalErrors: errorLogs.length,
         totalScheduler: schedulerResult.total,
-        grandTotal: activityResult.total + callResult.total + crmLogs.length + 
-                    webhookLogs.length + errorLogs.length + schedulerResult.total,
+        grandTotal: activityResult.total + callResult.total + crmLogs.length +
+          webhookLogs.length + errorLogs.length + schedulerResult.total,
       },
       filters: {
         days: daysNum,
