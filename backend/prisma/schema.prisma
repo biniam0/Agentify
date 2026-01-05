@@ -14,6 +14,7 @@ model User {
   name           String
   email          String   @unique
   barrierxUserId String   @unique
+  hubspotOwnerId String?  @unique
   tenantSlug     String
   isAuth         Boolean  @default(false)
   isEnabled      Boolean  @default(true)
