@@ -254,7 +254,7 @@ Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
 
   } catch (error: any) {
     console.error('❌ Webhook processing error:', error);
-    
+
     // Log error to database
     await loggingService.logError({
       errorType: 'EXTERNAL_SERVICE',
@@ -270,7 +270,7 @@ Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
         agentId: req.body?.data?.agent_id,
       },
     });
-    
+
     res.status(500).json({
       error: 'Failed to process webhook',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -314,7 +314,7 @@ export const handleCreateContact = async (req: Request, res: Response): Promise<
     });
   } catch (error: any) {
     console.error('❌ Create contact error:', error);
-    
+
     // Log error to database
     await loggingService.logError({
       errorType: 'EXTERNAL_SERVICE',
@@ -326,7 +326,7 @@ export const handleCreateContact = async (req: Request, res: Response): Promise<
       method: req.method,
       requestData: req.body,
     });
-    
+
     res.status(500).json({
       error: 'Failed to process create contact command',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -435,7 +435,7 @@ export const handleCreateNote = async (req: Request, res: Response): Promise<voi
     }
   } catch (error: any) {
     console.error('❌ Create note error:', error);
-    
+
     // Log error to database
     await loggingService.logError({
       errorType: 'EXTERNAL_SERVICE',
@@ -451,7 +451,7 @@ export const handleCreateNote = async (req: Request, res: Response): Promise<voi
         ownerId: req.body.hubspot_owner_id,
       },
     });
-    
+
     res.status(500).json({
       success: false,
       error: 'Failed to process create note command',
@@ -601,7 +601,7 @@ export const handleCreateMeeting = async (req: Request, res: Response): Promise<
     }
   } catch (error: any) {
     console.error('❌ Create meeting error:', error);
-    
+
     // Log error to database
     await loggingService.logError({
       errorType: 'EXTERNAL_SERVICE',
@@ -617,7 +617,7 @@ export const handleCreateMeeting = async (req: Request, res: Response): Promise<
         ownerId: req.body.hubspot_owner_id,
       },
     });
-    
+
     res.status(500).json({
       success: false,
       error: 'Failed to process create meeting command',
@@ -680,7 +680,7 @@ export const handleCreateTask = async (req: Request, res: Response): Promise<voi
       }
     } catch (error: any) {
       console.error('❌ Invalid timestamp format:', hs_timestamp);
-      
+
       // Log validation error
       await loggingService.logError({
         errorType: 'VALIDATION_ERROR',
@@ -692,7 +692,7 @@ export const handleCreateTask = async (req: Request, res: Response): Promise<voi
         method: req.method,
         requestData: { hs_timestamp, deal_id: req.body.deal_id },
       });
-      
+
       res.status(400).json({
         success: false,
         error: 'Invalid timestamp format. Expected ISO 8601 format (e.g., 2025-12-23T10:00:00Z)',
@@ -779,7 +779,7 @@ export const handleCreateTask = async (req: Request, res: Response): Promise<voi
     }
   } catch (error: any) {
     console.error('❌ Create task error:', error);
-    
+
     // Log error to database
     await loggingService.logError({
       errorType: 'EXTERNAL_SERVICE',
@@ -795,7 +795,7 @@ export const handleCreateTask = async (req: Request, res: Response): Promise<voi
         ownerId: req.body.hubspot_owner_id,
       },
     });
-    
+
     res.status(500).json({
       success: false,
       error: 'Failed to process create task command',
@@ -851,7 +851,7 @@ export const handleCreateDeal = async (req: Request, res: Response): Promise<voi
     });
   } catch (error: any) {
     console.error('❌ Create deal error:', error);
-    
+
     // Log error to database
     await loggingService.logError({
       errorType: 'EXTERNAL_SERVICE',
@@ -863,7 +863,7 @@ export const handleCreateDeal = async (req: Request, res: Response): Promise<voi
       method: req.method,
       requestData: req.body,
     });
-    
+
     res.status(500).json({
       error: 'Failed to process create deal command',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -886,9 +886,9 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     console.log('\n📞 ════════════════════════════════════════════════════');
     console.log('📞 INBOUND CALL - Twilio Personalization Webhook');
     console.log('📞 ════════════════════════════════════════════════════');
-    
+
     const { caller_id, agent_id, called_number, call_sid } = req.body;
-    
+
     console.log(`📱 Caller ID: ${caller_id}`);
     console.log(`🎯 Agent ID: ${agent_id}`);
     console.log(`📲 Called Number: ${called_number}`);
@@ -896,7 +896,7 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
 
     const prisma = (await import('../config/database')).default;
-    
+
     // Step 1: Find most recent post-meeting call
     // ⚡ OPTIMIZED: Only select fields we actually use (reduces data transfer)
     const recentCall = await prisma.callLog.findFirst({
@@ -932,7 +932,7 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     if (!recentCall) {
       console.log('⚠️  No recent post-meeting call found');
       console.log('📋 Returning generic greeting\n');
-      
+
       res.json({
         type: 'conversation_initiation_client_data',
         dynamic_variables: {
@@ -965,7 +965,7 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     console.log(`   Voicemail: ${wasVoicemail ? 'Yes' : 'No'}`);
 
     // Step 3: Determine if TRUE continuation (real conversation, not voicemail)
-    const isRealConversation = 
+    const isRealConversation =
       recentCall.status === 'COMPLETED' &&
       recentCall.transcriptSummary != null &&
       !wasVoicemail;
@@ -982,12 +982,12 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
       console.log('   ℹ️  dynamicVariables is null, checking webhookData...');
       const webhookData = recentCall.webhookData as any;
       const initData = webhookData?.data?.conversation_initiation_client_data?.dynamic_variables;
-      
+
       if (initData) {
         console.log('   ✅ Found dynamicVariables in webhookData (fallback successful)');
         dealId = initData.deal_id || initData.dealId;
         tenantSlug = initData.tenant_slug;
-        
+
         // Use all variables from webhookData
         originalVars = initData;
       }
@@ -1016,7 +1016,7 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
       dealContext = await barrierxService.getDealContextForContinuation(tenantSlug, dealId);
     } catch (error: any) {
       console.error('❌ Failed to fetch deal context, using stale data');
-      
+
       // Log deal context fetch failure (non-critical, we have fallback)
       await loggingService.logError({
         errorType: 'EXTERNAL_SERVICE',
@@ -1030,25 +1030,25 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
           callSid: req.body.call_sid,
         },
       });
-      
+
       dealContext = null;
     }
 
     // Step 6: Build dynamic variables
     const deal = dealContext?.deal || {};
     const owner = deal.owner || {};
-    
+
     // Get current time in owner's timezone
     const ownerTimezone = owner.timezone || originalVars?.current_timezone || 'UTC';
     const now = new Date();
-    
+
     const currentDateLocal = now.toLocaleDateString('en-US', {
       timeZone: ownerTimezone,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
     });
-    
+
     const currentTimeLocal = now.toLocaleTimeString('en-US', {
       timeZone: ownerTimezone,
       hour12: false,
@@ -1056,28 +1056,28 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
       minute: '2-digit',
       second: '2-digit'
     });
-    
+
     const currentDayOfWeek = now.toLocaleDateString('en-US', {
       timeZone: ownerTimezone,
       weekday: 'long'
     });
 
     // Format fresh context using formatters
-    const { 
-      formatRecentNotes, 
-      formatTasks, 
+    const {
+      formatRecentNotes,
+      formatTasks,
       countOpenTasks,
-      getTimeElapsed 
+      getTimeElapsed
     } = await import('../utils/formatters');
-    
-    const recentNotesText = dealContext 
+
+    const recentNotesText = dealContext
       ? formatRecentNotes(dealContext.recentNotes)
       : 'Unable to fetch recent notes';
-    
+
     const openTasksList = dealContext
       ? formatTasks(dealContext.openTasks)
       : 'Unable to fetch tasks';
-    
+
     const openTasksCount = dealContext
       ? countOpenTasks(dealContext.openTasks)
       : 0;
@@ -1088,21 +1088,21 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
       deal_stage: deal.stage || originalVars?.deal_stage,
       deal_amount: deal.amount?.toString() || originalVars?.deal_amount,
       close_date: deal.closeDate || originalVars?.close_date,
-      
+
       // Owner info
       owner_name: owner.name || originalVars?.owner_name,
       owner_email: owner.email || originalVars?.owner_email,
       owner_phone: owner.phone || originalVars?.owner_phone,
-      
+
       // Fresh context from BarrierX
       recent_notes_summary: recentNotesText,
       open_tasks_list: openTasksList,
       open_tasks_count: openTasksCount.toString(),
-      
+
       // Risks
       total_risk: deal.userDealRiskScores?.totalDealRisk?.toString() || '',
       champion_health: deal.championHealth?.toString() || '',
-      
+
       // Context flags
       has_context: 'true',
       has_fresh_data: dealContext ? 'true' : 'false',
@@ -1110,19 +1110,19 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
       is_voicemail_left: wasVoicemail ? 'true' : 'false',
       is_missed_call_return: (!isRealConversation && !wasVoicemail) ? 'true' : 'false',
       is_inbound_call: 'true',
-      
+
       // Previous call info
       last_call_date: recentCall.initiatedAt.toLocaleDateString(),
       last_call_time: recentCall.initiatedAt.toLocaleTimeString(),
       last_call_status: recentCall.status,
       last_call_summary: isRealConversation ? (recentCall.transcriptSummary || '') : '',
       time_since_last_call: getTimeElapsed(recentCall.initiatedAt),
-      
+
       // CRM identifiers
       deal_id: dealId,
       tenant_slug: tenantSlug,
       hubspot_owner_id: owner.hubspotId || originalVars?.hubspot_owner_id,
-      
+
       // Current time
       current_date_utc: now.toISOString().split('T')[0],
       current_time_utc: now.toISOString(),
@@ -1138,7 +1138,7 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     // Step 7: Build customized first message based on scenario
     const ownerFirstName = (owner.name || originalVars?.owner_name || 'there').split(' ')[0];
     const dealName = dynamicVariables.deal_name;
-    
+
     let firstMessage = '';
     if (isRealConversation) {
       // TRUE CONTINUATION
@@ -1165,11 +1165,17 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     console.log(`   Continuation: ${isRealConversation}`);
     console.log(`   Fresh Data: ${!!dealContext}`);
     console.log(`   Open Tasks: ${openTasksCount}`);
-    
+
     // Step 8: Log inbound call
+    // Look up correct database userId by email (recentCall.userId might contain wrong ID from historical data)
+    const dbUser = await prisma.user.findUnique({
+      where: { email: recentCall.userEmail },
+      select: { id: true },
+    });
+
     await loggingService.logCallInitiation({
       callType: 'POST_CALL',
-      userId: recentCall.userId,
+      userId: dbUser?.id || recentCall.userId, // Use correct DB UUID; fallback to stored value if user not found
       userName: recentCall.userName,
       userEmail: recentCall.userEmail,
       dealId: recentCall.dealId,
@@ -1192,7 +1198,7 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
   } catch (error: any) {
     console.error('❌ Webhook error:', error);
     console.error('   Stack:', error instanceof Error ? error.stack : 'No stack trace');
-    
+
     // Log critical inbound call error
     await loggingService.logError({
       errorType: 'EXTERNAL_SERVICE',
@@ -1208,7 +1214,7 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
         agentId: req.body.agent_id,
       },
     });
-    
+
     res.json({
       type: 'conversation_initiation_client_data',
       dynamic_variables: { has_context: 'false' },
