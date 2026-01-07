@@ -7,6 +7,11 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   databaseUrl: process.env.DATABASE_URL || '',
   jwtSecret: process.env.JWT_SECRET || 'default-secret-change-in-production',
+  admin: {
+    // When true, admin-only guards (e.g., requireAdmin) are bypassed.
+    // Useful for early UI development; DO NOT use in production.
+    disableAdminGuard: process.env.DISABLE_ADMIN_GUARD === 'true',
+  },
   // CORS configuration
   allowedOrigins: process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
