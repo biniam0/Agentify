@@ -670,46 +670,8 @@ export const getUserCallAnalyticsTimeseries = async (req: AuthRequest, res: Resp
       orderBy: { initiatedAt: 'asc' },
     });
 
-    // Group by date
-    const timeSeriesMap = new Map<string, any>();
-
-    calls.forEach(call => {
-      const date = new Date(call.initiatedAt);
-      let key: string;
-
-      if (groupBy === 'month') {
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      } else {
-        // Default to day
-        key = date.toISOString().split('T')[0];
-      }
-
-      if (!timeSeriesMap.has(key)) {
-        timeSeriesMap.set(key, {
-          date: key,
-          total: 0,
-          successful: 0,
-          failed: 0,
-          preCalls: 0,
-          postCalls: 0,
-          totalDuration: 0,
-        });
-      }
-
-      const entry = timeSeriesMap.get(key);
-      entry.total += 1;
-
-      if (call.status === 'COMPLETED') entry.successful += 1;
-      if (['FAILED', 'NO_ANSWER', 'BUSY'].includes(call.status)) entry.failed += 1;
-      if (call.callType === 'PRE_CALL') entry.preCalls += 1;
-      if (call.callType === 'POST_CALL') entry.postCalls += 1;
-      if (call.duration) entry.totalDuration += call.duration;
-    });
-
-    const timeseries = Array.from(timeSeriesMap.values()).map(entry => ({
-      ...entry,
-      avgDuration: entry.total > 0 ? Math.round(entry.totalDuration / entry.total) : 0,
-    }));
+    // Use service function to group calls by time period
+    const timeseries = loggingService.groupCallsByTimePeriod(calls, groupBy as 'day' | 'month');
 
     res.json({
       success: true,

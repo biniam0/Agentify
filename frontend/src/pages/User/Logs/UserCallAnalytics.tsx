@@ -3,6 +3,7 @@ import { Wallet, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import * as loggingService from '@/services/loggingService';
+import { transformTimeseriesForCharts, extractMetricForChart } from '@/utils/chartUtils';
 import { 
   AnalyticsCard, 
   UsageBarChart, 
@@ -44,37 +45,6 @@ const UserCallAnalytics: React.FC = () => {
     }
   };
 
-  // Transform timeseries data for charts
-  const prepareChartData = () => {
-    // Get last 12 months of data
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const now = new Date();
-    const last12Months: string[] = [];
-    
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      last12Months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    }
-
-    // Create a map of existing data
-    const dataMap = new Map(timeseries.map(t => [t.date, t]));
-
-    // Fill in all 12 months (with 0 for missing months)
-    return last12Months.map((monthKey, idx) => {
-      const data = dataMap.get(monthKey);
-      const monthIndex = parseInt(monthKey.split('-')[1]) - 1;
-      
-      return {
-        name: monthNames[monthIndex],
-        value: data?.total || 0,
-        total: data ? Math.max(data.total * 1.2, data.total + 5) : 0, // Background bar slightly higher
-        successful: data?.successful || 0,
-        failed: data?.failed || 0,
-        avgDuration: data?.avgDuration || 0,
-      };
-    });
-  };
-
   if (loading || !analytics) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -91,7 +61,8 @@ const UserCallAnalytics: React.FC = () => {
     );
   }
 
-  const chartData = prepareChartData();
+  // Use utility function to transform data for charts
+  const chartData = transformTimeseriesForCharts(timeseries, 12);
 
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">
@@ -130,7 +101,7 @@ const UserCallAnalytics: React.FC = () => {
         >
           <div className="mt-4">
             <TrendLineChart 
-              data={chartData.map(d => ({ name: d.name, value: d.avgDuration }))} 
+              data={extractMetricForChart(chartData, 'avgDuration')} 
               height={250} 
             />
           </div>
@@ -145,7 +116,7 @@ const UserCallAnalytics: React.FC = () => {
             <UsageBarChart 
               data={chartData.map(d => ({ 
                 name: d.name, 
-                value: d.successful,
+                value: d.successful || 0,
                 total: d.value 
               }))} 
               height={250} 
