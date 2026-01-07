@@ -392,3 +392,35 @@ export const getUserCrmActionLogs = async (filters?: {
     return response.data;
 };
 
+/**
+ * Get call analytics for the current authenticated user only
+ */
+export const getUserCallAnalytics = async (days: number = 30): Promise<{ success: boolean; data: CallAnalytics }> => {
+    const params = new URLSearchParams();
+    params.append('days', days.toString());
+    const response = await api.get(`/logs/user/analytics/calls?${params.toString()}`);
+    return response.data;
+};
+
+/**
+ * Get call analytics timeseries for the current authenticated user (for charts)
+ */
+export interface TimeseriesDataPoint {
+    date: string;
+    total: number;
+    successful: number;
+    failed: number;
+    preCalls: number;
+    postCalls: number;
+    totalDuration: number;
+    avgDuration: number;
+}
+
+export const getUserCallAnalyticsTimeseries = async (days: number = 30, groupBy: 'day' | 'month' = 'day'): Promise<{ success: boolean; data: TimeseriesDataPoint[] }> => {
+    const params = new URLSearchParams();
+    params.append('days', days.toString());
+    params.append('groupBy', groupBy);
+    const response = await api.get(`/logs/user/analytics/calls/timeseries?${params.toString()}`);
+    return response.data;
+};
+

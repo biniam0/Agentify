@@ -56,5 +56,11 @@ router.get('/user/activity', authenticate, loggingController.getUserActivityLogs
 // User can view their own CRM action logs
 router.get('/user/crm-actions', authenticate, loggingController.getUserCrmActionLogs);
 
+// User can view their own call analytics
+router.get('/user/analytics/calls', authenticate, loggingController.getUserCallAnalytics);
+
+// User can view their own call analytics timeseries (for charts)
+router.get('/user/analytics/calls/timeseries', authenticate, loggingController.getUserCallAnalyticsTimeseries);
+
 export default router;
 

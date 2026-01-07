@@ -532,3 +532,195 @@ export const getUserCrmActionLogs = async (req: AuthRequest, res: Response): Pro
   }
 };
 
+/**
+ * Get call analytics for the authenticated user only
+ */
+export const getUserCallAnalytics = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userEmail = req.user?.email;
+
+    if (!userEmail) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { days = 30 } = req.query;
+    const numDays = parseInt(days as string);
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - numDays);
+
+    const where: any = {
+      userEmail,
+      initiatedAt: { gte: startDate },
+    };
+
+    // Aggregated analytics for the user
+    const [
+      total,
+      statusCounts,
+      typeCounts,
+      triggerCounts,
+      durationAggregate
+    ] = await Promise.all([
+      prisma.callLog.count({ where }),
+      
+      prisma.callLog.groupBy({
+        by: ['status'],
+        where,
+        _count: { id: true },
+      }),
+      
+      prisma.callLog.groupBy({
+        by: ['callType'],
+        where,
+        _count: { id: true },
+      }),
+      
+      prisma.callLog.groupBy({
+        by: ['triggerSource'],
+        where,
+        _count: { id: true },
+      }),
+      
+      prisma.callLog.aggregate({
+        where,
+        _sum: { duration: true },
+        _avg: { duration: true },
+      }),
+    ]);
+
+    const statusMap = new Map(statusCounts.map(s => [s.status, s._count.id]));
+    const typeMap = new Map(typeCounts.map(t => [t.callType, t._count.id]));
+    const triggerMap = new Map(triggerCounts.map(t => [t.triggerSource, t._count.id]));
+
+    const successful = statusMap.get('COMPLETED') || 0;
+    const failed = (statusMap.get('FAILED') || 0) + 
+                   (statusMap.get('NO_ANSWER') || 0) + 
+                   (statusMap.get('BUSY') || 0);
+    const pending = (statusMap.get('INITIATED') || 0) + 
+                    (statusMap.get('RINGING') || 0) + 
+                    (statusMap.get('ANSWERED') || 0);
+
+    const analytics = {
+      total,
+      successful,
+      failed,
+      successRate: total > 0 ? (successful / total) * 100 : 0,
+      avgDuration: durationAggregate._avg.duration || 0,
+      byType: {
+        preCalls: typeMap.get('PRE_CALL') || 0,
+        postCalls: typeMap.get('POST_CALL') || 0,
+      },
+      byTrigger: {
+        manual: triggerMap.get('MANUAL') || 0,
+        scheduled: triggerMap.get('SCHEDULED') || 0,
+        retry: triggerMap.get('RETRY') || 0,
+      },
+      byStatus: {
+        completed: successful,
+        failed,
+        pending,
+      },
+    };
+
+    res.json({
+      success: true,
+      data: analytics,
+    });
+  } catch (error: any) {
+    console.error('❌ Get user call analytics error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch your call analytics',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Get time-series call data for the authenticated user (for charts)
+ */
+export const getUserCallAnalyticsTimeseries = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userEmail = req.user?.email;
+
+    if (!userEmail) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { days = 30, groupBy = 'day' } = req.query;
+    const numDays = parseInt(days as string);
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - numDays);
+
+    // Fetch all calls for this user in the time range
+    const calls = await prisma.callLog.findMany({
+      where: {
+        userEmail,
+        initiatedAt: { gte: startDate },
+      },
+      select: {
+        initiatedAt: true,
+        status: true,
+        callType: true,
+        duration: true,
+      },
+      orderBy: { initiatedAt: 'asc' },
+    });
+
+    // Group by date
+    const timeSeriesMap = new Map<string, any>();
+
+    calls.forEach(call => {
+      const date = new Date(call.initiatedAt);
+      let key: string;
+
+      if (groupBy === 'month') {
+        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      } else {
+        // Default to day
+        key = date.toISOString().split('T')[0];
+      }
+
+      if (!timeSeriesMap.has(key)) {
+        timeSeriesMap.set(key, {
+          date: key,
+          total: 0,
+          successful: 0,
+          failed: 0,
+          preCalls: 0,
+          postCalls: 0,
+          totalDuration: 0,
+        });
+      }
+
+      const entry = timeSeriesMap.get(key);
+      entry.total += 1;
+
+      if (call.status === 'COMPLETED') entry.successful += 1;
+      if (['FAILED', 'NO_ANSWER', 'BUSY'].includes(call.status)) entry.failed += 1;
+      if (call.callType === 'PRE_CALL') entry.preCalls += 1;
+      if (call.callType === 'POST_CALL') entry.postCalls += 1;
+      if (call.duration) entry.totalDuration += call.duration;
+    });
+
+    const timeseries = Array.from(timeSeriesMap.values()).map(entry => ({
+      ...entry,
+      avgDuration: entry.total > 0 ? Math.round(entry.totalDuration / entry.total) : 0,
+    }));
+
+    res.json({
+      success: true,
+      data: timeseries,
+    });
+  } catch (error: any) {
+    console.error('❌ Get user call analytics timeseries error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch your call analytics timeseries',
+      details: error.message,
+    });
+  }
+};
+
