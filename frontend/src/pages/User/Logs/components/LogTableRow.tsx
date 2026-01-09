@@ -66,24 +66,27 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
     };
 
     const getActivityBadge = (type: string) => {
+        // Capitalize properly: pre-call → Pre-Call, post-call → Post-Call
+        const displayText = type.split('-').map(word =>
+            word.charAt(0).toUpperCase() + word.slice(1)
+        ).join('-');
+
         return (
             <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-slate-200 bg-white text-xs font-medium text-slate-700">
                 <span className={`w-1.5 h-1.5 rounded-full ${type.includes('pre') ? 'bg-orange-400' : 'bg-red-500'}`} />
-                {type}
+                {displayText}
             </div>
         );
     };
 
     const getDirectionBadge = (direction: 'INBOUND' | 'OUTBOUND') => {
         return direction === 'INBOUND' ? (
-            <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs gap-1">
-                <ArrowDownCircle className="h-3 w-3" />
-                Inbound
+            <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 p-1 h-6 w-6 flex items-center justify-center" title="Inbound">
+                <ArrowDownCircle className="h-3.5 w-3.5" />
             </Badge>
         ) : (
-            <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200 text-xs gap-1">
-                <ArrowUpCircle className="h-3 w-3" />
-                Outbound
+            <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200 p-1 h-6 w-6 flex items-center justify-center" title="Outbound">
+                <ArrowUpCircle className="h-3.5 w-3.5" />
             </Badge>
         );
     };
@@ -96,7 +99,7 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                 onClick={() => onToggle(item.id)}
             >
                 <div className="col-span-2">
-                    <div className="space-y-1">
+                    <div className="flex items-center gap-2">
                         {getActivityBadge(item.activityType)}
                         {getDirectionBadge(item.callDirection)}
                     </div>

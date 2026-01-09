@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, HelpCircle, Settings, Bell, Zap, LogOut, Moon, Sun } from 'lucide-react';
+import { Search, HelpCircle, Settings, Bell, LogOut, Moon, Sun } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +25,7 @@ interface BarrierXHeaderProps {
   userName?: string;
 }
 
-export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({ 
+export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
   items,
   userAvatar,
   userName
@@ -61,15 +61,28 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
   return (
     <header className="bg-white border-b border-slate-100 sticky top-0 z-50">
       <div className="max-w-[1920px] mx-auto px-[10%] h-16 flex items-center justify-between">
-        
-        {/* Left: Logo */}
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-          <div className="flex items-center gap-1">
-             <span className="text-2xl font-bold tracking-tight text-slate-900">Agent</span>
-             <div className="relative flex items-center justify-center">
-               <Zap className="h-6 w-6 text-emerald-500 fill-emerald-500" />
-             </div>
-          </div>
+
+        <div
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => navigate('/')}
+        >
+          <span className="text-3xl font-bold leading-none tracking-tight text-slate-900">
+            Agent
+          </span>
+
+          <svg
+            className="h-[1.5rem] w-auto"
+            viewBox="0 0 42 28"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M42 28H28V14L42 28Z" fill="#53A17D" />
+            <path d="M28 14V0L42 2.00272e-06L28 14Z" fill="#2D6A4F" />
+            <path d="M14 28V14H28L14 28Z" fill="#2D6A4F" />
+            <path d="M28 14H14V0L28 14Z" fill="#53A17D" />
+            <path d="M14 28H0L14 14V28Z" fill="#53A17D" />
+            <path d="M14 14L0 0H14V14Z" fill="#53A17D" />
+          </svg>
         </div>
 
         {/* Middle: Navigation */}
@@ -82,8 +95,8 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
                 onClick={() => navigate(item.path)}
                 className={`
                   px-4 py-1.5 rounded-md text-sm font-medium transition-all
-                  ${isActive 
-                    ? 'bg-emerald-50/50 text-slate-900' 
+                  ${isActive
+                    ? 'bg-emerald-50/50 text-slate-900'
                     : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }
                 `}
@@ -109,7 +122,7 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
             <Bell className="h-4 w-4" />
             <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-red-500 rounded-full border border-white"></span>
           </Button>
-          
+
           <div className="pl-2 border-l border-slate-200">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

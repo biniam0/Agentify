@@ -4,11 +4,11 @@ import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import * as loggingService from '@/services/loggingService';
 import { transformTimeseriesForCharts, extractMetricForChart } from '@/utils/chartUtils';
-import { 
-  AnalyticsCard, 
-  UsageBarChart, 
-  TrendLineChart, 
-  MetricCard 
+import {
+  AnalyticsCard,
+  UsageBarChart,
+  TrendLineChart,
+  MetricCard
 } from './components/AnalyticsCharts';
 
 const UserCallAnalytics: React.FC = () => {
@@ -23,7 +23,7 @@ const UserCallAnalytics: React.FC = () => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch both summary analytics and timeseries data
       const [analyticsResponse, timeseriesResponse] = await Promise.all([
         loggingService.getUserCallAnalytics(30),
@@ -66,6 +66,11 @@ const UserCallAnalytics: React.FC = () => {
 
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">
+      {/* Call Analytics Page Header Card */}
+      <div className="flex flex-col gap-2 pl-2">
+        <h2 className="text-2xl font-bold text-slate-900">Call Analytics</h2>
+        <p className="text-slate-600">Track your call volume, duration, and success rate over time.</p>
+      </div>
       {/* Top Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <MetricCard
@@ -81,8 +86,8 @@ const UserCallAnalytics: React.FC = () => {
       </div>
 
       {/* Main Chart Section */}
-      <AnalyticsCard 
-        title="Monthly Call Volume" 
+      <AnalyticsCard
+        title="Monthly Call Volume"
         description="Track your call volume over the last 12 months."
         dateSelect
         className="h-[500px]"
@@ -94,32 +99,32 @@ const UserCallAnalytics: React.FC = () => {
 
       {/* Bottom Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AnalyticsCard 
-          title="Call Duration Trends" 
+        <AnalyticsCard
+          title="Call Duration Trends"
           description="Average call duration over time."
           dateSelect
         >
           <div className="mt-4">
-            <TrendLineChart 
-              data={extractMetricForChart(chartData, 'avgDuration')} 
-              height={250} 
+            <TrendLineChart
+              data={extractMetricForChart(chartData, 'avgDuration')}
+              height={250}
             />
           </div>
         </AnalyticsCard>
 
-        <AnalyticsCard 
-          title="Successful Connections" 
+        <AnalyticsCard
+          title="Successful Connections"
           description="Successful calls compared to total attempts."
           dateSelect
         >
           <div className="mt-4">
-            <UsageBarChart 
-              data={chartData.map(d => ({ 
-                name: d.name, 
+            <UsageBarChart
+              data={chartData.map(d => ({
+                name: d.name,
                 value: d.successful || 0,
-                total: d.value 
-              }))} 
-              height={250} 
+                total: d.value
+              }))}
+              height={250}
             />
           </div>
         </AnalyticsCard>

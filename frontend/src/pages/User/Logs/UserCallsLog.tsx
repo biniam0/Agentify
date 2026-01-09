@@ -112,6 +112,12 @@ const UserCallsLog: React.FC = () => {
 
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">
+      {/* Call History Page Header Card */}
+      <div className="flex flex-col gap-2 pl-2">
+        <h2 className="text-2xl font-bold text-slate-900">Call History</h2>
+        <p className="text-slate-600">Review your calls in depth, track performance, and analyze communication patterns with your clients.</p>
+      </div>
+
       {/* Stats Section */}
       <StatsHeader
         atRiskCount={failedCount}
