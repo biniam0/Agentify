@@ -86,45 +86,54 @@ const UserCallAnalytics: React.FC = () => {
       </div>
 
       {/* Main Chart Section */}
-      <AnalyticsCard
-        title="Monthly Call Volume"
+      <AnalyticsCard 
+        title="Monthly Call Volume" 
         description="Track your call volume over the last 12 months."
         dateSelect
         className="h-[500px]"
       >
         <div className="mt-8">
-          <UsageBarChart data={chartData} height={350} />
+          <UsageBarChart 
+            data={chartData} 
+            height={350}
+            yAxisFormatter={(value) => value.toString()} 
+          />
         </div>
       </AnalyticsCard>
 
       {/* Bottom Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AnalyticsCard
-          title="Call Duration Trends"
+        <AnalyticsCard 
+          title="Call Duration Trends" 
           description="Average call duration over time."
           dateSelect
         >
           <div className="mt-4">
-            <TrendLineChart
-              data={extractMetricForChart(chartData, 'avgDuration')}
+            <TrendLineChart 
+              data={extractMetricForChart(chartData, 'avgDuration')} 
               height={250}
+              yAxisFormatter={(value) => {
+                const mins = Math.floor(value / 60);
+                return mins > 0 ? `${mins}m` : `${value}s`;
+              }}
             />
           </div>
         </AnalyticsCard>
 
-        <AnalyticsCard
-          title="Successful Connections"
+        <AnalyticsCard 
+          title="Successful Connections" 
           description="Successful calls compared to total attempts."
           dateSelect
         >
           <div className="mt-4">
-            <UsageBarChart
-              data={chartData.map(d => ({
-                name: d.name,
+            <UsageBarChart 
+              data={chartData.map(d => ({ 
+                name: d.name, 
                 value: d.successful || 0,
-                total: d.value
-              }))}
+                total: d.value 
+              }))} 
               height={250}
+              yAxisFormatter={(value) => value.toString()}
             />
           </div>
         </AnalyticsCard>
