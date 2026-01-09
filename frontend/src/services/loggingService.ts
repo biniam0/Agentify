@@ -13,6 +13,7 @@ export interface CallLog {
     conversationId?: string;
     callSid?: string;
     callType: 'PRE_CALL' | 'POST_CALL';
+    callDirection?: 'INBOUND' | 'OUTBOUND';
     userId: string;
     userName: string;
     userEmail: string;

@@ -37,9 +37,10 @@ const UserCallsLog: React.FC = () => {
         setLogs(response.data);
         setTotal(response.total);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch call logs:', error);
-      toast.error(error.response?.data?.error || 'Failed to load call logs');
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Failed to load call logs');
     } finally {
       setLoading(false);
     }
@@ -47,10 +48,7 @@ const UserCallsLog: React.FC = () => {
 
   useEffect(() => {
     fetchLogs();
-  }, [page, activeTab]);
-
-  useEffect(() => {
-    fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, activeTab]);
 
   const handleToggle = (id: string) => {
@@ -62,11 +60,31 @@ const UserCallsLog: React.FC = () => {
     id: log.id,
     activityType: log.callType.toLowerCase().replace('_', '-'),
     dealName: log.dealName || 'Unknown Deal',
+    dealId: log.dealId,
     companyName: log.phoneNumber, // Fallback as we don't have company name in logs
     ownerName: log.userName || 'Unknown User',
     date: log.initiatedAt,
     status: log.status === 'COMPLETED' ? 'New' : 'Waiting', // Mapping to screenshot statuses
     description: log.transcriptSummary || log.failureReason || `Call to ${log.phoneNumber} regarding ${log.meetingTitle}`,
+
+    // Tier 1: Timeline data
+    initiatedAt: log.initiatedAt,
+    answeredAt: log.answeredAt,
+    completedAt: log.completedAt,
+    duration: log.duration,
+
+    // Tier 1: Retry info
+    retryAttempt: log.retryAttempt,
+    maxRetries: log.maxRetries,
+    parentCallId: log.parentCallId,
+
+    // Tier 1: Meeting/Deal context
+    meetingId: log.meetingId,
+    meetingTitle: log.meetingTitle,
+
+    // Tier 1: Call direction
+    callDirection: log.callDirection || 'OUTBOUND',
+
     details: log.callSuccessful ? [] : [
       {
         action: 'Review Failure',
