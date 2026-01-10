@@ -46,7 +46,7 @@ export const getUserActivityLogs = async (req: ServiceAuthRequest, res: Response
     }
 
     const result = await loggingService.getActivityLogs({
-      userId: userId,
+      userId: user.id, // Use internal database ID, not barrierxUserId
       activityType: activityType as ActivityType,
       status: status as Status,
       startDate: startDate ? new Date(startDate as string) : undefined,
@@ -91,7 +91,7 @@ export const getUserCallLogs = async (req: ServiceAuthRequest, res: Response): P
     }
 
     const result = await loggingService.getCallLogs({
-      userId: userId,
+      userId: user.id, // Use internal database ID, not barrierxUserId
       dealId: dealId as string,
       callType: callType as CallType,
       status: status as CallStatus,
@@ -196,7 +196,7 @@ export const getUserWebhookLogs = async (req: ServiceAuthRequest, res: Response)
 
     // Get user's conversationIds from their call logs
     const userCalls = await prisma.callLog.findMany({
-      where: { userId: userId },
+      where: { userId: user.id }, // Use internal database ID, not barrierxUserId
       select: { conversationId: true },
       distinct: ['conversationId'],
     });
@@ -329,8 +329,8 @@ export const getUserErrorLogs = async (req: ServiceAuthRequest, res: Response): 
       offset: 0,
     });
 
-    // Filter by userId
-    const userErrors = result.logs.filter((log: any) => log.userId === userId);
+    // Filter by userId (use internal database ID)
+    const userErrors = result.logs.filter((log: any) => log.userId === user.id);
 
     // Paginate
     const paginatedErrors = userErrors.slice(
@@ -438,13 +438,14 @@ const fetchUserWebhookLogs = async (userId: string, startDate: Date, limit: numb
 
 /**
  * Helper: Fetch error logs for a user within date range
+ * @param userId - Internal database User.id (UUID)
  */
 const fetchUserErrorLogs = async (userId: string, startDate: Date, limit: number = 100) => {
   const result = await loggingService.getErrorLogs({
     startDate,
     limit,
   });
-  // Filter by userId
+  // Filter by userId (expects internal database ID)
   return result.logs.filter((log: any) => log.userId === userId);
 };
 
@@ -500,11 +501,11 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
       errorLogs,
       schedulerResult,
     ] = await Promise.all([
-      fetchUserActivityLogs(userId, startDate),
-      fetchUserCallLogs(userId, startDate),
+      fetchUserActivityLogs(user.id, startDate), // Use internal database ID
+      fetchUserCallLogs(user.id, startDate), // Use internal database ID
       fetchUserCrmLogs(user.hubspotOwnerId || user.barrierxUserId, startDate),
-      fetchUserWebhookLogs(userId, startDate),
-      fetchUserErrorLogs(userId, startDate),
+      fetchUserWebhookLogs(user.id, startDate), // Use internal database ID
+      fetchUserErrorLogs(user.id, startDate), // Use internal database ID
       fetchSchedulerLogs(startDate),
     ]);
 
