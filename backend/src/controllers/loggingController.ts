@@ -9,6 +9,19 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import * as loggingService from '../services/loggingService';
 import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType } from '@prisma/client';
+import prisma from '../config/database';
+
+const applyDateRange = (
+  where: Record<string, any>,
+  field: 'initiatedAt' | 'createdAt',
+  startDate?: string,
+  endDate?: string
+) => {
+  if (!startDate && !endDate) return;
+  where[field] = where[field] || {};
+  if (startDate) where[field].gte = new Date(startDate);
+  if (endDate) where[field].lte = new Date(endDate);
+};
 
 // ============================================
 // CALL LOGS
@@ -313,16 +326,15 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
 // USER-SPECIFIC LOGS (Non-Admin)
 // ============================================
 
-import prisma from '../config/database';
-
 /**
  * Get call logs for the authenticated user only
  */
 export const getUserCallLogs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
+    const userEmail = req.user?.email;
 
-    if (!userId) {
+    if (!userId || !userEmail) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
@@ -337,24 +349,34 @@ export const getUserCallLogs = async (req: AuthRequest, res: Response): Promise<
       offset = 0,
     } = req.query;
 
-    // Filter by database userId (CallLog.userId stores database User.id, not barrierxUserId)
-    const result = await loggingService.getCallLogs({
-      userId: userId, // Use database userId directly
-      dealId: dealId as string,
-      callType: callType as CallType,
-      status: status as CallStatus,
-      startDate: startDate ? new Date(startDate as string) : undefined,
-      endDate: endDate ? new Date(endDate as string) : undefined,
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string),
-    });
+    // IMPORTANT:
+    // In production data, CallLog.userId is not always the DB User.id UUID (it may be an external numeric id).
+    // CallLog.userEmail is stable, so use it for user-specific filtering.
+    const where: Record<string, any> = { userEmail };
+    if (dealId) where.dealId = dealId as string;
+    if (callType) where.callType = callType as CallType;
+    if (status) where.status = status as CallStatus;
+    applyDateRange(where, 'initiatedAt', startDate as string | undefined, endDate as string | undefined);
+
+    const take = parseInt(limit as string);
+    const skip = parseInt(offset as string);
+
+    const [logs, total] = await Promise.all([
+      prisma.callLog.findMany({
+        where,
+        orderBy: { initiatedAt: 'desc' },
+        take,
+        skip,
+      }),
+      prisma.callLog.count({ where }),
+    ]);
 
     res.json({
       success: true,
-      data: result.logs,
-      total: result.total,
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string),
+      data: logs,
+      total,
+      limit: take,
+      offset: skip,
     });
   } catch (error: any) {
     console.error('❌ Get user call logs error:', error);
@@ -371,8 +393,9 @@ export const getUserCallLogs = async (req: AuthRequest, res: Response): Promise<
 export const getUserActivityLogs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
+    const userEmail = req.user?.email;
 
-    if (!userId) {
+    if (!userId || !userEmail) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
@@ -386,23 +409,31 @@ export const getUserActivityLogs = async (req: AuthRequest, res: Response): Prom
       offset = 0,
     } = req.query;
 
-    // Filter by database userId (ActivityLog.userId stores database User.id, not barrierxUserId)
-    const result = await loggingService.getActivityLogs({
-      userId: userId, // Use database userId directly
-      activityType: activityType as ActivityType,
-      status: status as Status,
-      startDate: startDate ? new Date(startDate as string) : undefined,
-      endDate: endDate ? new Date(endDate as string) : undefined,
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string),
-    });
+    // Same rationale as calls: ActivityLog.userEmail is stable in historical data.
+    const where: Record<string, any> = { userEmail };
+    if (activityType) where.activityType = activityType as ActivityType;
+    if (status) where.status = status as Status;
+    applyDateRange(where, 'createdAt', startDate as string | undefined, endDate as string | undefined);
+
+    const take = parseInt(limit as string);
+    const skip = parseInt(offset as string);
+
+    const [logs, total] = await Promise.all([
+      prisma.activityLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      prisma.activityLog.count({ where }),
+    ]);
 
     res.json({
       success: true,
-      data: result.logs,
-      total: result.total,
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string),
+      data: logs,
+      total,
+      limit: take,
+      offset: skip,
     });
   } catch (error: any) {
     console.error('❌ Get user activity logs error:', error);
@@ -419,19 +450,20 @@ export const getUserActivityLogs = async (req: AuthRequest, res: Response): Prom
 export const getUserCrmActionLogs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
+    const userEmail = req.user?.email;
 
-    if (!userId) {
+    if (!userId || !userEmail) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    // Get user's barrierxUserId from database
+    // Get user's identifiers from database (some environments use hubspotOwnerId for CRM ownerId)
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { barrierxUserId: true },
+      select: { barrierxUserId: true, hubspotOwnerId: true },
     });
 
-    if (!dbUser || !dbUser.barrierxUserId) {
+    if (!dbUser) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
@@ -447,27 +479,49 @@ export const getUserCrmActionLogs = async (req: AuthRequest, res: Response): Pro
       offset = 0,
     } = req.query;
 
-    // For CRM actions, use ownerId field which maps to barrierxUserId
-    const result = await loggingService.getCrmActionLogs({
-      actionType: actionType as CrmActionType,
-      conversationId: conversationId as string,
-      dealId: dealId as string,
-      status: status as Status,
-      startDate: startDate ? new Date(startDate as string) : undefined,
-      endDate: endDate ? new Date(endDate as string) : undefined,
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string),
-    });
+    // Build a set of possible owner IDs for this user:
+    // - hubspotOwnerId (numeric string) when available
+    // - barrierxUserId (uuid) for backwards compatibility
+    // - any distinct CallLog.userId values observed for this user's email (your sample shows numeric ids here)
+    const ownerIds = new Set<string>();
+    if (dbUser.hubspotOwnerId) ownerIds.add(dbUser.hubspotOwnerId);
+    if (dbUser.barrierxUserId) ownerIds.add(dbUser.barrierxUserId);
 
-    // Filter by ownerId on the backend
-    const userLogs = result.logs.filter((log: any) => log.ownerId === dbUser.barrierxUserId);
-    
+    const observedCallUserIds = await prisma.callLog.findMany({
+      where: { userEmail },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    observedCallUserIds.forEach(r => ownerIds.add(r.userId));
+
+    const where: Record<string, any> = {
+      ownerId: { in: Array.from(ownerIds) },
+    };
+    if (actionType) where.actionType = actionType as CrmActionType;
+    if (conversationId) where.conversationId = conversationId as string;
+    if (dealId) where.dealId = dealId as string;
+    if (status) where.status = status as Status;
+    applyDateRange(where, 'createdAt', startDate as string | undefined, endDate as string | undefined);
+
+    const take = parseInt(limit as string);
+    const skip = parseInt(offset as string);
+
+    const [logs, total] = await Promise.all([
+      prisma.crmActionLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      prisma.crmActionLog.count({ where }),
+    ]);
+
     res.json({
       success: true,
-      data: userLogs,
-      total: userLogs.length,
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string),
+      data: logs,
+      total,
+      limit: take,
+      offset: skip,
     });
   } catch (error: any) {
     console.error('❌ Get user CRM action logs error:', error);

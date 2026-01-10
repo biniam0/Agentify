@@ -172,7 +172,8 @@ const processUserMeetings = (userData: any) => {
 
   // Cache user info to avoid repeated access
   const userInfo = {
-    userId: userData.userId,
+    userId: userData.userId,                    // BarrierX ID (for external APIs)
+    databaseUserId: userData.databaseUserId,    // AgentX DB UUID (for logging)
     name: userData.name,
     email: userData.email,
     tenantSlug: userData.tenantSlug, // Include tenant slug for ElevenLabs
@@ -356,7 +357,8 @@ const runAutomationJob = async () => {
 
       // Convert deals to old format for backward compatibility with existing code
       const userData = {
-        userId: dbUser.barrierxUserId,
+        userId: dbUser.barrierxUserId,          // For BarrierX API calls
+        databaseUserId: dbUser.id,              // For AgentX database logging (CallLog.userId)
         name: dbUser.name,
         email: dbUser.email,
         tenantSlug: dbUser.tenantSlug,
@@ -423,7 +425,7 @@ const runAutomationJob = async () => {
             if (result?.conversation_id || result?.callSid) {
               await loggingService.logCallInitiation({
                 callType: 'PRE_CALL',
-                userId: meeting.user.userId,
+                userId: meeting.user.databaseUserId || meeting.user.userId, // Use AgentX DB UUID for proper user filtering
                 userName: meeting.user.name,
                 userEmail: meeting.user.email,
                 dealId: meeting.deal.id,
@@ -479,7 +481,7 @@ const runAutomationJob = async () => {
             if (result?.conversation_id || result?.callSid) {
               await loggingService.logCallInitiation({
                 callType: 'POST_CALL',
-                userId: meeting.user.userId,
+                userId: meeting.user.databaseUserId || meeting.user.userId, // Use AgentX DB UUID for proper user filtering
                 userName: meeting.user.name,
                 userEmail: meeting.user.email,
                 dealId: meeting.deal.id,

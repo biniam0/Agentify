@@ -33,6 +33,7 @@ router.get(
 
 // ============================================
 // INDIVIDUAL USER LOG ENDPOINTS
+// Note: :userId parameter should be the user's barrierxUserId
 // ============================================
 
 // 1. Activity Logs
