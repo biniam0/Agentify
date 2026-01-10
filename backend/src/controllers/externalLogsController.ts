@@ -4,6 +4,12 @@
  * Phase 2: Individual endpoint implementations
  * Phase 3: Batch endpoint with time-based filtering
  * Handles log requests from external services via API key authentication
+ * 
+ * IMPORTANT: External services (like BarrierX Platform) should pass barrierxUserId 
+ * in the :userId parameter, not the internal database UUID.
+ * 
+ * Example: GET /users/b7a7c13d-d164-4267-bbf1-b2f08032d2a5/all
+ *                      ↑ barrierxUserId (BarrierX user ID)
  */
 
 import { Response } from 'express';
@@ -12,10 +18,13 @@ import * as loggingService from '../services/loggingService';
 import prisma from '../config/database';
 import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType } from '@prisma/client';
 
-// Helper to verify user exists
-const verifyUser = async (userId: string) => {
+/**
+ * Helper to verify user exists
+ * Looks up by barrierxUserId (what external services provide)
+ */
+const verifyUser = async (barrierxUserId: string) => {
   const user = await prisma.user.findUnique({
-    where: { id: userId },
+    where: { barrierxUserId: barrierxUserId },
     select: { id: true, email: true, name: true, barrierxUserId: true, hubspotOwnerId: true }
   });
   return user;
@@ -27,7 +36,7 @@ const verifyUser = async (userId: string) => {
 
 export const getUserActivityLogs = async (req: ServiceAuthRequest, res: Response): Promise<void> => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.params; // userId = barrierxUserId from external service
     const { activityType, status, startDate, endDate, limit = 50, offset = 0 } = req.query;
 
     const user = await verifyUser(userId);
@@ -454,11 +463,12 @@ const fetchSchedulerLogs = async (startDate: Date, limit: number = 50) => {
  * 
  * GET /users/:userId/all?days=7
  * 
+ * Note: :userId should be the barrierxUserId (BarrierX Platform user ID)
  * Returns all 6 log types in a single response
  */
 export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Promise<void> => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.params; // userId = barrierxUserId from BarrierX Platform
     const { days = 7 } = req.query;
 
     // Validate days parameter
