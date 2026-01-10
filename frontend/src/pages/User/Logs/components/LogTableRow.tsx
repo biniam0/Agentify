@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ChevronDown, ChevronUp, CheckCircle2, MessageSquare, AlertCircle, ArrowDownCircle, ArrowUpCircle, RotateCcw, Calendar, Briefcase, Link as LinkIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, CheckCircle2, MessageSquare, AlertCircle, ArrowDownCircle, ArrowUpCircle, RotateCcw, Calendar, Briefcase, Link as LinkIcon, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { CallTimeline } from './CallTimeline';
 
@@ -53,13 +53,49 @@ interface LogTableRowProps {
 
 export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpanded }) => {
     const getStatusBadge = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'new':
-            case 'completed':
-                return <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 font-normal">New</Badge>; // Matching screenshot 'New' is green
-            case 'waiting':
-            case 'failed':
-                return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 font-normal">Waiting</Badge>;
+        switch (status) {
+            case 'COMPLETED':
+                return (
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 font-normal">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Completed
+                    </Badge>
+                );
+            case 'FAILED':
+                return (
+                    <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 font-normal">
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Failed
+                    </Badge>
+                );
+            case 'NO_ANSWER':
+                return (
+                    <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 font-normal">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        No Answer
+                    </Badge>
+                );
+            case 'BUSY':
+                return (
+                    <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200 font-normal">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Busy
+                    </Badge>
+                );
+            case 'ANSWERED':
+                return (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 font-normal">
+                        <MessageSquare className="h-3 w-3 mr-1" />
+                        In Progress
+                    </Badge>
+                );
+            case 'RINGING':
+            case 'INITIATED':
+                return (
+                    <Badge variant="outline" className="bg-cyan-50 text-cyan-600 border-cyan-200 font-normal">
+                        Ringing
+                    </Badge>
+                );
             default:
                 return <Badge variant="outline" className="text-slate-600 font-normal">{status}</Badge>;
         }

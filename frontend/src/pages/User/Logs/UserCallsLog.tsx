@@ -64,7 +64,7 @@ const UserCallsLog: React.FC = () => {
     companyName: log.phoneNumber, // Fallback as we don't have company name in logs
     ownerName: log.userName || 'Unknown User',
     date: log.initiatedAt,
-    status: log.status === 'COMPLETED' ? 'New' : 'Waiting', // Mapping to screenshot statuses
+    status: log.status, // Use real status from API
     description: log.transcriptSummary || log.failureReason || `Call to ${log.phoneNumber} regarding ${log.meetingTitle}`,
 
     // Tier 1: Timeline data
