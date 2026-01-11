@@ -6,17 +6,17 @@
  */
 
 import prisma from '../config/database';
-import { 
-  ActivityType, 
-  Status, 
-  CallType, 
-  CallStatus, 
-  TriggerSource, 
-  CrmActionType, 
-  WebhookType, 
+import {
+  ActivityType,
+  Status,
+  CallType,
+  CallStatus,
+  TriggerSource,
+  CrmActionType,
+  WebhookType,
   SchedulerJobType,
-  ErrorType, 
-  Severity 
+  ErrorType,
+  Severity
 } from '@prisma/client';
 
 // ============================================
@@ -29,6 +29,8 @@ export const logActivity = async (data: {
   userId?: string;
   userName?: string;
   userEmail?: string;
+  barrierxUserId?: string;
+  hubspotOwnerId?: string;
   dealId?: string;
   dealName?: string;
   meetingId?: string;
@@ -81,6 +83,8 @@ export const logCallInitiation = async (data: {
   userId: string;
   userName: string;
   userEmail: string;
+  barrierxUserId?: string;
+  hubspotOwnerId?: string;
   dealId: string;
   dealName: string;
   meetingId: string;
@@ -173,6 +177,11 @@ export const updateCallLogByCallSid = async (
 
 export const logCrmAction = async (data: {
   actionType: CrmActionType;
+  userId?: string;
+  userName?: string;
+  userEmail?: string;
+  barrierxUserId?: string;
+  hubspotOwnerId?: string;
   conversationId?: string;
   dealId?: string;
   tenantSlug: string;
@@ -320,6 +329,10 @@ export const logError = async (data: {
   stack?: string;
   code?: string;
   userId?: string;
+  userName?: string;
+  userEmail?: string;
+  barrierxUserId?: string;
+  hubspotOwnerId?: string;
   dealId?: string;
   endpoint?: string;
   method?: string;
@@ -357,7 +370,7 @@ export const getCallLogs = async (filters: {
 }) => {
   try {
     const where: any = {};
-    
+
     if (filters.userId) where.userId = filters.userId;
     if (filters.userEmail) where.userEmail = filters.userEmail;
     if (filters.dealId) where.dealId = filters.dealId;
@@ -398,7 +411,7 @@ export const getActivityLogs = async (filters: {
 }) => {
   try {
     const where: any = {};
-    
+
     if (filters.userId) where.userId = filters.userId;
     if (filters.userEmail) where.userEmail = filters.userEmail;
     if (filters.activityType) where.activityType = filters.activityType;
@@ -428,6 +441,7 @@ export const getActivityLogs = async (filters: {
 
 export const getErrorLogs = async (filters: {
   userId?: string;
+  userEmail?: string;
   errorType?: ErrorType;
   severity?: Severity;
   isResolved?: boolean;
@@ -438,8 +452,9 @@ export const getErrorLogs = async (filters: {
 }) => {
   try {
     const where: any = {};
-    
+
     if (filters.userId) where.userId = filters.userId;
+    if (filters.userEmail) where.userEmail = filters.userEmail;
     if (filters.errorType) where.errorType = filters.errorType;
     if (filters.severity) where.severity = filters.severity;
     if (filters.isResolved !== undefined) where.isResolved = filters.isResolved;
@@ -478,7 +493,7 @@ export const getWebhookLogs = async (filters: {
 }) => {
   try {
     const where: any = {};
-    
+
     if (filters.webhookType) where.webhookType = filters.webhookType;
     if (filters.eventType) where.eventType = filters.eventType;
     if (filters.conversationId) where.conversationId = filters.conversationId;
@@ -516,7 +531,7 @@ export const getSchedulerLogs = async (filters: {
 }) => {
   try {
     const where: any = {};
-    
+
     if (filters.jobType) where.jobType = filters.jobType;
     if (filters.status) where.status = filters.status;
     if (filters.startDate || filters.endDate) {
@@ -554,7 +569,7 @@ export const getCrmActionLogs = async (filters: {
 }) => {
   try {
     const where: any = {};
-    
+
     if (filters.actionType) where.actionType = filters.actionType;
     if (filters.conversationId) where.conversationId = filters.conversationId;
     if (filters.dealId) where.dealId = filters.dealId;
@@ -606,28 +621,28 @@ export const getCallAnalytics = async (userId?: string, days: number = 7) => {
     ] = await Promise.all([
       // Total count
       prisma.callLog.count({ where }),
-      
+
       // Group by status
       prisma.callLog.groupBy({
         by: ['status'],
         where,
         _count: { id: true },
       }),
-      
+
       // Group by type
       prisma.callLog.groupBy({
         by: ['callType'],
         where,
         _count: { id: true },
       }),
-      
+
       // Group by trigger source
       prisma.callLog.groupBy({
         by: ['triggerSource'],
         where,
         _count: { id: true },
       }),
-      
+
       // Aggregate duration
       prisma.callLog.aggregate({
         where,
@@ -642,12 +657,12 @@ export const getCallAnalytics = async (userId?: string, days: number = 7) => {
     const triggerMap = new Map(triggerCounts.map(t => [t.triggerSource, t._count.id]));
 
     const successful = statusMap.get('COMPLETED') || 0;
-    const failed = (statusMap.get('FAILED') || 0) + 
-                   (statusMap.get('NO_ANSWER') || 0) + 
-                   (statusMap.get('BUSY') || 0);
-    const pending = (statusMap.get('INITIATED') || 0) + 
-                    (statusMap.get('RINGING') || 0) + 
-                    (statusMap.get('ANSWERED') || 0);
+    const failed = (statusMap.get('FAILED') || 0) +
+      (statusMap.get('NO_ANSWER') || 0) +
+      (statusMap.get('BUSY') || 0);
+    const pending = (statusMap.get('INITIATED') || 0) +
+      (statusMap.get('RINGING') || 0) +
+      (statusMap.get('ANSWERED') || 0);
 
     return {
       total,

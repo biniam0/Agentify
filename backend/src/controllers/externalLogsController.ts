@@ -319,9 +319,9 @@ export const getUserErrorLogs = async (req: ServiceAuthRequest, res: Response): 
       return;
     }
 
-    // Get error logs - ErrorLog table only has userId field (not userEmail)
+    // Get error logs - Now supports userEmail filtering (schema updated)
     const result = await loggingService.getErrorLogs({
-      userId: user.id, // ErrorLog.userId stores database UUID
+      userEmail: user.email, // Use email for stable filtering
       errorType: errorType as ErrorType,
       severity: severity as Severity,
       startDate: startDate ? new Date(startDate as string) : undefined,
@@ -433,11 +433,11 @@ const fetchUserWebhookLogs = async (userEmail: string, startDate: Date, limit: n
 
 /**
  * Helper: Fetch error logs for a user within date range
- * @param userId - Internal database User.id (ErrorLog table only has userId field)
+ * @param userEmail - User's email (stable field for filtering)
  */
-const fetchUserErrorLogs = async (userId: string, startDate: Date, limit: number = 100) => {
+const fetchUserErrorLogs = async (userEmail: string, startDate: Date, limit: number = 100) => {
   const result = await loggingService.getErrorLogs({
-    userId,
+    userEmail,
     startDate,
     limit,
   });
@@ -500,7 +500,7 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
       fetchUserCallLogs(user.email, startDate), // Use email for stable filtering
       fetchUserCrmLogs(user.hubspotOwnerId || user.barrierxUserId, startDate),
       fetchUserWebhookLogs(user.email, startDate), // Use email for stable filtering
-      fetchUserErrorLogs(user.id, startDate), // ErrorLog only has userId field
+      fetchUserErrorLogs(user.email, startDate), // Use email for stable filtering
       fetchSchedulerLogs(startDate),
     ]);
 
