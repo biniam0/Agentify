@@ -46,7 +46,7 @@ export const getUserActivityLogs = async (req: ServiceAuthRequest, res: Response
     }
 
     const result = await loggingService.getActivityLogs({
-      userId: user.id, // Use internal database ID, not barrierxUserId
+      userEmail: user.email, // Use email for stable filtering
       activityType: activityType as ActivityType,
       status: status as Status,
       startDate: startDate ? new Date(startDate as string) : undefined,
@@ -91,7 +91,7 @@ export const getUserCallLogs = async (req: ServiceAuthRequest, res: Response): P
     }
 
     const result = await loggingService.getCallLogs({
-      userId: user.id, // Use internal database ID, not barrierxUserId
+      userEmail: user.email, // Use email for stable filtering (userId field is inconsistent)
       dealId: dealId as string,
       callType: callType as CallType,
       status: status as CallStatus,
@@ -196,7 +196,7 @@ export const getUserWebhookLogs = async (req: ServiceAuthRequest, res: Response)
 
     // Get user's conversationIds from their call logs
     const userCalls = await prisma.callLog.findMany({
-      where: { userId: user.id }, // Use internal database ID, not barrierxUserId
+      where: { userEmail: user.email }, // Use email for stable filtering (userId field is inconsistent)
       select: { conversationId: true },
       distinct: ['conversationId'],
     });
@@ -319,35 +319,27 @@ export const getUserErrorLogs = async (req: ServiceAuthRequest, res: Response): 
       return;
     }
 
-    // Get all error logs and filter by userId
+    // Get error logs - Now supports userEmail filtering (schema updated)
     const result = await loggingService.getErrorLogs({
+      userEmail: user.email, // Use email for stable filtering
       errorType: errorType as ErrorType,
       severity: severity as Severity,
       startDate: startDate ? new Date(startDate as string) : undefined,
       endDate: endDate ? new Date(endDate as string) : undefined,
-      limit: 1000,
-      offset: 0,
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
     });
-
-    // Filter by userId (use internal database ID)
-    const userErrors = result.logs.filter((log: any) => log.userId === user.id);
-
-    // Paginate
-    const paginatedErrors = userErrors.slice(
-      parseInt(offset as string),
-      parseInt(offset as string) + parseInt(limit as string)
-    );
 
     res.json({
       success: true,
       logType: 'error',
-      data: paginatedErrors,
+      data: result.logs,
       user: { id: user.id, name: user.name, email: user.email },
       pagination: {
-        total: userErrors.length,
+        total: result.total,
         limit: parseInt(limit as string),
         offset: parseInt(offset as string),
-        hasMore: userErrors.length > parseInt(offset as string) + paginatedErrors.length,
+        hasMore: result.total > parseInt(offset as string) + result.logs.length,
       },
       requestedBy: req.service?.name,
       timestamp: new Date().toISOString(),
@@ -374,10 +366,11 @@ const getDateRange = (days: number) => {
 
 /**
  * Helper: Fetch activity logs for a user within date range
+ * @param userEmail - User's email (stable field for filtering)
  */
-const fetchUserActivityLogs = async (userId: string, startDate: Date, limit: number = 100) => {
+const fetchUserActivityLogs = async (userEmail: string, startDate: Date, limit: number = 100) => {
   return await loggingService.getActivityLogs({
-    userId,
+    userEmail,
     startDate,
     limit,
   });
@@ -385,10 +378,11 @@ const fetchUserActivityLogs = async (userId: string, startDate: Date, limit: num
 
 /**
  * Helper: Fetch call logs for a user within date range
+ * @param userEmail - User's email (stable field for filtering)
  */
-const fetchUserCallLogs = async (userId: string, startDate: Date, limit: number = 100) => {
+const fetchUserCallLogs = async (userEmail: string, startDate: Date, limit: number = 100) => {
   return await loggingService.getCallLogs({
-    userId,
+    userEmail,
     startDate,
     limit,
   });
@@ -408,11 +402,12 @@ const fetchUserCrmLogs = async (hubspotOwnerId: string, startDate: Date, limit: 
 
 /**
  * Helper: Fetch webhook logs for a user within date range
+ * @param userEmail - User's email (stable field for filtering)
  */
-const fetchUserWebhookLogs = async (userId: string, startDate: Date, limit: number = 100) => {
+const fetchUserWebhookLogs = async (userEmail: string, startDate: Date, limit: number = 100) => {
   // Get user's conversation IDs
   const userCalls = await prisma.callLog.findMany({
-    where: { userId },
+    where: { userEmail },
     select: { conversationId: true },
     distinct: ['conversationId'],
   });
@@ -438,15 +433,15 @@ const fetchUserWebhookLogs = async (userId: string, startDate: Date, limit: numb
 
 /**
  * Helper: Fetch error logs for a user within date range
- * @param userId - Internal database User.id (UUID)
+ * @param userEmail - User's email (stable field for filtering)
  */
-const fetchUserErrorLogs = async (userId: string, startDate: Date, limit: number = 100) => {
+const fetchUserErrorLogs = async (userEmail: string, startDate: Date, limit: number = 100) => {
   const result = await loggingService.getErrorLogs({
+    userEmail,
     startDate,
     limit,
   });
-  // Filter by userId (expects internal database ID)
-  return result.logs.filter((log: any) => log.userId === userId);
+  return result.logs;
 };
 
 /**
@@ -501,11 +496,11 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
       errorLogs,
       schedulerResult,
     ] = await Promise.all([
-      fetchUserActivityLogs(user.id, startDate), // Use internal database ID
-      fetchUserCallLogs(user.id, startDate), // Use internal database ID
+      fetchUserActivityLogs(user.email, startDate), // Use email for stable filtering
+      fetchUserCallLogs(user.email, startDate), // Use email for stable filtering
       fetchUserCrmLogs(user.hubspotOwnerId || user.barrierxUserId, startDate),
-      fetchUserWebhookLogs(user.id, startDate), // Use internal database ID
-      fetchUserErrorLogs(user.id, startDate), // Use internal database ID
+      fetchUserWebhookLogs(user.email, startDate), // Use email for stable filtering
+      fetchUserErrorLogs(user.email, startDate), // Use email for stable filtering
       fetchSchedulerLogs(startDate),
     ]);
 

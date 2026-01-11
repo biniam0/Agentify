@@ -34,16 +34,18 @@ model User {
 // Activity Log - Master table for all backend activities
 model ActivityLog {
   id String @id @default(uuid())
-
+  
   // Core fields
   activityType ActivityType
   status       Status       @default(PENDING)
-
-  // User & Context
-  userId    String?
-  userName  String?
-  userEmail String?
-
+  
+  // User Context (standardized)
+  userId         String?  // AgentX database UUID
+  userName       String?  // User display name
+  userEmail      String?  // User email (stable field for filtering)
+  barrierxUserId String?  // BarrierX platform UUID
+  hubspotOwnerId String?  // HubSpot CRM owner ID
+  
   // Related entities
   dealId         String?
   dealName       String?
@@ -51,21 +53,22 @@ model ActivityLog {
   meetingTitle   String?
   conversationId String?
   callSid        String?
-
+  
   // Metadata
   metadata     Json?
   errorMessage String?
   errorStack   String? @db.Text
-
+  
   // Performance tracking
   duration Int?
-
+  
   // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
-
+  
   @@index([userId])
+  @@index([userEmail])
   @@index([activityType])
   @@index([status])
   @@index([dealId])
@@ -73,6 +76,7 @@ model ActivityLog {
   @@index([createdAt])
   // ⚡ Composite indexes for common query patterns
   @@index([userId, createdAt(sort: Desc)])
+  @@index([userEmail, createdAt(sort: Desc)])
   @@index([dealId, activityType])
   @@index([status, createdAt(sort: Desc)])
 }
@@ -80,17 +84,21 @@ model ActivityLog {
 // Call Log - Detailed call tracking
 model CallLog {
   id String @id @default(uuid())
-
+  
   // Call identification
   conversationId String?       @unique
   callSid        String?
   callType       CallType
   callDirection  CallDirection @default(OUTBOUND)
-
-  // User & Deal context
-  userId       String
-  userName     String
-  userEmail    String
+  
+  // User Context (standardized)
+  userId         String   // AgentX database UUID (or legacy mixed IDs)
+  userName       String   // User display name
+  userEmail      String   // User email (stable field for filtering)
+  barrierxUserId String?  // BarrierX platform UUID
+  hubspotOwnerId String?  // HubSpot CRM owner ID
+  
+  // Deal context
   dealId       String
   dealName     String
   meetingId    String
@@ -130,6 +138,7 @@ model CallLog {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([userEmail])
   @@index([dealId])
   @@index([callType])
   @@index([status])
@@ -139,6 +148,7 @@ model CallLog {
   // ⚡ Composite indexes for analytics and webhook queries
   @@index([phoneNumber, callType, initiatedAt(sort: Desc)])
   @@index([userId, initiatedAt(sort: Desc)])
+  @@index([userEmail, initiatedAt(sort: Desc)])
   @@index([status, initiatedAt])
   @@index([callType, status])
 }
@@ -146,38 +156,48 @@ model CallLog {
 // CRM Action Log - Notes, Meetings, Contacts created via AI
 model CrmActionLog {
   id String @id @default(uuid())
-
+  
   // Action type
   actionType CrmActionType
-
+  
+  // User Context (standardized)
+  userId         String?  // AgentX database UUID
+  userName       String?  // User display name
+  userEmail      String?  // User email (stable field for filtering)
+  barrierxUserId String?  // BarrierX platform UUID
+  hubspotOwnerId String?  // HubSpot CRM owner ID
+  ownerId        String   // Legacy: HubSpot owner ID (kept for backward compatibility)
+  
   // Context
   conversationId String?
   dealId         String?
   tenantSlug     String
-  ownerId        String
-
+  
   // Action details
   entityId String?
   title    String?
   body     String? @db.Text
-
+  
   // Status
   status       Status  @default(PENDING)
   errorMessage String?
-
+  
   // Metadata
   metadata Json?
-
+  
   // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
-
+  
   @@index([actionType])
   @@index([status])
   @@index([dealId])
   @@index([conversationId])
   @@index([createdAt])
+  @@index([userEmail])
+  @@index([userId])
+  @@index([ownerId])
 }
 
 // Webhook Log - All incoming webhooks
@@ -246,39 +266,47 @@ model SchedulerLog {
 // Error Log - Centralized error tracking
 model ErrorLog {
   id String @id @default(uuid())
-
+  
   // Error context
   errorType ErrorType
   severity  Severity
   source    String
-
+  
   // Error details
   message String
   stack   String? @db.Text
   code    String?
-
-  // Context
-  userId   String?
+  
+  // User Context (standardized)
+  userId         String?  // AgentX database UUID
+  userName       String?  // User display name
+  userEmail      String?  // User email (stable field for filtering)
+  barrierxUserId String?  // BarrierX platform UUID
+  hubspotOwnerId String?  // HubSpot CRM owner ID
+  
+  // Other Context
   dealId   String?
   endpoint String?
   method   String?
-
+  
   // Request/Response
   requestData  Json?
   responseData Json?
-
+  
   // Resolution
   isResolved Boolean   @default(false)
   resolvedAt DateTime?
   resolvedBy String?
   resolution String?   @db.Text
-
+  
   createdAt DateTime @default(now())
-
+  
   @@index([errorType])
   @@index([severity])
   @@index([isResolved])
   @@index([createdAt])
+  @@index([userEmail])
+  @@index([userId])
   // ⚡ Composite index for dashboard critical errors query
   @@index([severity, isResolved, createdAt(sort: Desc)])
   @@index([errorType, createdAt(sort: Desc)])
