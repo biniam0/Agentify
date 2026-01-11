@@ -346,6 +346,7 @@ export const logError = async (data: {
 
 export const getCallLogs = async (filters: {
   userId?: string;
+  userEmail?: string;
   dealId?: string;
   callType?: CallType;
   status?: CallStatus;
@@ -358,6 +359,7 @@ export const getCallLogs = async (filters: {
     const where: any = {};
     
     if (filters.userId) where.userId = filters.userId;
+    if (filters.userEmail) where.userEmail = filters.userEmail;
     if (filters.dealId) where.dealId = filters.dealId;
     if (filters.callType) where.callType = filters.callType;
     if (filters.status) where.status = filters.status;
@@ -386,6 +388,7 @@ export const getCallLogs = async (filters: {
 
 export const getActivityLogs = async (filters: {
   userId?: string;
+  userEmail?: string;
   activityType?: ActivityType;
   status?: Status;
   startDate?: Date;
@@ -397,6 +400,7 @@ export const getActivityLogs = async (filters: {
     const where: any = {};
     
     if (filters.userId) where.userId = filters.userId;
+    if (filters.userEmail) where.userEmail = filters.userEmail;
     if (filters.activityType) where.activityType = filters.activityType;
     if (filters.status) where.status = filters.status;
     if (filters.startDate || filters.endDate) {
@@ -423,6 +427,7 @@ export const getActivityLogs = async (filters: {
 };
 
 export const getErrorLogs = async (filters: {
+  userId?: string;
   errorType?: ErrorType;
   severity?: Severity;
   isResolved?: boolean;
@@ -434,6 +439,7 @@ export const getErrorLogs = async (filters: {
   try {
     const where: any = {};
     
+    if (filters.userId) where.userId = filters.userId;
     if (filters.errorType) where.errorType = filters.errorType;
     if (filters.severity) where.severity = filters.severity;
     if (filters.isResolved !== undefined) where.isResolved = filters.isResolved;
