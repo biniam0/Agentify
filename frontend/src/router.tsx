@@ -47,7 +47,7 @@ const router = createBrowserRouter([
     element: <Navigate to="/" replace />,
   },
 ], {
-  basename: import.meta.env.PROD ? '/app' : '/'
+  basename: '/app'
 });
 
 export default router;

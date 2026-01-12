@@ -4,8 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? '/app/' : '/',
+export default defineConfig(() => ({
+  base: '/app/',
   plugins: [react()],
   resolve: {
     alias: {

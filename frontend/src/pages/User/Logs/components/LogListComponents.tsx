@@ -1,5 +1,4 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,7 +41,7 @@ export const StatsHeader: React.FC<StatsHeaderProps> = ({
         </div>
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <Progress value={percentage} className="h-2 bg-slate-100" indicatorClassName="bg-emerald-500" />
+            <Progress value={percentage} className="h-2 bg-slate-100" />
             <span className="text-sm font-medium text-slate-600">{percentage}%</span>
           </div>
           <div className="flex justify-between items-end">
