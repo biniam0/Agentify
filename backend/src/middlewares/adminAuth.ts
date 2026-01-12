@@ -8,6 +8,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth';
 import * as loggingService from '../services/loggingService';
+import { config } from '../config/env';
 
 // Admin email(s) - currently only Tamirat
 const ADMIN_EMAILS = ['tamiratkebede120@gmail.com'];
@@ -18,6 +19,13 @@ const ADMIN_EMAILS = ['tamiratkebede120@gmail.com'];
  */
 export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // Dev toggle: bypass admin guard when explicitly disabled via env.
+    // NOTE: authenticate middleware still runs before this on protected routes.
+    if (config.admin.disableAdminGuard) {
+      next();
+      return;
+    }
+
     // Check if user is authenticated
     if (!req.user) {
       res.status(401).json({

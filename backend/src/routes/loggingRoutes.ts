@@ -9,11 +9,13 @@ import { Router } from 'express';
 import { authenticate } from '../middlewares/auth';
 import { requireAdmin } from '../middlewares/adminAuth';
 import * as loggingController from '../controllers/loggingController';
+import { config } from '../config/env';
 
 const router = Router();
 
 // All admin logging routes require authentication AND admin access
-const adminProtected = [authenticate, requireAdmin];
+// Dev toggle: allow bypassing admin guard for UI development.
+const adminProtected = config.admin.disableAdminGuard ? [authenticate] : [authenticate, requireAdmin];
 
 // ============================================
 // ADMIN ROUTES (UNCHANGED - ALL USERS' DATA)
@@ -53,6 +55,12 @@ router.get('/user/activity', authenticate, loggingController.getUserActivityLogs
 
 // User can view their own CRM action logs
 router.get('/user/crm-actions', authenticate, loggingController.getUserCrmActionLogs);
+
+// User can view their own call analytics
+router.get('/user/analytics/calls', authenticate, loggingController.getUserCallAnalytics);
+
+// User can view their own call analytics timeseries (for charts)
+router.get('/user/analytics/calls/timeseries', authenticate, loggingController.getUserCallAnalyticsTimeseries);
 
 export default router;
 
