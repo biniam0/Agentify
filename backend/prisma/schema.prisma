@@ -34,18 +34,18 @@ model User {
 // Activity Log - Master table for all backend activities
 model ActivityLog {
   id String @id @default(uuid())
-  
+
   // Core fields
   activityType ActivityType
   status       Status       @default(PENDING)
-  
+
   // User Context (standardized)
-  userId         String?  // AgentX database UUID
-  userName       String?  // User display name
-  userEmail      String?  // User email (stable field for filtering)
-  barrierxUserId String?  // BarrierX platform UUID
-  hubspotOwnerId String?  // HubSpot CRM owner ID
-  
+  userId         String? // AgentX database UUID
+  userName       String? // User display name
+  userEmail      String? // User email (stable field for filtering)
+  barrierxUserId String? // BarrierX platform UUID
+  hubspotOwnerId String? // HubSpot CRM owner ID
+
   // Related entities
   dealId         String?
   dealName       String?
@@ -53,20 +53,20 @@ model ActivityLog {
   meetingTitle   String?
   conversationId String?
   callSid        String?
-  
+
   // Metadata
   metadata     Json?
   errorMessage String?
   errorStack   String? @db.Text
-  
+
   // Performance tracking
   duration Int?
-  
+
   // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
-  
+
   @@index([userId])
   @@index([userEmail])
   @@index([activityType])
@@ -84,20 +84,20 @@ model ActivityLog {
 // Call Log - Detailed call tracking
 model CallLog {
   id String @id @default(uuid())
-  
+
   // Call identification
   conversationId String?       @unique
   callSid        String?
   callType       CallType
   callDirection  CallDirection @default(OUTBOUND)
-  
+
   // User Context (standardized)
-  userId         String   // AgentX database UUID (or legacy mixed IDs)
-  userName       String   // User display name
-  userEmail      String   // User email (stable field for filtering)
-  barrierxUserId String?  // BarrierX platform UUID
-  hubspotOwnerId String?  // HubSpot CRM owner ID
-  
+  userId         String // AgentX database UUID (or legacy mixed IDs)
+  userName       String // User display name
+  userEmail      String // User email (stable field for filtering)
+  barrierxUserId String? // BarrierX platform UUID
+  hubspotOwnerId String? // HubSpot CRM owner ID
+
   // Deal context
   dealId       String
   dealName     String
@@ -156,40 +156,40 @@ model CallLog {
 // CRM Action Log - Notes, Meetings, Contacts created via AI
 model CrmActionLog {
   id String @id @default(uuid())
-  
+
   // Action type
   actionType CrmActionType
-  
+
   // User Context (standardized)
-  userId         String?  // AgentX database UUID
-  userName       String?  // User display name
-  userEmail      String?  // User email (stable field for filtering)
-  barrierxUserId String?  // BarrierX platform UUID
-  hubspotOwnerId String?  // HubSpot CRM owner ID
-  ownerId        String   // Legacy: HubSpot owner ID (kept for backward compatibility)
-  
+  userId         String? // AgentX database UUID
+  userName       String? // User display name
+  userEmail      String? // User email (stable field for filtering)
+  barrierxUserId String? // BarrierX platform UUID
+  hubspotOwnerId String? // HubSpot CRM owner ID
+  ownerId        String // Legacy: HubSpot owner ID (kept for backward compatibility)
+
   // Context
   conversationId String?
   dealId         String?
   tenantSlug     String
-  
+
   // Action details
   entityId String?
   title    String?
   body     String? @db.Text
-  
+
   // Status
   status       Status  @default(PENDING)
   errorMessage String?
-  
+
   // Metadata
   metadata Json?
-  
+
   // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
-  
+
   @@index([actionType])
   @@index([status])
   @@index([dealId])
@@ -266,41 +266,41 @@ model SchedulerLog {
 // Error Log - Centralized error tracking
 model ErrorLog {
   id String @id @default(uuid())
-  
+
   // Error context
   errorType ErrorType
   severity  Severity
   source    String
-  
+
   // Error details
   message String
   stack   String? @db.Text
   code    String?
-  
+
   // User Context (standardized)
-  userId         String?  // AgentX database UUID
-  userName       String?  // User display name
-  userEmail      String?  // User email (stable field for filtering)
-  barrierxUserId String?  // BarrierX platform UUID
-  hubspotOwnerId String?  // HubSpot CRM owner ID
-  
+  userId         String? // AgentX database UUID
+  userName       String? // User display name
+  userEmail      String? // User email (stable field for filtering)
+  barrierxUserId String? // BarrierX platform UUID
+  hubspotOwnerId String? // HubSpot CRM owner ID
+
   // Other Context
   dealId   String?
   endpoint String?
   method   String?
-  
+
   // Request/Response
   requestData  Json?
   responseData Json?
-  
+
   // Resolution
   isResolved Boolean   @default(false)
   resolvedAt DateTime?
   resolvedBy String?
   resolution String?   @db.Text
-  
+
   createdAt DateTime @default(now())
-  
+
   @@index([errorType])
   @@index([severity])
   @@index([isResolved])
@@ -310,6 +310,67 @@ model ErrorLog {
   // ⚡ Composite index for dashboard critical errors query
   @@index([severity, isResolved, createdAt(sort: Desc)])
   @@index([errorType, createdAt(sort: Desc)])
+}
+
+// ============================================
+// BARRIERX INFO GATHERING
+// ============================================
+
+// Store structured responses from BarrierX info gathering calls
+model BarrierXInfoGathering {
+  id String @id @default(uuid())
+
+  // Deal Context
+  dealId      String
+  dealName    String
+  tenantSlug  String
+  tenantName  String?
+  companyName String?
+
+  // Owner who was called
+  ownerName      String
+  ownerEmail     String
+  ownerPhone     String
+  hubspotOwnerId String?
+
+  // Call tracking
+  conversationId String? @unique
+  callSid        String?
+
+  // Call status
+  status BarrierXInfoStatus @default(PENDING)
+
+  // Structured answers from the call
+  quantifiedPainPoints String? @db.Text // Q1: What are the quantified pain points?
+  championInfo         String? @db.Text // Q2: Who is the champion?
+  economicBuyerInfo    String? @db.Text // Q3: Who is the economic buyer?
+
+  // Call metadata
+  callDuration      Int?
+  transcriptSummary String? @db.Text
+  rawTranscript     Json?
+
+  // Timestamps
+  initiatedAt DateTime  @default(now())
+  answeredAt  DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([tenantSlug])
+  @@index([ownerEmail])
+  @@index([status])
+  @@index([initiatedAt])
+}
+
+enum BarrierXInfoStatus {
+  PENDING // Call initiated but not answered
+  IN_PROGRESS // Call in progress
+  COMPLETED // Call completed with answers
+  FAILED // Call failed (no answer, busy, etc.)
+  SKIPPED // Manually skipped
 }
 
 // ============================================
@@ -390,6 +451,7 @@ enum Status {
 enum CallType {
   PRE_CALL
   POST_CALL
+  BARRIERX_INFO_GATHERING
 }
 
 enum CallStatus {

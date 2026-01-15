@@ -44,6 +44,32 @@ router.get('/analytics/calls', adminProtected, loggingController.getCallAnalytic
 router.get('/analytics/dashboard', adminProtected, loggingController.getDashboardStats);
 
 // ============================================
+// BARRIERX INFO GATHERING (ADMIN ONLY)
+// ============================================
+
+// List all info gathering records
+router.get('/barrierx-info', adminProtected, loggingController.getBarrierXInfoGathering);
+
+// Export as CSV
+router.get('/barrierx-info/export', adminProtected, loggingController.exportBarrierXInfoGathering);
+
+// Get single record details
+router.get('/barrierx-info/:id', adminProtected, loggingController.getBarrierXInfoGatheringById);
+
+// ============================================
+// ZERO SCORE CALLS TRIGGER (ADMIN ONLY)
+// ============================================
+
+// Trigger zero-score info gathering calls
+router.post('/barrierx-info/trigger-zero-score', adminProtected, loggingController.triggerZeroScoreCalls);
+
+// Get status of running job
+router.get('/barrierx-info/zero-score-status', adminProtected, loggingController.getZeroScoreCallsStatus);
+
+// Stop running job
+router.post('/barrierx-info/stop-zero-score', adminProtected, loggingController.stopZeroScoreCalls);
+
+// ============================================
 // USER ROUTES (NEW - OWN DATA ONLY)
 // ============================================
 

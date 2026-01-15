@@ -3,7 +3,7 @@
  * Only accessible by tamiratkebede120@gmail.com
  */
 
-import { Activity, Calendar, LogOut, Moon, Shield, Sun } from 'lucide-react';
+import { Activity, Calendar, LogOut, Moon, Shield, Sun, Target } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import * as authService from '../../services/authService';
@@ -62,9 +62,10 @@ const AdminLayout: React.FC = () => {
   // Determine active tab
   const isLogsActive = location.pathname.startsWith('/admin/logs');
   const isMeetingsActive = location.pathname === '/admin' || location.pathname === '/admin/meetings';
+  const isBarrierXInfoActive = location.pathname === '/admin/barrierx-info';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -92,6 +93,15 @@ const AdminLayout: React.FC = () => {
               >
                 <Calendar className="w-4 h-4" />
                 Clients Meeting
+              </Button>
+              <Button
+                variant={isBarrierXInfoActive ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => navigate('/admin/barrierx-info')}
+                className="gap-2"
+              >
+                <Target className="w-4 h-4" />
+                BarrierX Info
               </Button>
               <Button
                 variant={isLogsActive ? 'default' : 'ghost'}

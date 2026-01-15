@@ -17,8 +17,8 @@ import {
   Zap
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
-import * as authService from '../services/authService';
 import * as meetingService from '../services/meetingService';
 import * as userService from '../services/userService';
 import { Meeting } from '../types';
@@ -51,6 +51,11 @@ import { DropdownMenuItem } from './ui/dropdown-menu';
 import { Skeleton } from './ui/skeleton';
 import { Switch } from './ui/switch';
 const MeetingsPage: React.FC = () => {
+  const location = useLocation();
+  // Detect if rendered inside AdminLayout to hide duplicate header/tabs
+  // Note: router uses basename '/app', so pathname is '/admin/...' not '/app/admin/...'
+  const isInsideAdminLayout = location.pathname.startsWith('/admin');
+  
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -72,7 +77,13 @@ const MeetingsPage: React.FC = () => {
   const [activeUserLogSection, setActiveUserLogSection] = useState<'overview' | 'calls' | 'activity' | 'crm-actions'>('overview'); // NEW: Active user log section
 
   useEffect(() => {
-    fetchMeetings(isAdminMode);
+    // Auto-enable admin mode when inside AdminLayout
+    if (isInsideAdminLayout && !isAdminMode) {
+      setIsAdminMode(true);
+      return; // Will re-run with isAdminMode = true
+    }
+    
+    fetchMeetings(isAdminMode || isInsideAdminLayout);
     fetchUserStatus();
     // Load saved theme
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -82,7 +93,7 @@ const MeetingsPage: React.FC = () => {
         document.documentElement.classList.add('dark');
       }
     }
-  }, [isAdminMode]);
+  }, [isAdminMode, isInsideAdminLayout]);
 
   const fetchMeetings = async (adminMode: boolean = false) => {
     try {
@@ -128,12 +139,6 @@ const MeetingsPage: React.FC = () => {
     setTheme(newTheme);
     document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', newTheme);
-  };
-
-  const handleAdminToggle = () => {
-    setIsAdminMode(!isAdminMode);
-    // Reset to meetings view when toggling admin mode
-    setUserView('meetings');
   };
 
   const showConfirmation = (type: 'pre' | 'post', meeting: Meeting) => {
@@ -339,19 +344,45 @@ const MeetingsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="bg-card/80 backdrop-blur border-b border-border">
-          <div className="container mx-auto px-4 py-4">
-            <Skeleton className="h-8 w-32" />
-          </div>
-        </header>
+        {/* Header Skeleton - Hidden when inside AdminLayout */}
+        {!isInsideAdminLayout && (
+          <header className="bg-card border-b border-border h-16 mb-3">
+            <div className="container mx-auto px-4 h-full flex items-center justify-between">
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-9 w-9 rounded-full" />
+            </div>
+          </header>
+        )}
+
         <main className="container mx-auto px-4 py-8">
-          <div className="space-y-4 mb-8">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-64" />
+          {/* Page Header Skeleton */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-40" />
+              <Skeleton className="h-4 w-56" />
+            </div>
+            <Skeleton className="h-16 w-64 rounded-lg" />
           </div>
+
+          {/* Meeting Cards Skeleton Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-64" />
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i} className="overflow-hidden">
+                <CardHeader className="space-y-2">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Skeleton className="h-10 w-full rounded-lg" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-2 w-full rounded-full" />
+                </CardContent>
+                <CardFooter className="flex gap-2">
+                  <Skeleton className="flex-1 h-9 rounded-md" />
+                  <Skeleton className="flex-1 h-9 rounded-md" />
+                </CardFooter>
+              </Card>
             ))}
           </div>
         </main>
@@ -361,7 +392,8 @@ const MeetingsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* Header - Hidden when inside AdminLayout to avoid duplicate headers */}
+      {!isInsideAdminLayout && (
       <div className="bg-gradient-to-r from-card/95 via-primary/5 to-card/95 backdrop-blur-xl border-b border-primary/10 sticky top-0 z-50 shadow-lg mb-3">
         <AppHeader
           customTitle={
@@ -395,9 +427,6 @@ const MeetingsPage: React.FC = () => {
           onSearchChange={setSearchQuery}
           showNotifications={true}
           notificationCount={2}
-          showAdminToggle={authService.isAdmin()}
-          isAdminMode={isAdminMode}
-          onAdminToggle={handleAdminToggle}
           theme={theme}
           onThemeToggle={handleThemeToggle}
           additionalDropdownItems={
@@ -410,9 +439,10 @@ const MeetingsPage: React.FC = () => {
           }
         />
       </div>
+      )}
 
-      {/* Admin Tabs - Only show when admin mode is active */}
-      {isAdminMode && (
+      {/* Admin Tabs - Only show when admin mode is active AND not inside AdminLayout */}
+      {isAdminMode && !isInsideAdminLayout && (
         <div className="bg-card/50 border-b border-border">
           <div className="container mx-auto px-4">
             <div className="flex gap-2">

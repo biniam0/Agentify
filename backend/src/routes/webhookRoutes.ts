@@ -16,5 +16,8 @@ router.post('/create-meeting', webhookController.handleCreateMeeting);
 router.post('/create-task', webhookController.handleCreateTask);
 router.post('/create-deal', webhookController.handleCreateDeal);
 
+// BarrierX Info Gathering Server Tool (called during the call to save answers)
+router.post('/barrierx-info-callback', webhookController.handleBarrierXInfoCallback);
+
 export default router;
 

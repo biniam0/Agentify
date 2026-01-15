@@ -7,6 +7,17 @@ import UserLogsLayout from './pages/User/Logs/UserLogsLayout';
 import UserCallsLog from './pages/User/Logs/UserCallsLog';
 import UserCallAnalytics from './pages/User/Logs/UserCallAnalytics';
 
+// Admin imports
+import AdminLayout from './pages/Admin/AdminLayout';
+import LogsLayout from './pages/Admin/Logs/LogsLayout';
+import LogsOverview from './pages/Admin/Logs/Overview';
+import CallsLog from './components/Admin/CallsLog';
+import WebhooksLog from './components/Admin/WebhooksLog';
+import CrmActionsLog from './components/Admin/CrmActionsLog';
+import SchedulerLog from './components/Admin/SchedulerLog';
+import ErrorsLog from './components/Admin/ErrorsLog';
+import BarrierXInfo from './pages/Admin/BarrierXInfo';
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -39,6 +50,59 @@ const router = createBrowserRouter([
       {
         path: 'analytics',
         element: <UserCallAnalytics />,
+      },
+    ],
+  },
+  // Admin Routes
+  {
+    path: '/admin',
+    element: (
+      <ProtectedRoute>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Navigate to="/admin/meetings" replace />,
+      },
+      {
+        path: 'meetings',
+        element: <MeetingsPage />,
+      },
+      {
+        path: 'barrierx-info',
+        element: <BarrierXInfo />,
+      },
+      {
+        path: 'logs',
+        element: <LogsLayout />,
+        children: [
+          {
+            index: true,
+            element: <LogsOverview />,
+          },
+          {
+            path: 'calls',
+            element: <CallsLog />,
+          },
+          {
+            path: 'webhooks',
+            element: <WebhooksLog />,
+          },
+          {
+            path: 'crm-actions',
+            element: <CrmActionsLog />,
+          },
+          {
+            path: 'scheduler',
+            element: <SchedulerLog />,
+          },
+          {
+            path: 'errors',
+            element: <ErrorsLog />,
+          },
+        ],
       },
     ],
   },
