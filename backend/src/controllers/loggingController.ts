@@ -686,3 +686,181 @@ export const getUserCallAnalyticsTimeseries = async (req: AuthRequest, res: Resp
   }
 };
 
+// ============================================
+// BARRIERX INFO GATHERING
+// ============================================
+
+/**
+ * Get all BarrierX info gathering records
+ */
+export const getBarrierXInfoGathering = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const {
+      status,
+      tenantSlug,
+      startDate,
+      endDate,
+      limit = 50,
+      offset = 0,
+    } = req.query;
+
+    const where: any = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (tenantSlug) {
+      where.tenantSlug = tenantSlug;
+    }
+
+    applyDateRange(where, 'createdAt', startDate as string, endDate as string);
+
+    const [records, total] = await Promise.all([
+      prisma.barrierXInfoGathering.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: parseInt(limit as string),
+        skip: parseInt(offset as string),
+      }),
+      prisma.barrierXInfoGathering.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      data: records,
+      total,
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
+    });
+  } catch (error: any) {
+    console.error('❌ Get BarrierX info gathering error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch BarrierX info gathering records',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Get single BarrierX info gathering record by ID
+ */
+export const getBarrierXInfoGatheringById = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const record = await prisma.barrierXInfoGathering.findUnique({
+      where: { id },
+    });
+
+    if (!record) {
+      res.status(404).json({ error: 'Record not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: record,
+    });
+  } catch (error: any) {
+    console.error('❌ Get BarrierX info gathering by ID error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch record',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Export BarrierX info gathering records as CSV
+ */
+export const exportBarrierXInfoGathering = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const {
+      status,
+      tenantSlug,
+      startDate,
+      endDate,
+    } = req.query;
+
+    const where: any = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (tenantSlug) {
+      where.tenantSlug = tenantSlug;
+    }
+
+    applyDateRange(where, 'createdAt', startDate as string, endDate as string);
+
+    const records = await prisma.barrierXInfoGathering.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Build CSV
+    const headers = [
+      'ID',
+      'Deal ID',
+      'Deal Name',
+      'Company',
+      'Tenant',
+      'Owner Name',
+      'Owner Email',
+      'Owner Phone',
+      'Status',
+      'Quantified Pain Points',
+      'Champion Info',
+      'Economic Buyer Info',
+      'Call Duration (s)',
+      'Transcript Summary',
+      'Initiated At',
+      'Completed At',
+    ];
+
+    const escapeCSV = (value: any): string => {
+      if (value === null || value === undefined) return '';
+      const str = String(value);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const rows = records.map(r => [
+      escapeCSV(r.id),
+      escapeCSV(r.dealId),
+      escapeCSV(r.dealName),
+      escapeCSV(r.companyName),
+      escapeCSV(r.tenantName || r.tenantSlug),
+      escapeCSV(r.ownerName),
+      escapeCSV(r.ownerEmail),
+      escapeCSV(r.ownerPhone),
+      escapeCSV(r.status),
+      escapeCSV(r.quantifiedPainPoints),
+      escapeCSV(r.championInfo),
+      escapeCSV(r.economicBuyerInfo),
+      escapeCSV(r.callDuration),
+      escapeCSV(r.transcriptSummary),
+      escapeCSV(r.initiatedAt?.toISOString()),
+      escapeCSV(r.completedAt?.toISOString()),
+    ]);
+
+    const csv = [
+      headers.join(','),
+      ...rows.map(row => row.join(',')),
+    ].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=barrierx-info-gathering-${new Date().toISOString().split('T')[0]}.csv`);
+    res.send(csv);
+  } catch (error: any) {
+    console.error('❌ Export BarrierX info gathering error:', error);
+    res.status(500).json({
+      error: 'Failed to export records',
+      details: error.message,
+    });
+  }
+};

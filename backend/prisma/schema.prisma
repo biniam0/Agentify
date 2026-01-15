@@ -313,6 +313,67 @@ model ErrorLog {
 }
 
 // ============================================
+// BARRIERX INFO GATHERING
+// ============================================
+
+// Store structured responses from BarrierX info gathering calls
+model BarrierXInfoGathering {
+  id String @id @default(uuid())
+  
+  // Deal Context
+  dealId      String
+  dealName    String
+  tenantSlug  String
+  tenantName  String?
+  companyName String?
+  
+  // Owner who was called
+  ownerName   String
+  ownerEmail  String
+  ownerPhone  String
+  hubspotOwnerId String?
+  
+  // Call tracking
+  conversationId String?  @unique
+  callSid        String?
+  
+  // Call status
+  status      BarrierXInfoStatus @default(PENDING)
+  
+  // Structured answers from the call
+  quantifiedPainPoints String?  @db.Text  // Q1: What are the quantified pain points?
+  championInfo         String?  @db.Text  // Q2: Who is the champion?
+  economicBuyerInfo    String?  @db.Text  // Q3: Who is the economic buyer?
+  
+  // Call metadata
+  callDuration      Int?
+  transcriptSummary String?  @db.Text
+  rawTranscript     Json?
+  
+  // Timestamps
+  initiatedAt DateTime  @default(now())
+  answeredAt  DateTime?
+  completedAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([dealId])
+  @@index([tenantSlug])
+  @@index([ownerEmail])
+  @@index([status])
+  @@index([initiatedAt])
+}
+
+enum BarrierXInfoStatus {
+  PENDING      // Call initiated but not answered
+  IN_PROGRESS  // Call in progress
+  COMPLETED    // Call completed with answers
+  FAILED       // Call failed (no answer, busy, etc.)
+  SKIPPED      // Manually skipped
+}
+
+// ============================================
 // SERVICE API KEY MANAGEMENT
 // ============================================
 
@@ -390,6 +451,7 @@ enum Status {
 enum CallType {
   PRE_CALL
   POST_CALL
+  BARRIERX_INFO_GATHERING
 }
 
 enum CallStatus {

@@ -44,6 +44,19 @@ router.get('/analytics/calls', adminProtected, loggingController.getCallAnalytic
 router.get('/analytics/dashboard', adminProtected, loggingController.getDashboardStats);
 
 // ============================================
+// BARRIERX INFO GATHERING (ADMIN ONLY)
+// ============================================
+
+// List all info gathering records
+router.get('/barrierx-info', adminProtected, loggingController.getBarrierXInfoGathering);
+
+// Export as CSV
+router.get('/barrierx-info/export', adminProtected, loggingController.exportBarrierXInfoGathering);
+
+// Get single record details
+router.get('/barrierx-info/:id', adminProtected, loggingController.getBarrierXInfoGatheringById);
+
+// ============================================
 // USER ROUTES (NEW - OWN DATA ONLY)
 // ============================================
 

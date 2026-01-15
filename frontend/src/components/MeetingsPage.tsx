@@ -17,6 +17,7 @@ import {
   Zap
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import * as authService from '../services/authService';
 import * as meetingService from '../services/meetingService';
@@ -51,6 +52,11 @@ import { DropdownMenuItem } from './ui/dropdown-menu';
 import { Skeleton } from './ui/skeleton';
 import { Switch } from './ui/switch';
 const MeetingsPage: React.FC = () => {
+  const location = useLocation();
+  // Detect if rendered inside AdminLayout to hide duplicate header/tabs
+  // Note: router uses basename '/app', so pathname is '/admin/...' not '/app/admin/...'
+  const isInsideAdminLayout = location.pathname.startsWith('/admin');
+  
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -72,7 +78,13 @@ const MeetingsPage: React.FC = () => {
   const [activeUserLogSection, setActiveUserLogSection] = useState<'overview' | 'calls' | 'activity' | 'crm-actions'>('overview'); // NEW: Active user log section
 
   useEffect(() => {
-    fetchMeetings(isAdminMode);
+    // Auto-enable admin mode when inside AdminLayout
+    if (isInsideAdminLayout && !isAdminMode) {
+      setIsAdminMode(true);
+      return; // Will re-run with isAdminMode = true
+    }
+    
+    fetchMeetings(isAdminMode || isInsideAdminLayout);
     fetchUserStatus();
     // Load saved theme
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -82,7 +94,7 @@ const MeetingsPage: React.FC = () => {
         document.documentElement.classList.add('dark');
       }
     }
-  }, [isAdminMode]);
+  }, [isAdminMode, isInsideAdminLayout]);
 
   const fetchMeetings = async (adminMode: boolean = false) => {
     try {
@@ -361,7 +373,8 @@ const MeetingsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* Header - Hidden when inside AdminLayout to avoid duplicate headers */}
+      {!isInsideAdminLayout && (
       <div className="bg-gradient-to-r from-card/95 via-primary/5 to-card/95 backdrop-blur-xl border-b border-primary/10 sticky top-0 z-50 shadow-lg mb-3">
         <AppHeader
           customTitle={
@@ -410,9 +423,10 @@ const MeetingsPage: React.FC = () => {
           }
         />
       </div>
+      )}
 
-      {/* Admin Tabs - Only show when admin mode is active */}
-      {isAdminMode && (
+      {/* Admin Tabs - Only show when admin mode is active AND not inside AdminLayout */}
+      {isAdminMode && !isInsideAdminLayout && (
         <div className="bg-card/50 border-b border-border">
           <div className="container mx-auto px-4">
             <div className="flex gap-2">
