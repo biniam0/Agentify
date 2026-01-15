@@ -11,7 +11,6 @@ import {
   Sun,
   LogOut,
   Settings,
-  Shield,
   Search,
   LucideIcon,
 } from 'lucide-react';
@@ -52,11 +51,6 @@ interface AppHeaderProps {
   showNotifications?: boolean;
   notificationCount?: number;
 
-  // Admin Toggle
-  showAdminToggle?: boolean;
-  isAdminMode?: boolean;
-  onAdminToggle?: () => void;
-
   // Back Button
   backButton?: {
     label: string;
@@ -94,9 +88,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onSearchChange,
   showNotifications = false,
   notificationCount = 0,
-  showAdminToggle = false,
-  isAdminMode = false,
-  onAdminToggle,
   backButton,
   statsBadge,
   tabs,
@@ -137,22 +128,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                   {statsBadge.label}
                 </span>
               </div>
-            )}
-
-            {/* Admin Mode Toggle */}
-            {showAdminToggle && (
-              <Button
-                onClick={onAdminToggle}
-                variant={isAdminMode ? 'default' : 'outline'}
-                size="sm"
-                className={`hidden md:flex items-center gap-2 ${isAdminMode
-                    ? 'bg-gradient-primary text-white'
-                    : 'border-primary/20 hover:bg-primary/5'
-                  }`}
-              >
-                <Shield className="h-3.5 w-3.5" />
-                {isAdminMode ? 'Admin Mode' : 'Admin'}
-              </Button>
             )}
           </div>
 

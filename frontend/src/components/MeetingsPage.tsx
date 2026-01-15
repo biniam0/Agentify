@@ -19,7 +19,6 @@ import {
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
-import * as authService from '../services/authService';
 import * as meetingService from '../services/meetingService';
 import * as userService from '../services/userService';
 import { Meeting } from '../types';
@@ -140,12 +139,6 @@ const MeetingsPage: React.FC = () => {
     setTheme(newTheme);
     document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', newTheme);
-  };
-
-  const handleAdminToggle = () => {
-    setIsAdminMode(!isAdminMode);
-    // Reset to meetings view when toggling admin mode
-    setUserView('meetings');
   };
 
   const showConfirmation = (type: 'pre' | 'post', meeting: Meeting) => {
@@ -408,9 +401,6 @@ const MeetingsPage: React.FC = () => {
           onSearchChange={setSearchQuery}
           showNotifications={true}
           notificationCount={2}
-          showAdminToggle={authService.isAdmin()}
-          isAdminMode={isAdminMode}
-          onAdminToggle={handleAdminToggle}
           theme={theme}
           onThemeToggle={handleThemeToggle}
           additionalDropdownItems={
