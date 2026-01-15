@@ -7,7 +7,7 @@
  * - CSV export functionality
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -24,6 +24,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Square,
+  Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -62,6 +64,23 @@ interface BarrierXInfoRecord {
   answeredAt: string | null;
   completedAt: string | null;
   createdAt: string;
+}
+
+interface JobStatus {
+  isRunning: boolean;
+  startedAt: string | null;
+  eligibleDeals: number;
+  completedCalls: number;
+  failedCalls: number;
+  lastError: string | null;
+  recentOutput: string[];
+  dbStats: {
+    pending: number;
+    inProgress: number;
+    completed: number;
+    failed: number;
+    total: number;
+  };
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -104,9 +123,14 @@ const BarrierXInfo: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Job state
+  const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
+  const [isTriggering, setIsTriggering] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
+
   const limit = 20;
 
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -135,11 +159,121 @@ const BarrierXInfo: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, [page, statusFilter]);
+
+  // Fetch job status
+  const fetchJobStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/zero-score-status`, {
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch job status');
+
+      const data = await response.json();
+      setJobStatus(data);
+    } catch (error) {
+      console.error('Failed to fetch job status:', error);
+    }
+  }, []);
+
+  // Trigger zero-score calls
+  const handleTriggerCalls = async () => {
+    if (isTriggering || jobStatus?.isRunning) return;
+
+    setIsTriggering(true);
+
+    // Optimistic update - show running state immediately
+    setJobStatus(prev => ({
+      ...prev,
+      isRunning: true,
+      startedAt: new Date().toISOString(),
+      eligibleDeals: 0,
+      completedCalls: 0,
+      failedCalls: 0,
+      lastError: null,
+      recentOutput: [],
+      dbStats: prev?.dbStats || { pending: 0, inProgress: 0, completed: 0, failed: 0, total: 0 },
+    }));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/trigger-zero-score`, {
+        method: 'POST',
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        // Revert optimistic update on error
+        setJobStatus(prev => prev ? { ...prev, isRunning: false, lastError: error.message } : null);
+        throw new Error(error.message || 'Failed to trigger calls');
+      }
+
+      // Start polling for actual status
+      setTimeout(() => fetchJobStatus(), 30000); // Poll after 30 seconds
+    } catch (error) {
+      console.error('Failed to trigger calls:', error);
+      // Revert optimistic update on error
+      setJobStatus(prev => prev ? { ...prev, isRunning: false } : null);
+    } finally {
+      setIsTriggering(false);
+    }
+  };
+
+  // Stop running job
+  const handleStopCalls = async () => {
+    if (isStopping || !jobStatus?.isRunning) return;
+
+    setIsStopping(true);
+
+    // Optimistic update - show stopped state immediately
+    setJobStatus(prev => prev ? { ...prev, isRunning: false } : null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/stop-zero-score`, {
+        method: 'POST',
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        // Revert if stop failed
+        setJobStatus(prev => prev ? { ...prev, isRunning: true } : null);
+        throw new Error('Failed to stop job');
+      }
+
+      await fetchJobStatus();
+    } catch (error) {
+      console.error('Failed to stop job:', error);
+    } finally {
+      setIsStopping(false);
+    }
   };
 
   useEffect(() => {
     fetchRecords();
-  }, [page, statusFilter]);
+    fetchJobStatus();
+  }, [fetchRecords, fetchJobStatus]);
+
+  // Poll for job status while running
+  useEffect(() => {
+    if (!jobStatus?.isRunning) return;
+
+    const interval = setInterval(() => {
+      fetchJobStatus();
+      fetchRecords(); // Also refresh records to see new calls
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [jobStatus?.isRunning, fetchJobStatus, fetchRecords]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -245,6 +379,112 @@ const BarrierXInfo: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Campaign Trigger Card */}
+      <Card className="border-2 border-dashed border-blue-300 dark:border-blue-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                <Target className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Zero Score Info Gathering
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Call deal owners for deals with no BarrierX score to gather pain points, champion, and economic buyer info
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {/* Job Status Indicator */}
+              {jobStatus?.isRunning && (
+                <div className="flex items-center gap-3 px-4 py-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  <div className="text-sm">
+                    <div className="font-medium text-blue-700 dark:text-blue-300">
+                      Calling in progress...
+                    </div>
+                    <div className="text-blue-600 dark:text-blue-400">
+                      {jobStatus.completedCalls} / {jobStatus.eligibleDeals || '?'} completed
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* DB Stats */}
+              {jobStatus?.dbStats && !jobStatus.isRunning && (
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-gray-700 dark:text-gray-300">
+                      {jobStatus.dbStats.total}
+                    </div>
+                    <div className="text-xs text-gray-500">Total Calls</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-green-600">
+                      {jobStatus.dbStats.completed}
+                    </div>
+                    <div className="text-xs text-gray-500">Completed</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-yellow-600">
+                      {jobStatus.dbStats.pending + jobStatus.dbStats.inProgress}
+                    </div>
+                    <div className="text-xs text-gray-500">Pending</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {jobStatus?.isRunning ? (
+                <Button
+                  variant="destructive"
+                  size="lg"
+                  onClick={handleStopCalls}
+                  disabled={isStopping}
+                  className="gap-2"
+                >
+                  {isStopping ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Square className="w-4 h-4" />
+                  )}
+                  Stop Calls
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="lg"
+                  onClick={handleTriggerCalls}
+                  disabled={isTriggering}
+                  className="gap-2 bg-blue-600 hover:bg-blue-700"
+                >
+                  {isTriggering ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Zap className="w-4 h-4" />
+                  )}
+                  Start Zero Score Calls
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Last Error Display */}
+          {jobStatus?.lastError && !jobStatus.isRunning && (
+            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                <XCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">Last Error:</span>
+                <span className="text-sm">{jobStatus.lastError}</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-4">

@@ -6,10 +6,37 @@
  */
 
 import { Request, Response } from 'express';
+import { spawn, ChildProcess } from 'child_process';
+import path from 'path';
 import { AuthRequest } from '../middlewares/auth';
 import * as loggingService from '../services/loggingService';
 import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType } from '@prisma/client';
 import prisma from '../config/database';
+
+// ============================================
+// ZERO SCORE CALLS JOB STATE
+// ============================================
+interface JobState {
+  isRunning: boolean;
+  startedAt: Date | null;
+  process: ChildProcess | null;
+  output: string[];
+  eligibleDeals: number;
+  completedCalls: number;
+  failedCalls: number;
+  lastError: string | null;
+}
+
+const zeroScoreJobState: JobState = {
+  isRunning: false,
+  startedAt: null,
+  process: null,
+  output: [],
+  eligibleDeals: 0,
+  completedCalls: 0,
+  failedCalls: 0,
+  lastError: null,
+};
 
 const applyDateRange = (
   where: Record<string, any>,
@@ -564,25 +591,25 @@ export const getUserCallAnalytics = async (req: AuthRequest, res: Response): Pro
       durationAggregate
     ] = await Promise.all([
       prisma.callLog.count({ where }),
-      
+
       prisma.callLog.groupBy({
         by: ['status'],
         where,
         _count: { id: true },
       }),
-      
+
       prisma.callLog.groupBy({
         by: ['callType'],
         where,
         _count: { id: true },
       }),
-      
+
       prisma.callLog.groupBy({
         by: ['triggerSource'],
         where,
         _count: { id: true },
       }),
-      
+
       prisma.callLog.aggregate({
         where,
         _sum: { duration: true },
@@ -595,12 +622,12 @@ export const getUserCallAnalytics = async (req: AuthRequest, res: Response): Pro
     const triggerMap = new Map(triggerCounts.map(t => [t.triggerSource, t._count.id]));
 
     const successful = statusMap.get('COMPLETED') || 0;
-    const failed = (statusMap.get('FAILED') || 0) + 
-                   (statusMap.get('NO_ANSWER') || 0) + 
-                   (statusMap.get('BUSY') || 0);
-    const pending = (statusMap.get('INITIATED') || 0) + 
-                    (statusMap.get('RINGING') || 0) + 
-                    (statusMap.get('ANSWERED') || 0);
+    const failed = (statusMap.get('FAILED') || 0) +
+      (statusMap.get('NO_ANSWER') || 0) +
+      (statusMap.get('BUSY') || 0);
+    const pending = (statusMap.get('INITIATED') || 0) +
+      (statusMap.get('RINGING') || 0) +
+      (statusMap.get('ANSWERED') || 0);
 
     const analytics = {
       total,
@@ -860,6 +887,205 @@ export const exportBarrierXInfoGathering = async (req: AuthRequest, res: Respons
     console.error('❌ Export BarrierX info gathering error:', error);
     res.status(500).json({
       error: 'Failed to export records',
+      details: error.message,
+    });
+  }
+};
+
+// ============================================
+// ZERO SCORE CALLS TRIGGER
+// ============================================
+
+/**
+ * Trigger zero-score info gathering calls
+ * Spawns the script as a background process
+ */
+export const triggerZeroScoreCalls = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // Check if already running
+    if (zeroScoreJobState.isRunning) {
+      res.status(409).json({
+        success: false,
+        error: 'Job already running',
+        message: 'Zero score calls job is already in progress',
+        startedAt: zeroScoreJobState.startedAt,
+        eligibleDeals: zeroScoreJobState.eligibleDeals,
+        completedCalls: zeroScoreJobState.completedCalls,
+      });
+      return;
+    }
+
+    console.log('\n🎯 ════════════════════════════════════════════════════');
+    console.log('🎯 TRIGGERING ZERO SCORE CALLS FROM ADMIN UI');
+    console.log('🎯 ════════════════════════════════════════════════════');
+    console.log(`⏰ Time: ${new Date().toISOString()}`);
+    console.log(`👤 Triggered by: ${req.user?.email || 'Unknown'}`);
+
+    // Reset state
+    zeroScoreJobState.isRunning = true;
+    zeroScoreJobState.startedAt = new Date();
+    zeroScoreJobState.output = [];
+    zeroScoreJobState.eligibleDeals = 0;
+    zeroScoreJobState.completedCalls = 0;
+    zeroScoreJobState.failedCalls = 0;
+    zeroScoreJobState.lastError = null;
+
+    // Spawn the script
+    const scriptPath = path.join(__dirname, '..', 'scripts', 'triggerMissingBarrierXCalls.ts');
+    const childProcess = spawn('npx', ['ts-node', scriptPath], {
+      cwd: path.join(__dirname, '..', '..'),
+      env: process.env,
+      shell: true,
+    });
+
+    zeroScoreJobState.process = childProcess;
+
+    // Capture output
+    childProcess.stdout?.on('data', (data: Buffer) => {
+      const output = data.toString();
+      zeroScoreJobState.output.push(output);
+
+      // Parse output for progress
+      const eligibleMatch = output.match(/Callable deals: (\d+)/);
+      if (eligibleMatch) {
+        zeroScoreJobState.eligibleDeals = parseInt(eligibleMatch[1]);
+      }
+
+      const completedMatch = output.match(/Overall progress: (\d+)\/(\d+)/);
+      if (completedMatch) {
+        zeroScoreJobState.completedCalls = parseInt(completedMatch[1]);
+      }
+
+      // Log to console
+      process.stdout.write(`[ZeroScore] ${output}`);
+    });
+
+    childProcess.stderr?.on('data', (data: Buffer) => {
+      const error = data.toString();
+      zeroScoreJobState.output.push(`[ERROR] ${error}`);
+      zeroScoreJobState.lastError = error;
+      process.stderr.write(`[ZeroScore ERROR] ${error}`);
+    });
+
+    childProcess.on('close', (code: number | null) => {
+      console.log(`\n🎯 Zero score calls script exited with code: ${code}`);
+      zeroScoreJobState.isRunning = false;
+      zeroScoreJobState.process = null;
+
+      if (code !== 0) {
+        zeroScoreJobState.lastError = `Script exited with code ${code}`;
+      }
+    });
+
+    childProcess.on('error', (err: Error) => {
+      console.error('❌ Failed to start zero score calls script:', err);
+      zeroScoreJobState.isRunning = false;
+      zeroScoreJobState.process = null;
+      zeroScoreJobState.lastError = err.message;
+    });
+
+    res.json({
+      success: true,
+      message: 'Zero score calls job started',
+      startedAt: zeroScoreJobState.startedAt,
+    });
+  } catch (error: any) {
+    console.error('❌ Trigger zero score calls error:', error);
+    zeroScoreJobState.isRunning = false;
+    zeroScoreJobState.lastError = error.message;
+    res.status(500).json({
+      error: 'Failed to trigger zero score calls',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Get status of zero-score calls job
+ */
+export const getZeroScoreCallsStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // Get counts from database for accurate stats
+    const [pendingCount, completedCount, failedCount, inProgressCount] = await Promise.all([
+      prisma.barrierXInfoGathering.count({ where: { status: 'PENDING' } }),
+      prisma.barrierXInfoGathering.count({ where: { status: 'COMPLETED' } }),
+      prisma.barrierXInfoGathering.count({ where: { status: 'FAILED' } }),
+      prisma.barrierXInfoGathering.count({ where: { status: 'IN_PROGRESS' } }),
+    ]);
+
+    res.json({
+      success: true,
+      isRunning: zeroScoreJobState.isRunning,
+      startedAt: zeroScoreJobState.startedAt,
+      eligibleDeals: zeroScoreJobState.eligibleDeals,
+      completedCalls: zeroScoreJobState.completedCalls,
+      failedCalls: zeroScoreJobState.failedCalls,
+      lastError: zeroScoreJobState.lastError,
+      recentOutput: zeroScoreJobState.output.slice(-20), // Last 20 lines
+      dbStats: {
+        pending: pendingCount,
+        inProgress: inProgressCount,
+        completed: completedCount,
+        failed: failedCount,
+        total: pendingCount + completedCount + failedCount + inProgressCount,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Get zero score calls status error:', error);
+    res.status(500).json({
+      error: 'Failed to get job status',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Stop the running zero-score calls job
+ */
+export const stopZeroScoreCalls = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!zeroScoreJobState.isRunning || !zeroScoreJobState.process) {
+      res.status(400).json({
+        success: false,
+        error: 'No job running',
+        message: 'There is no zero score calls job currently running',
+      });
+      return;
+    }
+
+    console.log('\n⛔ Stopping zero score calls job...');
+    console.log(`👤 Stopped by: ${req.user?.email || 'Unknown'}`);
+
+    const pid = zeroScoreJobState.process.pid;
+
+    // Kill the process - use platform-specific method
+    if (process.platform === 'win32' && pid) {
+      // Windows: use taskkill to kill process tree
+      console.log(`   🪟 Windows: Using taskkill to terminate PID ${pid}`);
+      spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { shell: true });
+    } else if (pid) {
+      // Unix/Mac: kill process group
+      console.log(`   🐧 Unix: Sending SIGTERM to PID ${pid}`);
+      try {
+        process.kill(-pid, 'SIGTERM'); // Kill process group
+      } catch {
+        zeroScoreJobState.process.kill('SIGTERM');
+      }
+    } else {
+      zeroScoreJobState.process.kill('SIGTERM');
+    }
+
+    zeroScoreJobState.isRunning = false;
+    zeroScoreJobState.process = null;
+
+    res.json({
+      success: true,
+      message: 'Zero score calls job stopped',
+    });
+  } catch (error: any) {
+    console.error('❌ Stop zero score calls error:', error);
+    res.status(500).json({
+      error: 'Failed to stop job',
       details: error.message,
     });
   }
