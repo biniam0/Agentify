@@ -4,6 +4,7 @@ import MeetingsPage from './components/MeetingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { isAuthenticated } from './services/authService';
 import UserLogsLayout from './pages/User/Logs/UserLogsLayout';
+import UserLogsPage from './pages/User/Logs/UserLogsPage';
 import UserCallsLog from './pages/User/Logs/UserCallsLog';
 import UserCallAnalytics from './pages/User/Logs/UserCallAnalytics';
 
@@ -32,6 +33,14 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <MeetingsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/logs',
+    element: (
+      <ProtectedRoute>
+        <UserLogsPage />
       </ProtectedRoute>
     ),
   },

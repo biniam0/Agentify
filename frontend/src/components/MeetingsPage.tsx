@@ -17,7 +17,7 @@ import {
   Zap
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import * as meetingService from '../services/meetingService';
 import * as userService from '../services/userService';
@@ -52,6 +52,7 @@ import { Skeleton } from './ui/skeleton';
 import { Switch } from './ui/switch';
 const MeetingsPage: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   // Detect if rendered inside AdminLayout to hide duplicate header/tabs
   // Note: router uses basename '/app', so pathname is '/admin/...' not '/app/admin/...'
   const isInsideAdminLayout = location.pathname.startsWith('/admin');
@@ -431,7 +432,7 @@ const MeetingsPage: React.FC = () => {
           onThemeToggle={handleThemeToggle}
           additionalDropdownItems={
             !isAdminMode ? (
-              <DropdownMenuItem onClick={() => setUserView('logs')}>
+              <DropdownMenuItem onClick={() => navigate('/logs')}>
                 <FileText className="mr-2 h-4 w-4" />
                 My Logs
               </DropdownMenuItem>
