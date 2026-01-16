@@ -16,8 +16,11 @@ router.post('/create-meeting', webhookController.handleCreateMeeting);
 router.post('/create-task', webhookController.handleCreateTask);
 router.post('/create-deal', webhookController.handleCreateDeal);
 
-// BarrierX Info Gathering Server Tool (called during the call to save answers)
-router.post('/barrierx-info-callback', webhookController.handleBarrierXInfoCallback);
+// Info Gathering Server Tools (unified agent with 3 tools)
+// Called during the call to save gathered answers
+router.post('/info-gathering/zero-score', webhookController.handleZeroScoreCallback);
+router.post('/info-gathering/lost-deal', webhookController.handleLostDealCallback);
+router.post('/info-gathering/inactivity', webhookController.handleInactivityCallback);
 
 export default router;
 

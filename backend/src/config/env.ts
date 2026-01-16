@@ -26,6 +26,9 @@ export const config = {
     postAgentId: process.env.ELEVENLABS_POST_AGENT_ID || '',
     phoneNumberId: process.env.ELEVENLABS_PHONE_NUMBER_ID || '',
     webhookSecret: process.env.ELEVENLABS_WEBHOOK_SECRET || '',
+
+    // Info Gathering Agent (single unified agent with 3 server tools)
+    infoGatheringAgentId: process.env.ELEVENLABS_INFO_GATHERING_AGENT_ID || '',
   },
   callRetry: {
     enabled: process.env.ENABLE_CALL_RETRY === 'true',

@@ -320,6 +320,9 @@ model ErrorLog {
 model BarrierXInfoGathering {
   id String @id @default(uuid())
 
+  // Gathering Type - what kind of info gathering call
+  gatheringType GatheringType @default(ZERO_SCORE)
+
   // Deal Context
   dealId      String
   dealName    String
@@ -340,10 +343,26 @@ model BarrierXInfoGathering {
   // Call status
   status BarrierXInfoStatus @default(PENDING)
 
-  // Structured answers from the call
+  // ============================================
+  // ZERO SCORE FIELDS
+  // ============================================
   quantifiedPainPoints String? @db.Text // Q1: What are the quantified pain points?
   championInfo         String? @db.Text // Q2: Who is the champion?
   economicBuyerInfo    String? @db.Text // Q3: Who is the economic buyer?
+
+  // ============================================
+  // LOST DEAL FIELDS (3 Questions)
+  // ============================================
+  lossReason     String? @db.Text // Q1: What was the primary reason this deal was lost?
+  competitorName String? // Q2: Who was the deal lost to?
+  lessonsLearned String? @db.Text // Q3: What could we improve for next time?
+
+  // ============================================
+  // INACTIVITY FIELDS (3 Questions)
+  // ============================================
+  inactivityStatus    String? @db.Text // Q1: What's the current status of this deal?
+  inactivityBlockers  String? @db.Text // Q2: Are there any blockers or challenges?
+  inactivityNextSteps String? @db.Text // Q3: What are the next steps you're planning?
 
   // Call metadata
   callDuration      Int?
@@ -362,7 +381,14 @@ model BarrierXInfoGathering {
   @@index([tenantSlug])
   @@index([ownerEmail])
   @@index([status])
+  @@index([gatheringType])
   @@index([initiatedAt])
+}
+
+enum GatheringType {
+  ZERO_SCORE // Deals with no BarrierX score
+  LOST_DEAL // Deals marked as Closed Lost
+  INACTIVITY // Deals with no activity for 2 weeks
 }
 
 enum BarrierXInfoStatus {

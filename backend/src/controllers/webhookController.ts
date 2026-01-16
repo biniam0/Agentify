@@ -99,8 +99,9 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
     // Determine call type based on agent ID or dynamic variables
     const isPreMeetingCall = agentId === config.elevenlabs.preAgentId;
     const isPostMeetingCall = agentId === config.elevenlabs.postAgentId;
-    const isBarrierXInfoCall = agentId === process.env.ELEVENLABS_BARRIERX_INFO_AGENT_ID ||
-      data.conversation_initiation_client_data?.dynamic_variables?.call_type === 'BARRIERX_INFO_GATHERING';
+    const dynamicCallType = data.conversation_initiation_client_data?.dynamic_variables?.call_type;
+    const isBarrierXInfoCall = agentId === config.elevenlabs.infoGatheringAgentId ||
+      ['BARRIERX_INFO_GATHERING', 'LOST_DEAL_QUESTIONNAIRE', 'INACTIVITY_CHECK'].includes(dynamicCallType);
 
     const callType = isBarrierXInfoCall
       ? 'BARRIERX_INFO_GATHERING'
@@ -1470,10 +1471,10 @@ async function handleBarrierXInfoGatheringWebhook(webhookData: any): Promise<voi
  * - deal_id: string
  * - conversation_id: string
  */
-export const handleBarrierXInfoCallback = async (req: Request, res: Response): Promise<void> => {
+export const handleZeroScoreCallback = async (req: Request, res: Response): Promise<void> => {
   try {
     console.log('\n🎯 ════════════════════════════════════════════════════');
-    console.log('🎯 BARRIERX INFO GATHERER - Server Tool Callback');
+    console.log('🎯 ZERO SCORE INFO - Server Tool Callback');
     console.log('🎯 ════════════════════════════════════════════════════');
     console.log('⏰ Time:', new Date().toISOString());
     console.log('📦 Raw Body:', JSON.stringify(req.body, null, 2));
@@ -1548,7 +1549,7 @@ export const handleBarrierXInfoCallback = async (req: Request, res: Response): P
       webhookType: 'ELEVENLABS_TOOL',
       eventType: 'barrierx_info_callback',
       conversationId: conversation_id,
-      agentId: process.env.ELEVENLABS_BARRIERX_INFO_AGENT_ID,
+      agentId: config.elevenlabs.infoGatheringAgentId,
       status: 'SUCCESS',
       payload: req.body,
     });
@@ -1575,7 +1576,7 @@ export const handleBarrierXInfoCallback = async (req: Request, res: Response): P
     await loggingService.logError({
       errorType: 'EXTERNAL_SERVICE',
       severity: 'HIGH',
-      source: 'webhookController.handleBarrierXInfoCallback',
+      source: 'webhookController.handleZeroScoreCallback',
       message: error.message || 'Failed to save BarrierX info',
       stack: error.stack,
       endpoint: req.path,
@@ -1586,6 +1587,280 @@ export const handleBarrierXInfoCallback = async (req: Request, res: Response): P
       success: false,
       error: 'Failed to save information',
       message: 'There was an issue saving the information. Please try again.',
+    });
+  }
+};
+
+/**
+ * Handle Lost Deal Questionnaire - Server Tool Callback
+ * 
+ * This is called during a Lost Deal call when the ElevenLabs agent
+ * has gathered feedback about why the deal was lost.
+ * 
+ * Expected body:
+ * - loss_reason: string (Q1: What was the primary reason this deal was lost?)
+ * - competitor_name: string (Q2: Who was the deal lost to?)
+ * - lessons_learned: string (Q3: What could we improve for next time?)
+ * - deal_id: string
+ * - conversation_id: string
+ */
+export const handleLostDealCallback = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('\n💔 ════════════════════════════════════════════════════');
+    console.log('💔 LOST DEAL QUESTIONNAIRE - Server Tool Callback');
+    console.log('💔 ════════════════════════════════════════════════════');
+    console.log('⏰ Time:', new Date().toISOString());
+    console.log('📦 Raw Body:', JSON.stringify(req.body, null, 2));
+
+    const {
+      loss_reason,
+      competitor_name,
+      lessons_learned,
+      deal_id,
+      conversation_id,
+    } = req.body;
+
+    console.log('\n📋 Extracted Data:');
+    console.log(`   Deal ID: ${deal_id || 'not provided'}`);
+    console.log(`   Conversation ID: ${conversation_id || 'not provided'}`);
+    console.log(`   Loss Reason: ${loss_reason ? loss_reason.substring(0, 100) + '...' : 'not provided'}`);
+    console.log(`   Competitor: ${competitor_name || 'not provided'}`);
+    console.log(`   Lessons Learned: ${lessons_learned ? lessons_learned.substring(0, 100) + '...' : 'not provided'}`);
+
+    // Try to find existing record by conversation_id or deal_id
+    let existingRecord = null;
+
+    if (conversation_id) {
+      existingRecord = await prisma.barrierXInfoGathering.findUnique({
+        where: { conversationId: conversation_id },
+      });
+    }
+
+    if (!existingRecord && deal_id) {
+      existingRecord = await prisma.barrierXInfoGathering.findFirst({
+        where: {
+          dealId: deal_id,
+          gatheringType: 'LOST_DEAL',
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    if (existingRecord) {
+      // Update existing record
+      await prisma.barrierXInfoGathering.update({
+        where: { id: existingRecord.id },
+        data: {
+          lossReason: loss_reason || existingRecord.lossReason,
+          competitorName: competitor_name || existingRecord.competitorName,
+          lessonsLearned: lessons_learned || existingRecord.lessonsLearned,
+          status: 'IN_PROGRESS',
+          conversationId: conversation_id || existingRecord.conversationId,
+        },
+      });
+      console.log(`   ✅ Updated existing record: ${existingRecord.id}`);
+    } else {
+      // Create new record if none exists (fallback)
+      console.log(`   ⚠️ No existing record found - creating new one`);
+      const newRecord = await prisma.barrierXInfoGathering.create({
+        data: {
+          gatheringType: 'LOST_DEAL',
+          dealId: deal_id || 'unknown',
+          dealName: 'Unknown (from server tool callback)',
+          tenantSlug: 'unknown',
+          ownerName: 'Unknown',
+          ownerEmail: '',
+          ownerPhone: '',
+          conversationId: conversation_id || null,
+          lossReason: loss_reason || null,
+          competitorName: competitor_name || null,
+          lessonsLearned: lessons_learned || null,
+          status: 'IN_PROGRESS',
+        },
+      });
+      console.log(`   ✅ Created new record: ${newRecord.id}`);
+    }
+
+    // Log to AgentX logging system
+    await loggingService.logWebhook({
+      webhookType: 'ELEVENLABS_TOOL',
+      eventType: 'lost_deal_callback',
+      conversationId: conversation_id,
+      agentId: config.elevenlabs.infoGatheringAgentId,
+      status: 'SUCCESS',
+      payload: req.body,
+    });
+
+    console.log('   ✅ Logged to AgentX logging system');
+
+    // Return success to ElevenLabs
+    res.json({
+      success: true,
+      message: 'Feedback saved successfully. Thank the user for sharing this valuable feedback.',
+      data: {
+        deal_id,
+        conversation_id,
+        saved_at: new Date().toISOString(),
+        loss_reason_received: !!loss_reason,
+        competitor_received: !!competitor_name,
+        lessons_received: !!lessons_learned,
+      },
+    });
+
+  } catch (error: any) {
+    console.error('❌ Error in Lost Deal callback:', error);
+
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'webhookController.handleLostDealCallback',
+      message: error.message || 'Failed to save lost deal feedback',
+      stack: error.stack,
+      endpoint: req.path,
+      requestData: req.body,
+    });
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save feedback',
+      message: 'There was an issue saving the feedback. Please try again.',
+    });
+  }
+};
+
+/**
+ * Handle Inactivity Check - Server Tool Callback
+ * 
+ * This is called during an Inactivity call when the ElevenLabs agent
+ * has gathered information about a stale deal.
+ * 
+ * Expected body:
+ * - current_status: string (Q1: What's the current status of this deal?)
+ * - blockers: string (Q2: Are there any blockers or challenges?)
+ * - next_steps: string (Q3: What are the next steps you're planning?)
+ * - deal_id: string
+ * - conversation_id: string
+ */
+export const handleInactivityCallback = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('\n⏰ ════════════════════════════════════════════════════');
+    console.log('⏰ INACTIVITY CHECK - Server Tool Callback');
+    console.log('⏰ ════════════════════════════════════════════════════');
+    console.log('⏰ Time:', new Date().toISOString());
+    console.log('📦 Raw Body:', JSON.stringify(req.body, null, 2));
+
+    const {
+      current_status,
+      blockers,
+      next_steps,
+      deal_id,
+      conversation_id,
+    } = req.body;
+
+    console.log('\n📋 Extracted Data:');
+    console.log(`   Deal ID: ${deal_id || 'not provided'}`);
+    console.log(`   Conversation ID: ${conversation_id || 'not provided'}`);
+    console.log(`   Current Status: ${current_status ? current_status.substring(0, 100) + '...' : 'not provided'}`);
+    console.log(`   Blockers: ${blockers ? blockers.substring(0, 100) + '...' : 'not provided'}`);
+    console.log(`   Next Steps: ${next_steps ? next_steps.substring(0, 100) + '...' : 'not provided'}`);
+
+    // Try to find existing record by conversation_id or deal_id
+    let existingRecord = null;
+
+    if (conversation_id) {
+      existingRecord = await prisma.barrierXInfoGathering.findUnique({
+        where: { conversationId: conversation_id },
+      });
+    }
+
+    if (!existingRecord && deal_id) {
+      existingRecord = await prisma.barrierXInfoGathering.findFirst({
+        where: {
+          dealId: deal_id,
+          gatheringType: 'INACTIVITY',
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    if (existingRecord) {
+      // Update existing record
+      await prisma.barrierXInfoGathering.update({
+        where: { id: existingRecord.id },
+        data: {
+          inactivityStatus: current_status || existingRecord.inactivityStatus,
+          inactivityBlockers: blockers || existingRecord.inactivityBlockers,
+          inactivityNextSteps: next_steps || existingRecord.inactivityNextSteps,
+          status: 'IN_PROGRESS',
+          conversationId: conversation_id || existingRecord.conversationId,
+        },
+      });
+      console.log(`   ✅ Updated existing record: ${existingRecord.id}`);
+    } else {
+      // Create new record if none exists (fallback)
+      console.log(`   ⚠️ No existing record found - creating new one`);
+      const newRecord = await prisma.barrierXInfoGathering.create({
+        data: {
+          gatheringType: 'INACTIVITY',
+          dealId: deal_id || 'unknown',
+          dealName: 'Unknown (from server tool callback)',
+          tenantSlug: 'unknown',
+          ownerName: 'Unknown',
+          ownerEmail: '',
+          ownerPhone: '',
+          conversationId: conversation_id || null,
+          inactivityStatus: current_status || null,
+          inactivityBlockers: blockers || null,
+          inactivityNextSteps: next_steps || null,
+          status: 'IN_PROGRESS',
+        },
+      });
+      console.log(`   ✅ Created new record: ${newRecord.id}`);
+    }
+
+    // Log to AgentX logging system
+    await loggingService.logWebhook({
+      webhookType: 'ELEVENLABS_TOOL',
+      eventType: 'inactivity_callback',
+      conversationId: conversation_id,
+      agentId: config.elevenlabs.infoGatheringAgentId,
+      status: 'SUCCESS',
+      payload: req.body,
+    });
+
+    console.log('   ✅ Logged to AgentX logging system');
+
+    // Return success to ElevenLabs
+    res.json({
+      success: true,
+      message: 'Update saved successfully. Thank the user for the status update.',
+      data: {
+        deal_id,
+        conversation_id,
+        saved_at: new Date().toISOString(),
+        status_received: !!current_status,
+        blockers_received: !!blockers,
+        next_steps_received: !!next_steps,
+      },
+    });
+
+  } catch (error: any) {
+    console.error('❌ Error in Inactivity callback:', error);
+
+    await loggingService.logError({
+      errorType: 'EXTERNAL_SERVICE',
+      severity: 'HIGH',
+      source: 'webhookController.handleInactivityCallback',
+      message: error.message || 'Failed to save inactivity check',
+      stack: error.stack,
+      endpoint: req.path,
+      requestData: req.body,
+    });
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save update',
+      message: 'There was an issue saving the update. Please try again.',
     });
   }
 };
