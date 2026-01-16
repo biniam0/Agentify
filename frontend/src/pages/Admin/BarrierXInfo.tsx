@@ -68,6 +68,7 @@ interface BarrierXInfoRecord {
 
 interface JobStatus {
   isRunning: boolean;
+  type?: 'ZERO_SCORE' | 'LOST_DEAL' | 'INACTIVITY' | null;
   startedAt: string | null;
   eligibleDeals: number;
   completedCalls: number;
@@ -125,7 +126,9 @@ const BarrierXInfo: React.FC = () => {
 
   // Job state
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
-  const [isTriggering, setIsTriggering] = useState(false);
+  const [isTriggeringZeroScore, setIsTriggeringZeroScore] = useState(false);
+  const [isTriggeringLostDeal, setIsTriggeringLostDeal] = useState(false);
+  const [isTriggeringInactivity, setIsTriggeringInactivity] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
 
   const limit = 20;
@@ -181,15 +184,16 @@ const BarrierXInfo: React.FC = () => {
   }, []);
 
   // Trigger zero-score calls
-  const handleTriggerCalls = async () => {
-    if (isTriggering || jobStatus?.isRunning) return;
+  const handleTriggerZeroScoreCalls = async () => {
+    if (isTriggeringZeroScore || jobStatus?.isRunning) return;
 
-    setIsTriggering(true);
+    setIsTriggeringZeroScore(true);
 
     // Optimistic update - show running state immediately
     setJobStatus(prev => ({
       ...prev,
       isRunning: true,
+      type: 'ZERO_SCORE',
       startedAt: new Date().toISOString(),
       eligibleDeals: 0,
       completedCalls: 0,
@@ -210,19 +214,104 @@ const BarrierXInfo: React.FC = () => {
 
       if (!response.ok) {
         const error = await response.json();
-        // Revert optimistic update on error
         setJobStatus(prev => prev ? { ...prev, isRunning: false, lastError: error.message } : null);
         throw new Error(error.message || 'Failed to trigger calls');
       }
 
-      // Start polling for actual status
-      setTimeout(() => fetchJobStatus(), 30000); // Poll after 30 seconds
+      setTimeout(() => fetchJobStatus(), 1000);
     } catch (error) {
       console.error('Failed to trigger calls:', error);
-      // Revert optimistic update on error
       setJobStatus(prev => prev ? { ...prev, isRunning: false } : null);
     } finally {
-      setIsTriggering(false);
+      setIsTriggeringZeroScore(false);
+    }
+  };
+
+  // Trigger lost deal calls
+  const handleTriggerLostDealCalls = async () => {
+    if (isTriggeringLostDeal || jobStatus?.isRunning) return;
+
+    setIsTriggeringLostDeal(true);
+
+    // Optimistic update
+    setJobStatus(prev => ({
+      ...prev,
+      isRunning: true,
+      type: 'LOST_DEAL',
+      startedAt: new Date().toISOString(),
+      eligibleDeals: 0,
+      completedCalls: 0,
+      failedCalls: 0,
+      lastError: null,
+      recentOutput: [],
+      dbStats: prev?.dbStats || { pending: 0, inProgress: 0, completed: 0, failed: 0, total: 0 },
+    }));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/trigger-lost-deal`, {
+        method: 'POST',
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        setJobStatus(prev => prev ? { ...prev, isRunning: false, lastError: error.message } : null);
+        throw new Error(error.message || 'Failed to trigger calls');
+      }
+
+      setTimeout(() => fetchJobStatus(), 1000);
+    } catch (error) {
+      console.error('Failed to trigger lost deal calls:', error);
+      setJobStatus(prev => prev ? { ...prev, isRunning: false } : null);
+    } finally {
+      setIsTriggeringLostDeal(false);
+    }
+  };
+
+  // Trigger inactivity check calls
+  const handleTriggerInactivityCalls = async () => {
+    if (isTriggeringInactivity || jobStatus?.isRunning) return;
+
+    setIsTriggeringInactivity(true);
+
+    // Optimistic update
+    setJobStatus(prev => ({
+      ...prev,
+      isRunning: true,
+      type: 'INACTIVITY',
+      startedAt: new Date().toISOString(),
+      eligibleDeals: 0,
+      completedCalls: 0,
+      failedCalls: 0,
+      lastError: null,
+      recentOutput: [],
+      dbStats: prev?.dbStats || { pending: 0, inProgress: 0, completed: 0, failed: 0, total: 0 },
+    }));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/trigger-inactivity`, {
+        method: 'POST',
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        setJobStatus(prev => prev ? { ...prev, isRunning: false, lastError: error.message } : null);
+        throw new Error(error.message || 'Failed to trigger calls');
+      }
+
+      setTimeout(() => fetchJobStatus(), 1000);
+    } catch (error) {
+      console.error('Failed to trigger inactivity calls:', error);
+      setJobStatus(prev => prev ? { ...prev, isRunning: false } : null);
+    } finally {
+      setIsTriggeringInactivity(false);
     }
   };
 
@@ -380,111 +469,241 @@ const BarrierXInfo: React.FC = () => {
         </div>
       </div>
 
-      {/* Campaign Trigger Card */}
-      <Card className="border-2 border-dashed border-blue-300 dark:border-blue-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                <Target className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Zero Score Info Gathering
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Call deal owners for deals with no BarrierX score to gather pain points, champion, and economic buyer info
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              {/* Job Status Indicator */}
-              {jobStatus?.isRunning && (
-                <div className="flex items-center gap-3 px-4 py-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                  <div className="text-sm">
-                    <div className="font-medium text-blue-700 dark:text-blue-300">
-                      Calling in progress...
-                    </div>
-                    <div className="text-blue-600 dark:text-blue-400">
-                      {jobStatus.completedCalls} / {jobStatus.eligibleDeals || '?'} completed
-                    </div>
-                  </div>
+      {/* Campaign Trigger Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Zero Score Card */}
+        <Card className="border-2 border-dashed border-blue-300 dark:border-blue-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                  <Target className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                 </div>
-              )}
-
-              {/* DB Stats */}
-              {jobStatus?.dbStats && !jobStatus.isRunning && (
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-700 dark:text-gray-300">
-                      {jobStatus.dbStats.total}
-                    </div>
-                    <div className="text-xs text-gray-500">Total Calls</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-green-600">
-                      {jobStatus.dbStats.completed}
-                    </div>
-                    <div className="text-xs text-gray-500">Completed</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-yellow-600">
-                      {jobStatus.dbStats.pending + jobStatus.dbStats.inProgress}
-                    </div>
-                    <div className="text-xs text-gray-500">Pending</div>
-                  </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Zero Score Calls
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Gather pain points, champion & economic buyer
+                  </p>
                 </div>
-              )}
+              </div>
 
-              {/* Action Buttons */}
-              {jobStatus?.isRunning ? (
-                <Button
-                  variant="destructive"
-                  size="lg"
-                  onClick={handleStopCalls}
-                  disabled={isStopping}
-                  className="gap-2"
-                >
-                  {isStopping ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Square className="w-4 h-4" />
-                  )}
-                  Stop Calls
-                </Button>
-              ) : (
-                <Button
-                  variant="default"
-                  size="lg"
-                  onClick={handleTriggerCalls}
-                  disabled={isTriggering}
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
-                >
-                  {isTriggering ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Zap className="w-4 h-4" />
-                  )}
-                  Start Zero Score Calls
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Last Error Display */}
-          {jobStatus?.lastError && !jobStatus.isRunning && (
-            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-                <XCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">Last Error:</span>
-                <span className="text-sm">{jobStatus.lastError}</span>
+              {/* Status + Button */}
+              <div className="flex items-center justify-between">
+                {jobStatus?.isRunning && jobStatus.type === 'ZERO_SCORE' ? (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-blue-600">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{jobStatus.completedCalls}/{jobStatus.eligibleDeals || '?'}</span>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleStopCalls}
+                      disabled={isStopping}
+                      className="gap-2"
+                    >
+                      <Square className="w-4 h-4" />
+                      Stop
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm text-gray-500">
+                      {jobStatus?.dbStats?.total || 0} calls logged
+                    </div>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleTriggerZeroScoreCalls}
+                      disabled={isTriggeringZeroScore || jobStatus?.isRunning}
+                      className="gap-2 bg-blue-600 hover:bg-blue-700"
+                    >
+                      {isTriggeringZeroScore ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Zap className="w-4 h-4" />
+                      )}
+                      Start Calls
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Lost Deal Card */}
+        <Card className="border-2 border-dashed border-red-300 dark:border-red-700 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/30">
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-red-100 dark:bg-red-900/50 rounded-lg">
+                  <XCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Lost Deal Questionnaire
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Gather loss reasons from Closed Lost deals
+                  </p>
+                </div>
+              </div>
+
+              {/* Status + Button */}
+              <div className="flex items-center justify-between">
+                {jobStatus?.isRunning && jobStatus.type === 'LOST_DEAL' ? (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-red-600">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{jobStatus.completedCalls}/{jobStatus.eligibleDeals || '?'}</span>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleStopCalls}
+                      disabled={isStopping}
+                      className="gap-2"
+                    >
+                      <Square className="w-4 h-4" />
+                      Stop
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm text-gray-500">
+                      Calls "Closed Lost" deal owners
+                    </div>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleTriggerLostDealCalls}
+                      disabled={isTriggeringLostDeal || jobStatus?.isRunning}
+                      className="gap-2 bg-red-600 hover:bg-red-700"
+                    >
+                      {isTriggeringLostDeal ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Zap className="w-4 h-4" />
+                      )}
+                      Start Calls
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Inactivity Check Card */}
+        <Card className="border-2 border-dashed border-orange-300 dark:border-orange-700 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30">
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-100 dark:bg-orange-900/50 rounded-lg">
+                  <Clock className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Inactivity Check
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Follow up on stale deals (2+ weeks)
+                  </p>
+                </div>
+              </div>
+
+              {/* Status + Button */}
+              <div className="flex items-center justify-between">
+                {jobStatus?.isRunning && jobStatus.type === 'INACTIVITY' ? (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-orange-600">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{jobStatus.completedCalls}/{jobStatus.eligibleDeals || '?'}</span>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleStopCalls}
+                      disabled={isStopping}
+                      className="gap-2"
+                    >
+                      <Square className="w-4 h-4" />
+                      Stop
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm text-gray-500">
+                      Check status & next steps
+                    </div>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleTriggerInactivityCalls}
+                      disabled={isTriggeringInactivity || jobStatus?.isRunning}
+                      className="gap-2 bg-orange-600 hover:bg-orange-700"
+                    >
+                      {isTriggeringInactivity ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Zap className="w-4 h-4" />
+                      )}
+                      Start Calls
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Running Job Status Bar */}
+      {jobStatus?.isRunning && (
+        <Card className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-950/30 dark:to-amber-950/30 border-yellow-300 dark:border-yellow-700">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-5 h-5 animate-spin text-yellow-600" />
+                <div>
+                  <span className="font-medium text-yellow-800 dark:text-yellow-200">
+                    {jobStatus.type === 'ZERO_SCORE' ? 'Zero Score' : jobStatus.type === 'LOST_DEAL' ? 'Lost Deal' : 'Inactivity'} calls in progress
+                  </span>
+                  <span className="text-yellow-600 dark:text-yellow-400 ml-2">
+                    • {jobStatus.completedCalls}/{jobStatus.eligibleDeals || '?'} completed
+                  </span>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleStopCalls}
+                disabled={isStopping}
+                className="border-yellow-400 text-yellow-700 hover:bg-yellow-100"
+              >
+                {isStopping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Square className="w-4 h-4 mr-2" />}
+                Stop All
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Last Error Display */}
+      {jobStatus?.lastError && !jobStatus.isRunning && (
+        <Card className="border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30">
+          <CardContent className="py-3">
+            <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+              <XCircle className="w-4 h-4" />
+              <span className="text-sm font-medium">Last Error:</span>
+              <span className="text-sm">{jobStatus.lastError}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-4">

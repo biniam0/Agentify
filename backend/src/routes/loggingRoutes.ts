@@ -57,17 +57,25 @@ router.get('/barrierx-info/export', adminProtected, loggingController.exportBarr
 router.get('/barrierx-info/:id', adminProtected, loggingController.getBarrierXInfoGatheringById);
 
 // ============================================
-// ZERO SCORE CALLS TRIGGER (ADMIN ONLY)
+// INFO GATHERING CALLS TRIGGER (ADMIN ONLY)
 // ============================================
 
 // Trigger zero-score info gathering calls
 router.post('/barrierx-info/trigger-zero-score', adminProtected, loggingController.triggerZeroScoreCalls);
 
-// Get status of running job
-router.get('/barrierx-info/zero-score-status', adminProtected, loggingController.getZeroScoreCallsStatus);
+// Trigger lost deal questionnaire calls
+router.post('/barrierx-info/trigger-lost-deal', adminProtected, loggingController.triggerLostDealCalls);
 
-// Stop running job
-router.post('/barrierx-info/stop-zero-score', adminProtected, loggingController.stopZeroScoreCalls);
+// Trigger inactivity check calls
+router.post('/barrierx-info/trigger-inactivity', adminProtected, loggingController.triggerInactivityCalls);
+
+// Get status of running job (works for all types)
+router.get('/barrierx-info/zero-score-status', adminProtected, loggingController.getInfoGatheringStatus);
+router.get('/barrierx-info/status', adminProtected, loggingController.getInfoGatheringStatus);
+
+// Stop running job (works for all types)
+router.post('/barrierx-info/stop-zero-score', adminProtected, loggingController.stopInfoGatheringCalls);
+router.post('/barrierx-info/stop', adminProtected, loggingController.stopInfoGatheringCalls);
 
 // ============================================
 // USER ROUTES (NEW - OWN DATA ONLY)
