@@ -5,7 +5,6 @@ import {
   Briefcase,
   Calendar,
   Clock,
-  DollarSign,
   FileText,
   Phone,
   Search,
@@ -254,15 +253,6 @@ const MeetingsPage: React.FC = () => {
     return 'Soon';
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      scheduled: 'border-primary',
-      in_progress: 'border-warning',
-      completed: 'border-success',
-    };
-    return colors[status] || 'border-primary';
-  };
-
   const formatDealAmount = (amount?: number) => {
     if (!amount) return 'N/A';
     if (amount >= 1000000) {
@@ -318,47 +308,49 @@ const MeetingsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-slate-50 dark:bg-background">
         {/* Header Skeleton - Hidden when inside AdminLayout */}
         {!isInsideAdminLayout && (
-          <header className="bg-card border-b border-border h-16 mb-3">
-            <div className="container mx-auto px-4 h-full flex items-center justify-between">
+          <header className="bg-white border-b border-slate-100 h-16">
+            <div className="max-w-[1920px] mx-auto px-[10%] h-full flex items-center justify-between">
               <Skeleton className="h-8 w-32" />
               <Skeleton className="h-9 w-9 rounded-full" />
             </div>
           </header>
         )}
 
-        <main className="container mx-auto px-4 py-8">
-          {/* Page Header Skeleton */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-40" />
-              <Skeleton className="h-4 w-56" />
+        <main className="max-w-[1920px] mx-auto px-[10%] py-8">
+          <div className="space-y-8 max-w-[1600px] mx-auto">
+            {/* Page Header Skeleton */}
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+              <div className="space-y-2 pl-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-72" />
+              </div>
+              <Skeleton className="h-20 w-72 rounded-lg" />
             </div>
-            <Skeleton className="h-16 w-64 rounded-lg" />
-          </div>
 
-          {/* Meeting Cards Skeleton Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="overflow-hidden">
-                <CardHeader className="space-y-2">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Skeleton className="h-10 w-full rounded-lg" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-2 w-full rounded-full" />
-                </CardContent>
-                <CardFooter className="flex gap-2">
-                  <Skeleton className="flex-1 h-9 rounded-md" />
-                  <Skeleton className="flex-1 h-9 rounded-md" />
-                </CardFooter>
-              </Card>
-            ))}
+            {/* Meeting Cards Skeleton Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i} className="bg-white dark:bg-card border border-slate-200 dark:border-border shadow-sm overflow-hidden">
+                  <CardHeader className="space-y-2 border-b border-slate-100 dark:border-border">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardHeader>
+                  <CardContent className="space-y-3 pt-4">
+                    <Skeleton className="h-12 w-full rounded-lg" />
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-2 w-full rounded-full" />
+                  </CardContent>
+                  <CardFooter className="flex gap-2 border-t border-slate-100 dark:border-border bg-slate-50/50 dark:bg-muted/20">
+                    <Skeleton className="flex-1 h-9 rounded-md" />
+                    <Skeleton className="flex-1 h-9 rounded-md" />
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
           </div>
         </main>
       </div>
@@ -366,7 +358,7 @@ const MeetingsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50 dark:bg-background">
       {/* Header - Hidden when inside AdminLayout to avoid duplicate headers */}
       {!isInsideAdminLayout && (
         <BarrierXHeader
@@ -381,271 +373,282 @@ const MeetingsPage: React.FC = () => {
 
       {/* Admin Tabs - Only show when admin mode is active AND not inside AdminLayout */}
       {isAdminMode && !isInsideAdminLayout && (
-        <div className="bg-card/50 border-b border-border">
-          <div className="container mx-auto px-4">
-            <div className="flex gap-2">
-              <Button
-                variant={adminTab === 'meetings' ? 'default' : 'ghost'}
-                size="sm"
+        <div className="bg-white border-b border-slate-100">
+          <div className="max-w-[1920px] mx-auto px-[10%]">
+            <div className="flex gap-1">
+              <button
                 onClick={() => setAdminTab('meetings')}
-                className="rounded-b-none"
+                className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${adminTab === 'meetings'
+                    ? 'border-emerald-600 text-slate-900'
+                    : 'border-transparent text-slate-500 hover:text-slate-900'
+                  }`}
               >
-                <Calendar className="w-4 h-4 mr-2" />
+                <Calendar className="w-4 h-4 mr-2 inline" />
                 Clients Meetings
-              </Button>
-              <Button
-                variant={adminTab === 'logs' ? 'default' : 'ghost'}
-                size="sm"
+              </button>
+              <button
                 onClick={() => setAdminTab('logs')}
-                className="rounded-b-none"
+                className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${adminTab === 'logs'
+                    ? 'border-emerald-600 text-slate-900'
+                    : 'border-transparent text-slate-500 hover:text-slate-900'
+                  }`}
               >
-                <Activity className="w-4 h-4 mr-2" />
+                <Activity className="w-4 h-4 mr-2 inline" />
                 Logs
-              </Button>
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="max-w-[1920px] mx-auto px-[10%] py-8">
         {/* Show Meetings Content when viewing meetings (both admin and regular users) */}
         {((!isAdminMode && userView === 'meetings') || (isAdminMode && adminTab === 'meetings')) && (
           <>
-            {/* Page Header with Automation Toggle */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mb-2 flex items-center gap-2">
-                  Meetings
-                  {isAdminMode && (
-                    <Badge className="bg-gradient-primary text-white">
-                      <Shield className="h-3 w-3 mr-1" />
-                      Admin Mode
-                    </Badge>
-                  )}
-                </h2>
-                <p className="text-muted-foreground flex items-center gap-2">
-                  <span>
+            {/* Page Header */}
+            <div className="space-y-8 max-w-[1600px] mx-auto">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+                <div className="flex flex-col gap-2 pl-2">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-foreground">
+                      {isAdminMode ? 'Client Meetings' : 'My Meetings'}
+                    </h2>
+                    {isAdminMode && (
+                      <span className="px-2.5 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
+                        <Shield className="h-3 w-3 mr-1 inline" />
+                        Admin
+                      </span>
+                    )}
+                    <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-full">
+                      {searchQuery
+                        ? `${filteredMeetings.length} of ${meetings.length}`
+                        : `${meetings.length} total`}
+                    </span>
+                  </div>
+                  <p className="text-slate-600 dark:text-muted-foreground">
                     {isAdminMode
-                      ? `All users' meetings ${totalUsers > 0 ? `(${totalUsers} users)` : ''}`
-                      : 'Manage your upcoming and past meetings'
+                      ? `Manage all users' meetings${totalUsers > 0 ? ` across ${totalUsers} users` : ''}`
+                      : 'Track your upcoming meetings and trigger pre/post meeting calls'
                     }
-                  </span>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
-                    {searchQuery
-                      ? `${filteredMeetings.length} of ${meetings.length}`
-                      : `${meetings.length} total`}
-                  </Badge>
-                </p>
+                  </p>
+                </div>
+
+                {/* Automation Toggle Card */}
+                <Card className="md:w-auto bg-white dark:bg-card border border-slate-200 dark:border-border shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between space-x-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                          <Phone className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-foreground">
+                            Auto-Dialing
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-muted-foreground">
+                            {isEnabled ? 'System operational' : 'Currently disabled'}
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="automation-toggle"
+                        checked={isEnabled}
+                        onCheckedChange={handleToggleAutomation}
+                        disabled={toggleLoading}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* Automation Toggle Card */}
-              <Card className="md:w-auto border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between space-x-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Phone className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">
-                          Auto-Dialing
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {isEnabled ? 'System operational' : 'Currently disabled'}
-                        </p>
-                      </div>
+              {error && (
+                <Alert variant="destructive" className="mb-6 bg-red-50 border-red-200">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-700">{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {filteredMeetings.length === 0 ? (
+                <Card className="text-center py-16 bg-white dark:bg-card border border-slate-200 dark:border-border shadow-sm">
+                  <CardContent>
+                    <div className="inline-block p-4 rounded-full bg-slate-100 mb-4">
+                      {searchQuery ? (
+                        <Search className="h-12 w-12 text-slate-400" />
+                      ) : (
+                        <Calendar className="h-12 w-12 text-slate-400" />
+                      )}
                     </div>
-                    <Switch
-                      id="automation-toggle"
-                      checked={isEnabled}
-                      onCheckedChange={handleToggleAutomation}
-                      disabled={toggleLoading}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {error && (
-              <Alert variant="destructive" className="mb-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {filteredMeetings.length === 0 ? (
-              <Card className="text-center py-16 border-2 border-dashed border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
-                <CardContent>
-                  <div className="inline-block p-4 rounded-full bg-primary/10 mb-4">
-                    {searchQuery ? (
-                      <Search className="h-12 w-12 text-primary" />
-                    ) : (
-                      <Calendar className="h-12 w-12 text-primary" />
+                    <h3 className="text-xl font-semibold text-slate-900 dark:text-foreground mb-2">
+                      {searchQuery ? 'No meetings found' : 'No meetings scheduled'}
+                    </h3>
+                    <p className="text-slate-500 dark:text-muted-foreground">
+                      {searchQuery
+                        ? `No meetings match "${searchQuery}". Try a different search term.`
+                        : 'Your upcoming meetings will appear here'}
+                    </p>
+                    {searchQuery && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSearchQuery('')}
+                        className="mt-4 border-slate-200 hover:bg-slate-50"
+                      >
+                        Clear search
+                      </Button>
                     )}
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    {searchQuery ? 'No meetings found' : 'No meetings scheduled'}
-                  </h3>
-                  <p className="text-muted-foreground">
-                    {searchQuery
-                      ? `No meetings match "${searchQuery}". Try a different search term.`
-                      : 'Your upcoming meetings will appear here'}
-                  </p>
-                  {searchQuery && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSearchQuery('')}
-                      className="mt-4"
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filteredMeetings.map((meeting) => (
+                    <Card
+                      key={meeting.id}
+                      className="group bg-white dark:bg-card border border-slate-200 dark:border-border shadow-sm hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden"
                     >
-                      Clear search
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredMeetings.map((meeting) => (
-                  <Card
-                    key={meeting.id}
-                    className={`group hover:shadow-2xl hover-scale shadow-md transition-smooth flex flex-col border-l-4 ${getStatusColor(meeting.status)} overflow-hidden`}
-                  >
-                    {/* Header with gradient */}
-                    <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5 pb-3">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-start gap-3 flex-1">
-                          <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
-                            <Calendar className="h-4 w-4 text-primary" />
+                      {/* Header */}
+                      <CardHeader className="pb-3 border-b border-slate-100 dark:border-border">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="p-2 rounded-lg bg-emerald-50 dark:bg-primary/10">
+                              <Calendar className="h-4 w-4 text-emerald-600 dark:text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <CardTitle className="text-sm font-semibold text-slate-900 dark:text-foreground line-clamp-2 mb-1">
+                                {meeting.title}
+                              </CardTitle>
+                              {meeting.agenda && (
+                                <CardDescription className="line-clamp-1 text-xs text-slate-500">
+                                  {meeting.agenda}
+                                </CardDescription>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <CardTitle className="text-base line-clamp-2 mb-1">{meeting.title}</CardTitle>
-                            {meeting.agenda && (
-                              <CardDescription className="line-clamp-1 text-xs">{meeting.agenda}</CardDescription>
-                            )}
-                          </div>
+                          {getStatusBadge(meeting.status)}
                         </div>
-                        {getStatusBadge(meeting.status)}
-                      </div>
 
-                      {/* Time countdown badge */}
-                      <div className="flex items-center gap-2 mt-2">
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">
-                          <Zap className="h-3 w-3" />
-                          <span>{getTimeUntilMeeting(meeting.startTime)}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span>
+                        {/* Time info */}
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+                            <Zap className="h-3 w-3" />
+                            {getTimeUntilMeeting(meeting.startTime)}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                            <Clock className="h-3 w-3" />
                             {new Date(meeting.endTime).getTime() - new Date(meeting.startTime).getTime() > 0
                               ? `${Math.round((new Date(meeting.endTime).getTime() - new Date(meeting.startTime).getTime()) / 60000)} min`
                               : 'N/A'}
                           </span>
                         </div>
-                      </div>
-                    </CardHeader>
+                      </CardHeader>
 
-                    <CardContent className="flex-1 space-y-3 pt-4">
-                      {/* Deal info with visual emphasis */}
-                      <div className="flex items-center justify-between p-2.5 rounded-lg bg-gradient-to-r from-muted/50 to-muted/30 border border-border/50">
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="h-4 w-4 text-primary" />
-                          <span className="font-semibold text-sm">{meeting.dealName}</span>
-                        </div>
-                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-bold">
-                          <DollarSign className="h-3 w-3 mr-0.5" />
-                          ${formatDealAmount(meeting.dealAmount)}
-                        </Badge>
-                      </div>
-
-                      {/* Meeting date and Company */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-                          <Calendar className="h-3.5 w-3.5" />
-                          <span>{formatDate(meeting.startTime)}</span>
-                        </div>
-                        {meeting.dealCompany && (
-                          <div className="flex items-center gap-2 text-xs px-1">
-                            <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="font-medium text-foreground">{meeting.dealCompany}</span>
+                      <CardContent className="flex-1 space-y-3 pt-4">
+                        {/* Deal info */}
+                        <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-muted/50 border border-slate-100 dark:border-border">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Briefcase className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                            <span className="font-medium text-sm text-slate-900 dark:text-foreground truncate">
+                              {meeting.dealName}
+                            </span>
                           </div>
-                        )}
-                        {/* Show owner in admin mode */}
-                        {isAdminMode && meeting.owner && (
-                          <div className="flex items-center gap-2 text-xs px-1 mt-1">
-                            <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="font-medium text-foreground">Owner: {meeting.owner.name}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Deal stage and progress indicator */}
-                      <div className="space-y-1.5 px-1">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground flex items-center gap-1">
-                            <TrendingUp className="h-3 w-3" />
-                            {formatDealStage(meeting.dealStage)}
-                          </span>
-                          <span className="font-semibold text-primary">
-                            {getDealProgressByStage(meeting.dealStage)}%
+                          <span className="text-sm font-semibold text-emerald-600 flex-shrink-0">
+                            ${formatDealAmount(meeting.dealAmount)}
                           </span>
                         </div>
-                        <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-primary to-accent h-1.5 rounded-full transition-all duration-500"
-                            style={{
-                              width: `${getDealProgressByStage(meeting.dealStage)}%`
-                            }}
-                          />
-                        </div>
-                      </div>
 
-                      {/* Participants preview */}
-                      {meeting.participants && meeting.participants.length > 0 && (
-                        <div className="flex items-center gap-2 pt-1 px-1">
-                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-muted-foreground">
+                        {/* Meeting date and Company */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-xs text-slate-500 px-1">
+                            <Calendar className="h-3.5 w-3.5" />
+                            <span>{formatDate(meeting.startTime)}</span>
+                          </div>
+                          {meeting.dealCompany && (
+                            <div className="flex items-center gap-2 text-xs px-1">
+                              <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+                              <span className="font-medium text-slate-700 dark:text-foreground">
+                                {meeting.dealCompany}
+                              </span>
+                            </div>
+                          )}
+                          {isAdminMode && meeting.owner && (
+                            <div className="flex items-center gap-2 text-xs px-1">
+                              <Users className="h-3.5 w-3.5 text-slate-400" />
+                              <span className="font-medium text-slate-700 dark:text-foreground">
+                                Owner: {meeting.owner.name}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Deal stage and progress */}
+                        <div className="space-y-1.5 px-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 flex items-center gap-1">
+                              <TrendingUp className="h-3 w-3" />
+                              {formatDealStage(meeting.dealStage)}
+                            </span>
+                            <span className="font-semibold text-emerald-600">
+                              {getDealProgressByStage(meeting.dealStage)}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200 dark:bg-secondary rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
+                              style={{ width: `${getDealProgressByStage(meeting.dealStage)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Participants */}
+                        {meeting.participants && meeting.participants.length > 0 && (
+                          <div className="flex items-center gap-2 pt-1 px-1">
+                            <Users className="h-3.5 w-3.5 text-slate-400" />
+                            <span className="text-xs text-slate-500">
                               {meeting.participants.length} participant{meeting.participants.length > 1 ? 's' : ''}
                             </span>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Risk indicator */}
-                      {meeting.dealRisks && getRiskLevel(meeting.dealRisks) && (
-                        <div className="flex items-center justify-between pt-1 px-1">
-                          <span className="text-xs text-muted-foreground">Deal Risk</span>
-                          <Badge variant="outline" className={`text-[10px] h-5 ${getRiskLevel(meeting.dealRisks)?.color}`}>
-                            {getRiskLevel(meeting.dealRisks)?.level} ({meeting.dealRisks.totalDealRisk}%)
-                          </Badge>
-                        </div>
-                      )}
-                    </CardContent>
+                        {/* Risk indicator */}
+                        {meeting.dealRisks && getRiskLevel(meeting.dealRisks) && (
+                          <div className="flex items-center justify-between pt-1 px-1">
+                            <span className="text-xs text-slate-500">Deal Risk</span>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getRiskLevel(meeting.dealRisks)?.level === 'High'
+                                ? 'bg-red-50 text-red-600'
+                                : getRiskLevel(meeting.dealRisks)?.level === 'Medium'
+                                  ? 'bg-amber-50 text-amber-600'
+                                  : 'bg-emerald-50 text-emerald-600'
+                              }`}>
+                              {getRiskLevel(meeting.dealRisks)?.level} ({meeting.dealRisks.totalDealRisk}%)
+                            </span>
+                          </div>
+                        )}
+                      </CardContent>
 
-                    <CardFooter className="flex gap-2 pt-4 border-t bg-muted/20">
-                      <Button
-                        onClick={() => showConfirmation('pre', meeting)}
-                        className="flex-1 gap-2 bg-gradient-primary hover:opacity-90 transition-all"
-                        size="sm"
-                      >
-                        <Phone className="h-4 w-4" />
-                        Pre-Call
-                      </Button>
-                      <Button
-                        onClick={() => showConfirmation('post', meeting)}
-                        className="flex-1 gap-2 border-primary/20 hover:bg-primary/5"
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Phone className="h-4 w-4" />
-                        Post-Call
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            )}
+                      <CardFooter className="flex gap-2 pt-4 border-t border-slate-100 dark:border-border bg-slate-50/50 dark:bg-muted/20">
+                        <Button
+                          onClick={() => showConfirmation('pre', meeting)}
+                          className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                          size="sm"
+                        >
+                          <Phone className="h-4 w-4" />
+                          Pre-Call
+                        </Button>
+                        <Button
+                          onClick={() => showConfirmation('post', meeting)}
+                          className="flex-1 gap-2 border-slate-200 dark:border-border hover:bg-slate-100 dark:hover:bg-muted"
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Phone className="h-4 w-4" />
+                          Post-Call
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           </>
         )}
 

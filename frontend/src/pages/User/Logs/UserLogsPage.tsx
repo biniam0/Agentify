@@ -12,7 +12,6 @@ import {
   Phone,
 } from 'lucide-react';
 import { BarrierXHeader } from './components/BarrierXHeader';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 const UserLogsPage: React.FC = () => {
@@ -39,60 +38,50 @@ const UserLogsPage: React.FC = () => {
     { label: 'Analytics', path: '/calls/analytics' },
   ];
 
+  // Sidebar navigation items
+  const sidebarItems = [
+    { label: 'Overview', path: '/logs', icon: Activity },
+    { label: 'Calls', path: '/logs/calls', icon: Phone },
+    { label: 'Activity', path: '/logs/activity', icon: Activity },
+    { label: 'CRM Actions', path: '/logs/crm-actions', icon: FileText },
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-background">
       {/* Header - Using BarrierXHeader for consistency */}
       <BarrierXHeader items={navigationItems} />
 
       {/* Main Content */}
-      <main className="container mx-auto px-[10%] py-8 max-w-[1920px]">
-        <div className="flex gap-6">
+      <main className="max-w-[1920px] mx-auto px-[10%] py-8">
+        <div className="flex gap-6 max-w-[1600px] mx-auto">
           {/* Logs Sidebar */}
           <aside className="w-64 flex-shrink-0">
-            <Card className="p-4 sticky top-24">
+            <Card className="p-4 sticky top-24 bg-white dark:bg-card border border-slate-200 dark:border-border shadow-sm">
               <div className="flex items-center gap-2 mb-4 px-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleBackToMeetings}
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-                <h2 className="text-lg font-semibold">My Logs</h2>
+                <ArrowLeft className="w-4 h-4 cursor-pointer" onClick={handleBackToMeetings} />
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-foreground">My Logs</h2>
               </div>
               <nav className="space-y-1">
-                <Button
-                  variant={isActive('/logs') ? 'default' : 'ghost'}
-                  className="w-full justify-start gap-3"
-                  onClick={() => navigate('/logs')}
-                >
-                  <Activity className="w-4 h-4" />
-                  Overview
-                </Button>
-                <Button
-                  variant={isActive('/logs/calls') ? 'default' : 'ghost'}
-                  className="w-full justify-start gap-3"
-                  onClick={() => navigate('/logs/calls')}
-                >
-                  <Phone className="w-4 h-4" />
-                  Calls
-                </Button>
-                <Button
-                  variant={isActive('/logs/activity') ? 'default' : 'ghost'}
-                  className="w-full justify-start gap-3"
-                  onClick={() => navigate('/logs/activity')}
-                >
-                  <Activity className="w-4 h-4" />
-                  Activity
-                </Button>
-                <Button
-                  variant={isActive('/logs/crm-actions') ? 'default' : 'ghost'}
-                  className="w-full justify-start gap-3"
-                  onClick={() => navigate('/logs/crm-actions')}
-                >
-                  <FileText className="w-4 h-4" />
-                  CRM Actions
-                </Button>
+                {sidebarItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.path);
+                  return (
+                    <button
+                      key={item.path}
+                      onClick={() => navigate(item.path)}
+                      className={`
+                        w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all
+                        ${active
+                          ? 'bg-emerald-600 text-white'
+                          : 'text-slate-600 dark:text-muted-foreground hover:text-slate-900 dark:hover:text-foreground hover:bg-slate-50 dark:hover:bg-muted'
+                        }
+                      `}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {item.label}
+                    </button>
+                  );
+                })}
               </nav>
             </Card>
           </aside>

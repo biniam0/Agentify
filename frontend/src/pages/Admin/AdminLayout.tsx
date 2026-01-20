@@ -1,9 +1,9 @@
 /**
- * Admin Layout - Tabs for "Clients Meeting" and "Logs"
+ * Admin Layout - BarrierX style header with tabs
  * Only accessible by tamiratkebede120@gmail.com
  */
 
-import { Activity, Calendar, LogOut, Moon, Shield, Sun, Target } from 'lucide-react';
+import { Activity, Calendar, LogOut, Moon, Sun, Target, Search, HelpCircle, Settings, Bell } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import * as authService from '../../services/authService';
@@ -16,7 +16,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '../../components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
+import { Badge } from '../../components/ui/badge';
 
 const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -59,93 +60,155 @@ const AdminLayout: React.FC = () => {
     }
   };
 
-  // Determine active tab
-  const isLogsActive = location.pathname.startsWith('/admin/logs');
-  const isMeetingsActive = location.pathname === '/admin' || location.pathname === '/admin/meetings';
-  const isBarrierXInfoActive = location.pathname === '/admin/barrierx-info';
+  // Navigation items
+  const navItems = [
+    { label: 'Clients Meeting', path: '/admin/meetings', icon: Calendar },
+    { label: 'BarrierX Info', path: '/admin/barrierx-info', icon: Target },
+    { label: 'Logs', path: '/admin/logs', icon: Activity },
+  ];
+
+  const isActive = (path: string) => {
+    if (path === '/admin/meetings') {
+      return location.pathname === '/admin' || location.pathname === '/admin/meetings';
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo & Title */}
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Admin Dashboard
-                </h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">AgentX Management</p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-background">
+      {/* Header - BarrierX Style */}
+      <header className="bg-white dark:bg-card border-b border-slate-100 dark:border-border sticky top-0 z-50">
+        <div className="max-w-[1920px] mx-auto px-[10%] h-16 flex items-center justify-between">
+          {/* Logo - Agent X Dashboard */}
+          <div
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => navigate('/admin')}
+          >
+            <span className="text-3xl font-bold leading-none tracking-tight text-slate-900 dark:text-foreground">
+              Agent
+            </span>
+            <svg
+              className="h-[1.5rem] w-auto"
+              viewBox="0 0 42 28"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M42 28H28V14L42 28Z" fill="#53A17D" />
+              <path d="M28 14V0L42 2.00272e-06L28 14Z" fill="#2D6A4F" />
+              <path d="M14 28V14H28L14 28Z" fill="#2D6A4F" />
+              <path d="M28 14H14V0L28 14Z" fill="#53A17D" />
+              <path d="M14 28H0L14 14V28Z" fill="#53A17D" />
+              <path d="M14 14L0 0H14V14Z" fill="#53A17D" />
+            </svg>
+            <span className="text-xl font-semibold text-slate-600 dark:text-muted-foreground ml-1">
+              Dashboard
+            </span>
+          </div>
 
-            {/* Tabs */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant={isMeetingsActive ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => navigate('/admin/meetings')}
-                className="gap-2"
-              >
-                <Calendar className="w-4 h-4" />
-                Clients Meeting
-              </Button>
-              <Button
-                variant={isBarrierXInfoActive ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => navigate('/admin/barrierx-info')}
-                className="gap-2"
-              >
-                <Target className="w-4 h-4" />
-                BarrierX Info
-              </Button>
-              <Button
-                variant={isLogsActive ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => navigate('/admin/logs')}
-                className="gap-2"
-              >
-                <Activity className="w-4 h-4" />
-                Logs
-              </Button>
-            </div>
+          {/* Middle: Navigation */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navItems.map((item) => {
+              const active = isActive(item.path);
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`
+                    px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2
+                    ${active
+                      ? 'bg-emerald-50 dark:bg-primary/10 text-slate-900 dark:text-foreground'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-foreground hover:bg-slate-50 dark:hover:bg-muted'
+                    }
+                  `}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
 
-            {/* User Menu */}
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={toggleTheme}>
-                {theme === 'light' ? (
-                  <Moon className="w-5 h-5" />
-                ) : (
-                  <Sun className="w-5 h-5" />
-                )}
-              </Button>
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 dark:hover:text-foreground">
+              <Search className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 dark:hover:text-foreground">
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 dark:hover:text-foreground">
+              <Settings className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 dark:hover:text-foreground relative">
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-red-500 rounded-full border border-white"></span>
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleTheme}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-foreground"
+            >
+              {theme === 'light' ? (
+                <Moon className="h-4 w-4" />
+              ) : (
+                <Sun className="h-4 w-4" />
+              )}
+            </Button>
 
+            <div className="pl-2 border-l border-slate-200 dark:border-border">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2">
-                    <Avatar className="w-8 h-8">
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm">
-                        {user?.name?.charAt(0) || 'A'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{user?.name || 'Admin'}</span>
-                  </Button>
+                  <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-slate-200 dark:hover:ring-border transition-all">
+                    <AvatarImage src={user?.avatar} />
+                    <AvatarFallback className="bg-slate-900 dark:bg-primary text-white text-xs">
+                      {user?.name?.charAt(0) || 'A'}
+                    </AvatarFallback>
+                  </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>
-                    <div>
-                      <p className="font-semibold">{user?.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
+                <DropdownMenuContent className="w-64" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex items-center gap-3 py-2">
+                      <Avatar className="h-12 w-12 border-2 border-emerald-200 dark:border-primary/20">
+                        <AvatarImage src={user?.avatar} />
+                        <AvatarFallback className="bg-slate-900 dark:bg-primary text-white font-semibold text-lg">
+                          {user?.name?.charAt(0) || 'A'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col flex-1">
+                        <p className="text-sm font-semibold leading-none mb-1">
+                          {user?.name || 'Admin'}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground mb-1">
+                          {user?.email || 'admin@example.com'}
+                        </p>
+                        <Badge className="w-fit text-[10px] h-5 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-primary/10 dark:text-primary dark:border-primary/20">
+                          <span className="mr-1">●</span> Admin
+                        </Badge>
+                      </div>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+                    {theme === 'light' ? (
+                      <Moon className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Sun className="mr-2 h-4 w-4" />
+                    )}
+                    <span>{theme === 'light' ? 'Dark' : 'Light'} Mode</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-destructive focus:text-destructive cursor-pointer"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Logout</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -155,7 +218,7 @@ const AdminLayout: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-[1920px] mx-auto px-[10%] py-8">
         <Outlet />
       </main>
     </div>
@@ -163,4 +226,3 @@ const AdminLayout: React.FC = () => {
 };
 
 export default AdminLayout;
-
