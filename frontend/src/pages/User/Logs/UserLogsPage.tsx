@@ -3,45 +3,21 @@
  * Dedicated page for user logs accessible via /app/logs route
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
   ArrowLeft,
   FileText,
   Phone,
-  Calendar,
 } from 'lucide-react';
-import AppHeader from '@/components/Layout/AppHeader';
+import { BarrierXHeader } from './components/BarrierXHeader';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 const UserLogsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-
-  useEffect(() => {
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-      if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-      }
-    }
-  }, []);
-
-  const handleThemeToggle = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
 
   const handleBackToMeetings = () => {
     navigate('/meetings');
@@ -55,34 +31,21 @@ const UserLogsPage: React.FC = () => {
     return location.pathname.startsWith(path);
   };
 
+  // Navigation items for the header
+  const navigationItems = [
+    { label: 'Meetings', path: '/meetings' },
+    { label: 'Logs', path: '/logs' },
+    { label: 'Calls', path: '/calls' },
+    { label: 'Analytics', path: '/calls/analytics' },
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <AppHeader
-        customTitle={
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-              <FileText className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                My Logs
-              </h1>
-            </div>
-          </div>
-        }
-        statsBadge={{
-          icon: Calendar,
-          label: 'Activity History',
-        }}
-        showNotifications={true}
-        notificationCount={0}
-        theme={theme}
-        onThemeToggle={handleThemeToggle}
-      />
+    <div className="min-h-screen bg-slate-50 dark:bg-background">
+      {/* Header - Using BarrierXHeader for consistency */}
+      <BarrierXHeader items={navigationItems} />
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-[10%] py-8 max-w-[1920px]">
         <div className="flex gap-6">
           {/* Logs Sidebar */}
           <aside className="w-64 flex-shrink-0">

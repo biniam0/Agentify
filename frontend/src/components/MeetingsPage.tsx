@@ -17,7 +17,7 @@ import {
   Zap
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import * as meetingService from '../services/meetingService';
 import * as userService from '../services/userService';
@@ -28,7 +28,7 @@ import WebhooksLog from './Admin/WebhooksLog';
 import CrmActionsLog from './Admin/CrmActionsLog';
 import SchedulerLog from './Admin/SchedulerLog';
 import ErrorsLog from './Admin/ErrorsLog';
-import AppHeader from './Layout/AppHeader';
+import { BarrierXHeader } from '../pages/User/Logs/components/BarrierXHeader';
 import UserLogsOverview from '../pages/User/Logs/Overview';
 import UserCallsLog from '../pages/User/Logs/UserCallsLog';
 import UserActivityLog from '../pages/User/Logs/UserActivityLog';
@@ -47,16 +47,14 @@ import {
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { DropdownMenuItem } from './ui/dropdown-menu';
 import { Skeleton } from './ui/skeleton';
 import { Switch } from './ui/switch';
 const MeetingsPage: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   // Detect if rendered inside AdminLayout to hide duplicate header/tabs
   // Note: router uses basename '/app', so pathname is '/admin/...' not '/app/admin/...'
   const isInsideAdminLayout = location.pathname.startsWith('/admin');
-  
+
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -68,7 +66,6 @@ const MeetingsPage: React.FC = () => {
   const [callLoading, setCallLoading] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
   const [toggleLoading, setToggleLoading] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [totalUsers, setTotalUsers] = useState<number>(0);
@@ -83,17 +80,9 @@ const MeetingsPage: React.FC = () => {
       setIsAdminMode(true);
       return; // Will re-run with isAdminMode = true
     }
-    
+
     fetchMeetings(isAdminMode || isInsideAdminLayout);
     fetchUserStatus();
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-      if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-      }
-    }
   }, [isAdminMode, isInsideAdminLayout]);
 
   const fetchMeetings = async (adminMode: boolean = false) => {
@@ -133,13 +122,6 @@ const MeetingsPage: React.FC = () => {
     } finally {
       setToggleLoading(false);
     }
-  };
-
-  const handleThemeToggle = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    document.documentElement.classList.toggle('dark');
-    localStorage.setItem('theme', newTheme);
   };
 
   const showConfirmation = (type: 'pre' | 'post', meeting: Meeting) => {
@@ -281,14 +263,6 @@ const MeetingsPage: React.FC = () => {
     return colors[status] || 'border-primary';
   };
 
-  const getTodayMeetingsCount = () => {
-    const today = new Date().toDateString();
-    return meetings.filter(m => {
-      const meetingDate = new Date(m.startTime).toDateString();
-      return meetingDate === today;
-    }).length;
-  };
-
   const formatDealAmount = (amount?: number) => {
     if (!amount) return 'N/A';
     if (amount >= 1000000) {
@@ -395,51 +369,14 @@ const MeetingsPage: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header - Hidden when inside AdminLayout to avoid duplicate headers */}
       {!isInsideAdminLayout && (
-      <div className="bg-gradient-to-r from-card/95 via-primary/5 to-card/95 backdrop-blur-xl border-b border-primary/10 sticky top-0 z-50 shadow-lg mb-3">
-        <AppHeader
-          customTitle={
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                {/* Logo with gradient background */}
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-primary blur-md opacity-50 rounded-xl" />
-                  <div className="relative p-2 rounded-xl bg-gradient-primary shadow-lg">
-                    <Zap className="h-5 w-5 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent leading-tight">
-                    AgentX
-                  </h1>
-                  <p className="text-[10px] text-muted-foreground leading-tight">AI Sales Automation</p>
-                </div>
-              </div>
-              {/* Divider */}
-              <div className="h-8 w-px bg-border/50 hidden md:block" />
-            </div>
-          }
-          statsBadge={{
-            icon: Calendar,
-            label: `${getTodayMeetingsCount()} Today`,
-          }}
-          showSearch={userView === 'meetings'}
-          searchQuery={searchQuery}
-          searchPlaceholder="Search meetings..."
-          onSearchChange={setSearchQuery}
-          showNotifications={true}
-          notificationCount={2}
-          theme={theme}
-          onThemeToggle={handleThemeToggle}
-          additionalDropdownItems={
-            !isAdminMode ? (
-              <DropdownMenuItem onClick={() => navigate('/logs')}>
-                <FileText className="mr-2 h-4 w-4" />
-                My Logs
-              </DropdownMenuItem>
-            ) : undefined
-          }
+        <BarrierXHeader
+          items={[
+            { label: 'Meetings', path: '/meetings' },
+            { label: 'Logs', path: '/logs' },
+            { label: 'Calls', path: '/calls' },
+            { label: 'Analytics', path: '/calls/analytics' },
+          ]}
         />
-      </div>
       )}
 
       {/* Admin Tabs - Only show when admin mode is active AND not inside AdminLayout */}

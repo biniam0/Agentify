@@ -4,8 +4,10 @@ import { BarrierXHeader } from './components/BarrierXHeader';
 
 const UserLogsLayout: React.FC = () => {
   const navigationItems = [
+    { label: 'Meetings', path: '/meetings' },
+    { label: 'Logs', path: '/logs' },
     { label: 'Calls', path: '/calls' },
-    { label: 'Call Analytics', path: '/calls/analytics' },
+    { label: 'Analytics', path: '/calls/analytics' },
   ];
 
   return (
