@@ -167,7 +167,7 @@ const processUserMeetings = (userData: any) => {
 
   // ✅ Cache time values - calculate once, reuse for all meetings
   const now = Date.now();
-  const fifteenMinutesFromNow = now + 15 * 60 * 1000;
+  const twentyMinutesFromNow = now + 20 * 60 * 1000;
   const thirtyMinutesAgo = now - 30 * 60 * 1000;
 
   // Cache user info to avoid repeated access
@@ -201,8 +201,8 @@ const processUserMeetings = (userData: any) => {
       const startTime = new Date(startTimeStr).getTime();
       const endTime = new Date(endTimeStr).getTime();
 
-      // Check for pre-meeting (T-15: upcoming within next 15 minutes)
-      const isPreMeeting = startTime >= now && startTime <= fifteenMinutesFromNow;
+      // Check for pre-meeting (T-20: upcoming within next 20 minutes)
+      const isPreMeeting = startTime >= now && startTime <= twentyMinutesFromNow;
 
       // Check for post-meeting (T+30: ended within last 30 minutes)
       const isPostMeeting = endTime >= thirtyMinutesAgo && endTime <= now;
@@ -394,7 +394,7 @@ const runAutomationJob = async () => {
         console.log(`\n📋 User: ${dbUser.name} (${dbUser.email})`);
       }
 
-      // Trigger pre-meeting calls (T-15)
+      // Trigger pre-meeting calls (T-20)
       if (preMeetings.length > 0) {
         console.log(`  📞 ${preMeetings.length} pre-meeting call(s) to trigger:`);
         for (const meeting of preMeetings) {

@@ -335,7 +335,7 @@
             "id": "m-6666666665",
             "title": "Integration Planning",
             "body": "Technical integration roadmap and timeline.",
-            "startTime": "{{T-15}}",
+            "startTime": "{{T-20}}",
             "duration": "3600",
             "endTime": "{{T+45}}"
           },

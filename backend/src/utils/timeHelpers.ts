@@ -8,14 +8,14 @@ export interface TimeWindow {
 }
 
 /**
- * Get time window for T-15 (15 minutes from now)
+ * Get time window for T-20 (20 minutes from now)
  * Used for pre-meeting calls
  */
-export const getT15Window = (): TimeWindow => {
+export const getT20Window = (): TimeWindow => {
   const now = Date.now();
   return {
     start: now,
-    end: now + 15 * 60 * 1000, // 15 minutes from now
+    end: now + 20 * 60 * 1000, // 20 minutes from now
   };
 };
 
@@ -32,11 +32,11 @@ export const getT30Window = (): TimeWindow => {
 };
 
 /**
- * Check if a meeting is in the T-15 window (upcoming within 15 minutes)
+ * Check if a meeting is in the T-20 window (upcoming within 20 minutes)
  */
-export const isInT15Window = (startTime: string): boolean => {
+export const isInT20Window = (startTime: string): boolean => {
   const meetingStart = new Date(startTime).getTime();
-  const window = getT15Window();
+  const window = getT20Window();
   return meetingStart >= window.start && meetingStart <= window.end;
 };
 
@@ -60,9 +60,9 @@ export const isMeetingOngoing = (startTime: string, endTime: string): boolean =>
 };
 
 /**
- * Filter meetings based on T-15 and T+30 logic
+ * Filter meetings based on T-20 and T+30 logic
  * Returns meetings that are either:
- * - Starting within next 15 minutes (T-15)
+ * - Starting within next 20 minutes (T-20)
  * - Ended within last 30 minutes (T+30)
  * - Currently ongoing
  */
@@ -71,7 +71,7 @@ export const filterMeetingsByTimeWindow = <T extends { startTime: string; endTim
 ): T[] => {
   return meetings.filter((meeting) => {
     return (
-      isInT15Window(meeting.startTime) ||
+      isInT20Window(meeting.startTime) ||
       isInT30Window(meeting.endTime) ||
       isMeetingOngoing(meeting.startTime, meeting.endTime)
     );
