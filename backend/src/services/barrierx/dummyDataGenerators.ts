@@ -62,8 +62,8 @@ export const generateDummyMeetings = (deal: any, contacts: Contact[]): Meeting[]
   // Convert stage to lowercase for easier comparison
   const stage = (deal.stage || '').toLowerCase();
 
-  // Pre-meeting (15 minutes before)
-  const preMeetingTime = now - 15 * 60 * 1000;
+  // Pre-meeting (20 minutes before)
+  const preMeetingTime = now - 20 * 60 * 1000;
   meetings.push({
     id: `m-${deal.id}-pre`,
     title: `Pre-${stage} Call`,

@@ -81,7 +81,7 @@ interface PostCallPayload {
 
 /**
  * Trigger pre-meeting call via ElevenLabs
- * Calls customer 15 minutes before meeting starts
+ * Calls customer 20 minutes before meeting starts
  */
 export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<any> => {
   try {
