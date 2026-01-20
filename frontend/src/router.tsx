@@ -5,7 +5,10 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { isAuthenticated } from './services/authService';
 import UserLogsLayout from './pages/User/Logs/UserLogsLayout';
 import UserLogsPage from './pages/User/Logs/UserLogsPage';
+import UserLogsOverview from './pages/User/Logs/Overview';
 import UserCallsLog from './pages/User/Logs/UserCallsLog';
+import UserActivityLog from './pages/User/Logs/UserActivityLog';
+import UserCrmActionsLog from './pages/User/Logs/UserCrmActionsLog';
 import UserCallAnalytics from './pages/User/Logs/UserCallAnalytics';
 
 // Admin imports
@@ -43,6 +46,24 @@ const router = createBrowserRouter([
         <UserLogsPage />
       </ProtectedRoute>
     ),
+    children: [
+      {
+        index: true,
+        element: <UserLogsOverview />,
+      },
+      {
+        path: 'calls',
+        element: <UserCallsLog />,
+      },
+      {
+        path: 'activity',
+        element: <UserActivityLog />,
+      },
+      {
+        path: 'crm-actions',
+        element: <UserCrmActionsLog />,
+      },
+    ],
   },
   {
     path: '/calls',

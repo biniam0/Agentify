@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
   ArrowLeft,
@@ -15,16 +15,10 @@ import {
 import AppHeader from '@/components/Layout/AppHeader';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import UserLogsOverview from './Overview';
-import UserCallsLog from './UserCallsLog';
-import UserActivityLog from './UserActivityLog';
-import UserCrmActionsLog from './UserCrmActionsLog';
-
-type LogSection = 'overview' | 'calls' | 'activity' | 'crm-actions';
 
 const UserLogsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState<LogSection>('overview');
+  const location = useLocation();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
@@ -51,6 +45,14 @@ const UserLogsPage: React.FC = () => {
 
   const handleBackToMeetings = () => {
     navigate('/meetings');
+  };
+
+  // Determine active section based on current path
+  const isActive = (path: string) => {
+    if (path === '/logs') {
+      return location.pathname === '/logs';
+    }
+    return location.pathname.startsWith(path);
   };
 
   return (
@@ -97,33 +99,33 @@ const UserLogsPage: React.FC = () => {
               </div>
               <nav className="space-y-1">
                 <Button
-                  variant={activeSection === 'overview' ? 'default' : 'ghost'}
+                  variant={isActive('/logs') ? 'default' : 'ghost'}
                   className="w-full justify-start gap-3"
-                  onClick={() => setActiveSection('overview')}
+                  onClick={() => navigate('/logs')}
                 >
                   <Activity className="w-4 h-4" />
                   Overview
                 </Button>
                 <Button
-                  variant={activeSection === 'calls' ? 'default' : 'ghost'}
+                  variant={isActive('/logs/calls') ? 'default' : 'ghost'}
                   className="w-full justify-start gap-3"
-                  onClick={() => setActiveSection('calls')}
+                  onClick={() => navigate('/logs/calls')}
                 >
                   <Phone className="w-4 h-4" />
                   Calls
                 </Button>
                 <Button
-                  variant={activeSection === 'activity' ? 'default' : 'ghost'}
+                  variant={isActive('/logs/activity') ? 'default' : 'ghost'}
                   className="w-full justify-start gap-3"
-                  onClick={() => setActiveSection('activity')}
+                  onClick={() => navigate('/logs/activity')}
                 >
                   <Activity className="w-4 h-4" />
                   Activity
                 </Button>
                 <Button
-                  variant={activeSection === 'crm-actions' ? 'default' : 'ghost'}
+                  variant={isActive('/logs/crm-actions') ? 'default' : 'ghost'}
                   className="w-full justify-start gap-3"
-                  onClick={() => setActiveSection('crm-actions')}
+                  onClick={() => navigate('/logs/crm-actions')}
                 >
                   <FileText className="w-4 h-4" />
                   CRM Actions
@@ -132,12 +134,9 @@ const UserLogsPage: React.FC = () => {
             </Card>
           </aside>
 
-          {/* Logs Main Content */}
+          {/* Logs Main Content - Renders child routes */}
           <div className="flex-1 min-w-0">
-            {activeSection === 'overview' && <UserLogsOverview />}
-            {activeSection === 'calls' && <UserCallsLog />}
-            {activeSection === 'activity' && <UserActivityLog />}
-            {activeSection === 'crm-actions' && <UserCrmActionsLog />}
+            <Outlet />
           </div>
         </div>
       </main>
