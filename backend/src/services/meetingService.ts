@@ -140,6 +140,9 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
         ).join('\n\n')
         : 'No specific actions recommended at this time',
 
+      // Flag to indicate if using general/mock recommendations (not deal-specific from BarrierX)
+      using_mock: recommendationsData.isUsingMockData || false,
+
       // Owner (sales rep) context
       owner_name: dealData.owner?.name || userData.name || 'Sales Rep',
       owner_email: dealData.owner?.email || userData.email || '',
