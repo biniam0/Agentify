@@ -127,10 +127,18 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       risk_1: risks[0]?.description || 'No risks identified',
       risk_2: risks[1]?.description || '',
       risk_3: risks[2]?.description || '',
-      recommended_actions: recommendations.length > 0 
-        ? recommendations.map((rec, index) => `${index + 1}. ${rec.title}`).join('; ') 
+      // Quick summary for initial briefing
+      recommended_actions: recommendations.length > 0
+        ? recommendations.map((rec, index) => `${index + 1}. ${rec.title}`).join('; ')
         : 'No specific actions recommended at this time',
       action_count: recommendations.length,
+
+      // Full context with notes for detailed discussion
+      recommendations_full: recommendations.length > 0
+        ? recommendations.map((rec, index) =>
+          `Action ${index + 1} [${rec.severity}]: ${rec.title}\nContext: ${rec.note}`
+        ).join('\n\n')
+        : 'No specific actions recommended at this time',
 
       // Owner (sales rep) context
       owner_name: dealData.owner?.name || userData.name || 'Sales Rep',
