@@ -56,35 +56,35 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
         switch (status) {
             case 'COMPLETED':
                 return (
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 font-normal">
+                    <Badge variant="outline" className="badge-success border-[hsl(var(--status-success-bg)/0.3)] font-normal">
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         Completed
                     </Badge>
                 );
             case 'FAILED':
                 return (
-                    <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 font-normal">
+                    <Badge variant="outline" className="badge-error border-[hsl(var(--status-error-bg)/0.3)] font-normal">
                         <XCircle className="h-3 w-3 mr-1" />
                         Failed
                     </Badge>
                 );
             case 'NO_ANSWER':
                 return (
-                    <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 font-normal">
+                    <Badge variant="outline" className="badge-warning border-[hsl(var(--status-warning-bg)/0.3)] font-normal">
                         <AlertCircle className="h-3 w-3 mr-1" />
                         No Answer
                     </Badge>
                 );
             case 'BUSY':
                 return (
-                    <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200 font-normal">
+                    <Badge variant="outline" className="badge-pending border-[hsl(var(--status-pending-bg)/0.3)] font-normal">
                         <AlertCircle className="h-3 w-3 mr-1" />
                         Busy
                     </Badge>
                 );
             case 'ANSWERED':
                 return (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 font-normal">
+                    <Badge variant="outline" className="badge-info border-[hsl(var(--status-info-bg)/0.3)] font-normal">
                         <MessageSquare className="h-3 w-3 mr-1" />
                         In Progress
                     </Badge>
@@ -92,12 +92,12 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
             case 'RINGING':
             case 'INITIATED':
                 return (
-                    <Badge variant="outline" className="bg-cyan-50 text-cyan-600 border-cyan-200 font-normal">
+                    <Badge variant="outline" className="bg-cyan-50 text-cyan-600 border-cyan-200 dark:bg-cyan-950 dark:text-cyan-400 dark:border-cyan-800 font-normal">
                         Ringing
                     </Badge>
                 );
             default:
-                return <Badge variant="outline" className="text-slate-600 font-normal">{status}</Badge>;
+                return <Badge variant="outline" className="text-body font-normal">{status}</Badge>;
         }
     };
 
@@ -108,8 +108,8 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
         ).join('-');
 
         return (
-            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-slate-200 bg-white text-xs font-medium text-slate-700">
-                <span className={`w-1.5 h-1.5 rounded-full ${type.includes('pre') ? 'bg-orange-400' : 'bg-red-500'}`} />
+            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-default dark:border-border bg-elevated dark:bg-card text-xs font-medium text-body dark:text-foreground">
+                <span className={`w-1.5 h-1.5 rounded-full ${type.includes('pre') ? 'bg-[hsl(var(--icon-orange))]' : 'bg-[hsl(var(--status-error-bg))]'}`} />
                 {displayText}
             </div>
         );
@@ -117,21 +117,21 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
 
     const getDirectionBadge = (direction: 'INBOUND' | 'OUTBOUND') => {
         return direction === 'INBOUND' ? (
-            <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 p-1 h-6 w-6 flex items-center justify-center" title="Inbound">
+            <Badge variant="outline" className="badge-info border-[hsl(var(--status-info-bg)/0.3)] p-1 h-6 w-6 flex items-center justify-center" title="Inbound">
                 <ArrowDownCircle className="h-3.5 w-3.5" />
             </Badge>
         ) : (
-            <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200 p-1 h-6 w-6 flex items-center justify-center" title="Outbound">
+            <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-950 dark:text-purple-400 dark:border-purple-800 p-1 h-6 w-6 flex items-center justify-center" title="Outbound">
                 <ArrowUpCircle className="h-3.5 w-3.5" />
             </Badge>
         );
     };
 
     return (
-        <div className="border-b border-slate-100 last:border-0">
+        <div className="border-b border-subtle dark:border-border last:border-0">
             {/* Main Row */}
             <div
-                className="grid grid-cols-12 gap-4 py-4 px-6 items-center hover:bg-slate-50 transition-colors cursor-pointer"
+                className="grid grid-cols-12 gap-4 py-4 px-6 items-center hover:bg-page dark:hover:bg-muted transition-colors cursor-pointer"
                 onClick={() => onToggle(item.id)}
             >
                 <div className="col-span-2">
@@ -141,41 +141,41 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                     </div>
                 </div>
                 <div className="col-span-3">
-                    <div className="text-sm font-medium text-slate-900 truncate">{item.dealName}</div>
+                    <div className="text-sm font-medium text-heading dark:text-foreground truncate">{item.dealName}</div>
                 </div>
                 <div className="col-span-2">
-                    <div className="text-sm text-slate-600 truncate">{item.companyName}</div>
+                    <div className="text-sm text-body dark:text-muted-foreground truncate">{item.companyName}</div>
                 </div>
                 <div className="col-span-2 flex items-center gap-2">
                     <Avatar className="h-6 w-6">
                         <AvatarImage src={item.ownerAvatar} />
-                        <AvatarFallback className="text-[10px] bg-indigo-100 text-indigo-700">
+                        <AvatarFallback className="text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
                             {item.ownerName.charAt(0)}
                         </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium text-slate-900 truncate">{item.ownerName}</span>
+                    <span className="text-sm font-medium text-heading dark:text-foreground truncate">{item.ownerName}</span>
                 </div>
                 <div className="col-span-2">
-                    <div className="text-sm text-slate-600">
+                    <div className="text-sm text-body dark:text-muted-foreground">
                         {format(new Date(item.date), 'MMM d, yyyy')}
                     </div>
                 </div>
                 <div className="col-span-1 flex justify-end items-center gap-2">
                     {getStatusBadge(item.status)}
-                    {isExpanded ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                    {isExpanded ? <ChevronUp className="h-4 w-4 text-subtle" /> : <ChevronDown className="h-4 w-4 text-subtle" />}
                 </div>
             </div>
 
             {/* Expanded Content */}
             {isExpanded && (
-                <div className="px-6 pb-6 pt-2 bg-slate-50/50">
-                    <div className="bg-white border border-slate-100 rounded-lg p-6 space-y-6">
+                <div className="px-6 pb-6 pt-2 bg-page dark:bg-muted/30">
+                    <div className="bg-elevated dark:bg-card border border-subtle dark:border-border rounded-lg p-6 space-y-6">
 
                         {/* Top Action Bar */}
-                        <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-                            <h3 className="text-base font-semibold text-slate-900">Call Details</h3>
+                        <div className="flex justify-between items-center pb-4 border-b border-subtle dark:border-border">
+                            <h3 className="text-base font-semibold text-heading dark:text-foreground">Call Details</h3>
                             <div className="flex gap-2">
-                                <Button className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2" size="sm">
+                                <Button className="bg-brand hover:bg-brand-hover text-white gap-2" size="sm">
                                     <CheckCircle2 className="h-4 w-4" />
                                     Complete
                                 </Button>
@@ -201,26 +201,26 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                             <div className="space-y-6">
                                 {/* Meeting & Deal Context */}
                                 <div>
-                                    <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                                    <h4 className="text-sm font-semibold text-body dark:text-foreground mb-3 flex items-center gap-2">
                                         <Briefcase className="h-4 w-4" />
                                         Business Context
                                     </h4>
-                                    <div className="space-y-3 bg-slate-50 rounded-lg p-4 border border-slate-100">
+                                    <div className="space-y-3 bg-page dark:bg-muted/50 rounded-lg p-4 border border-subtle dark:border-border">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs text-slate-500">Deal</span>
+                                            <span className="text-xs text-subtle">Deal</span>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-sm font-medium text-slate-900">{item.dealName}</span>
-                                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
+                                                <span className="text-sm font-medium text-heading dark:text-foreground">{item.dealName}</span>
+                                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-brand hover:text-[hsl(var(--app-brand-hover))] hover:bg-brand-light dark:hover:bg-primary/10">
                                                     <LinkIcon className="h-3 w-3 mr-1" />
                                                     View
                                                 </Button>
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs text-slate-500">Meeting</span>
+                                            <span className="text-xs text-subtle">Meeting</span>
                                             <div className="flex items-center gap-2">
-                                                <Calendar className="h-3 w-3 text-slate-400" />
-                                                <span className="text-sm font-medium text-slate-900 truncate max-w-[200px]">{item.meetingTitle}</span>
+                                                <Calendar className="h-3 w-3 text-subtle" />
+                                                <span className="text-sm font-medium text-heading dark:text-foreground truncate max-w-[200px]">{item.meetingTitle}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -229,22 +229,22 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                                 {/* Retry Information */}
                                 {item.retryAttempt > 1 && (
                                     <div>
-                                        <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                                        <h4 className="text-sm font-semibold text-body dark:text-foreground mb-3 flex items-center gap-2">
                                             <RotateCcw className="h-4 w-4" />
                                             Retry Information
                                         </h4>
-                                        <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
+                                        <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-4 border border-orange-100 dark:border-orange-900">
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="text-sm font-medium text-orange-900">
+                                                <span className="text-sm font-medium text-orange-900 dark:text-orange-300">
                                                     Retry Attempt {item.retryAttempt} of {item.maxRetries}
                                                 </span>
-                                                <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">
+                                                <Badge variant="outline" className="badge-warning border-[hsl(var(--status-warning-bg)/0.3)]">
                                                     Retry
                                                 </Badge>
                                             </div>
                                             {item.parentCallId && (
-                                                <p className="text-xs text-orange-600 mt-2">
-                                                    Original Call ID: <code className="bg-orange-100 px-1.5 py-0.5 rounded">{item.parentCallId.slice(0, 8)}...</code>
+                                                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                                                    Original Call ID: <code className="bg-orange-100 dark:bg-orange-900/50 px-1.5 py-0.5 rounded">{item.parentCallId.slice(0, 8)}...</code>
                                                 </p>
                                             )}
                                         </div>
@@ -254,8 +254,8 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                                 {/* Description */}
                                 {item.description && (
                                     <div>
-                                        <h4 className="text-sm font-semibold text-slate-700 mb-2">Summary</h4>
-                                        <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 rounded-lg p-4 border border-slate-100">
+                                        <h4 className="text-sm font-semibold text-body dark:text-foreground mb-2">Summary</h4>
+                                        <p className="text-sm text-body dark:text-muted-foreground leading-relaxed bg-page dark:bg-muted/50 rounded-lg p-4 border border-subtle dark:border-border">
                                             {item.description}
                                         </p>
                                     </div>
@@ -265,18 +265,18 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
 
                         {/* Failure Details (if any) */}
                         {item.details && item.details.length > 0 && (
-                            <div className="pt-4 border-t border-slate-100">
-                                <h4 className="text-sm font-semibold text-slate-700 mb-3">Issues Detected</h4>
+                            <div className="pt-4 border-t border-subtle dark:border-border">
+                                <h4 className="text-sm font-semibold text-body dark:text-foreground mb-3">Issues Detected</h4>
                                 <div className="space-y-3">
                                     {item.details.map((detail, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-3 bg-red-50 rounded-md border border-red-100">
+                                        <div key={idx} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-100 dark:border-red-900">
                                             <div className="flex items-center gap-3">
-                                                <div className="p-1.5 bg-red-100 rounded text-red-600">
+                                                <div className="p-1.5 bg-red-100 dark:bg-red-900/50 rounded text-red-600 dark:text-red-400">
                                                     <AlertCircle className="h-4 w-4" />
                                                 </div>
-                                                <span className="text-sm font-medium text-slate-700">{detail.action}</span>
+                                                <span className="text-sm font-medium text-body dark:text-foreground">{detail.action}</span>
                                             </div>
-                                            <div className="text-sm text-slate-600">{detail.role}</div>
+                                            <div className="text-sm text-body dark:text-muted-foreground">{detail.role}</div>
                                         </div>
                                     ))}
                                 </div>

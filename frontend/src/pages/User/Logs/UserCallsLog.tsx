@@ -111,11 +111,11 @@ const UserCallsLog: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 max-w-[1600px] mx-auto">
+    <div className="space-y-8 content-container">
       {/* Call History Page Header Card */}
       <div className="flex flex-col gap-2 pl-2">
-        <h2 className="text-2xl font-bold text-slate-900">Call History</h2>
-        <p className="text-slate-600">Review your calls in depth, track performance, and analyze communication patterns with your clients.</p>
+        <h2 className="text-2xl font-bold text-heading dark:text-foreground">Call History</h2>
+        <p className="text-body dark:text-muted-foreground">Review your calls in depth, track performance, and analyze communication patterns with your clients.</p>
       </div>
 
       {/* Stats Section */}
@@ -128,9 +128,9 @@ const UserCallsLog: React.FC = () => {
       />
 
       {/* Main Content Card */}
-      <Card className="bg-white border border-slate-100 shadow-sm overflow-hidden">
+      <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-card overflow-hidden">
         {/* Toolbar */}
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="p-4 border-b border-subtle dark:border-border flex flex-col sm:flex-row justify-between items-center gap-4">
           <FilterTabs
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -144,7 +144,7 @@ const UserCallsLog: React.FC = () => {
         </div>
 
         {/* Table Header */}
-        <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-table-header dark:bg-muted border-b border-subtle dark:border-border text-xs font-semibold text-subtle uppercase tracking-wider">
           <div className="col-span-2">Activity</div>
           <div className="col-span-3">Deal name</div>
           <div className="col-span-2">Phone / Company</div>
@@ -156,7 +156,7 @@ const UserCallsLog: React.FC = () => {
         {/* List */}
         <div>
           {logs.length === 0 ? (
-            <div className="p-12 text-center text-slate-500">
+            <div className="p-12 text-center text-subtle">
               No logs found for this filter.
             </div>
           ) : (
@@ -173,7 +173,7 @@ const UserCallsLog: React.FC = () => {
 
         {/* Pagination Footer */}
         {total > limit && (
-          <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-center">
+          <div className="p-4 border-t border-subtle dark:border-border bg-table-header dark:bg-muted flex justify-center">
             <div className="flex gap-2">
               <Button
                 variant="outline"

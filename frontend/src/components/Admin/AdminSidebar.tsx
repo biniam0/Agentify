@@ -114,7 +114,7 @@ export function AdminSidebar() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               onClick={() => navigate('/admin')}
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-brand text-white">
                 <svg
                   className="size-4"
                   viewBox="0 0 42 28"

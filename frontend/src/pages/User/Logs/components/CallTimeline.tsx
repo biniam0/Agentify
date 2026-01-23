@@ -36,40 +36,40 @@ export const CallTimeline: React.FC<CallTimelineProps> = ({
 
   return (
     <div className="space-y-4">
-      <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+      <h4 className="text-sm font-semibold text-body dark:text-foreground flex items-center gap-2">
         <Clock className="h-4 w-4" />
         Call Timeline
       </h4>
       
       <div className="relative pl-8">
         {/* Timeline line */}
-        <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-slate-200" />
+        <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-[hsl(var(--border-default))] dark:bg-border" />
 
         {/* Initiated */}
         <div className="relative mb-6">
-          <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow" />
+          <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-[hsl(var(--icon-blue))] border-2 border-white dark:border-card shadow" />
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <PlayCircle className="h-3.5 w-3.5 text-blue-500" />
-              <span className="text-sm font-medium text-slate-900">Call Initiated</span>
+              <PlayCircle className="h-3.5 w-3.5 icon-blue" />
+              <span className="text-sm font-medium text-heading dark:text-foreground">Call Initiated</span>
             </div>
-            <div className="text-xs text-slate-500">{formatTime(initiatedAt)}</div>
+            <div className="text-xs text-subtle">{formatTime(initiatedAt)}</div>
           </div>
         </div>
 
         {/* Answered */}
         {answeredAt && (
           <div className="relative mb-6">
-            <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white shadow" />
+            <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-[hsl(var(--icon-green))] border-2 border-white dark:border-card shadow" />
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                <span className="text-sm font-medium text-slate-900">Call Answered</span>
-                <Badge variant="outline" className="text-xs bg-green-50 text-green-600 border-green-200">
+                <CheckCircle2 className="h-3.5 w-3.5 icon-green" />
+                <span className="text-sm font-medium text-heading dark:text-foreground">Call Answered</span>
+                <Badge variant="outline" className="text-xs badge-success border-[hsl(var(--status-success-bg)/0.3)]">
                   {calculateTimeToAnswer()} to answer
                 </Badge>
               </div>
-              <div className="text-xs text-slate-500">{formatTime(answeredAt)}</div>
+              <div className="text-xs text-subtle">{formatTime(answeredAt)}</div>
             </div>
           </div>
         )}
@@ -77,27 +77,27 @@ export const CallTimeline: React.FC<CallTimelineProps> = ({
         {/* Completed */}
         {completedAt ? (
           <div className="relative mb-2">
-            <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow" />
+            <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand border-2 border-white dark:border-card shadow" />
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                <span className="text-sm font-medium text-slate-900">Call Completed</span>
-                <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-600 border-emerald-200">
+                <CheckCircle2 className="h-3.5 w-3.5 text-brand" />
+                <span className="text-sm font-medium text-heading dark:text-foreground">Call Completed</span>
+                <Badge variant="outline" className="text-xs bg-brand-light text-brand border-[hsl(var(--app-brand-muted)/0.3)] dark:bg-primary/10 dark:text-primary dark:border-primary/30">
                   Duration: {formatDuration(duration)}
                 </Badge>
               </div>
-              <div className="text-xs text-slate-500">{formatTime(completedAt)}</div>
+              <div className="text-xs text-subtle">{formatTime(completedAt)}</div>
             </div>
           </div>
         ) : (
           <div className="relative mb-2">
-            <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow" />
+            <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-[hsl(var(--status-error-bg))] border-2 border-white dark:border-card shadow" />
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <XCircle className="h-3.5 w-3.5 text-red-500" />
-                <span className="text-sm font-medium text-slate-900">Call Not Completed</span>
+                <XCircle className="h-3.5 w-3.5 text-[hsl(var(--status-error-text))]" />
+                <span className="text-sm font-medium text-heading dark:text-foreground">Call Not Completed</span>
               </div>
-              <div className="text-xs text-slate-500">No completion timestamp</div>
+              <div className="text-xs text-subtle">No completion timestamp</div>
             </div>
           </div>
         )}

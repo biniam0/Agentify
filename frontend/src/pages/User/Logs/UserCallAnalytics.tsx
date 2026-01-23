@@ -65,11 +65,11 @@ const UserCallAnalytics: React.FC = () => {
   const chartData = transformTimeseriesForCharts(timeseries, 12);
 
   return (
-    <div className="space-y-8 max-w-[1600px] mx-auto">
+    <div className="space-y-8 content-container">
       {/* Call Analytics Page Header Card */}
       <div className="flex flex-col gap-2 pl-2">
-        <h2 className="text-2xl font-bold text-slate-900">Call Analytics</h2>
-        <p className="text-slate-600">Track your call volume, duration, and success rate over time.</p>
+        <h2 className="text-2xl font-bold text-heading dark:text-foreground">Call Analytics</h2>
+        <p className="text-body dark:text-muted-foreground">Track your call volume, duration, and success rate over time.</p>
       </div>
       {/* Top Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

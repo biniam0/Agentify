@@ -47,19 +47,19 @@ const UserLogsPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-background">
+    <div className="min-h-screen bg-page dark:bg-background">
       {/* Header - Using BarrierXHeader for consistency */}
       <BarrierXHeader items={navigationItems} />
 
       {/* Main Content */}
-      <main className="max-w-[1920px] mx-auto px-[10%] py-8">
-        <div className="flex gap-6 max-w-[1600px] mx-auto">
+      <main className="page-container py-8">
+        <div className="flex gap-6 content-container">
           {/* Logs Sidebar */}
           <aside className="w-64 flex-shrink-0">
-            <Card className="p-4 sticky top-24 bg-white dark:bg-card border border-slate-200 dark:border-border shadow-sm">
+            <Card className="p-4 sticky top-24 bg-elevated dark:bg-card border border-default dark:border-border shadow-card">
               <div className="flex items-center gap-2 mb-4 px-2">
-                <ArrowLeft className="w-4 h-4 cursor-pointer" onClick={handleBackToMeetings} />
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-foreground">My Logs</h2>
+                <ArrowLeft className="w-4 h-4 cursor-pointer text-heading dark:text-foreground hover:text-brand transition-colors" onClick={handleBackToMeetings} />
+                <h2 className="text-lg font-semibold text-heading dark:text-foreground">My Logs</h2>
               </div>
               <nav className="space-y-1">
                 {sidebarItems.map((item) => {
@@ -72,8 +72,8 @@ const UserLogsPage: React.FC = () => {
                       className={`
                         w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all
                         ${active
-                          ? 'bg-emerald-600 text-white'
-                          : 'text-slate-600 dark:text-muted-foreground hover:text-slate-900 dark:hover:text-foreground hover:bg-slate-50 dark:hover:bg-muted'
+                          ? 'bg-brand text-white'
+                          : 'text-body dark:text-muted-foreground hover:text-heading dark:hover:text-foreground hover:bg-page dark:hover:bg-muted'
                         }
                       `}
                     >

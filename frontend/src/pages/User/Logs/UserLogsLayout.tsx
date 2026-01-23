@@ -11,9 +11,9 @@ const UserLogsLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-page dark:bg-background">
       <BarrierXHeader items={navigationItems} />
-      <main className="container mx-auto px-[10%] py-8 max-w-[1920px]">
+      <main className="page-container py-8">
         <Outlet />
       </main>
     </div>

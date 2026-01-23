@@ -67,7 +67,7 @@ const AdminLayout: React.FC = () => {
       <AdminSidebar />
       <SidebarInset>
         {/* Header - BarrierX Style */}
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border bg-white dark:bg-card transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border bg-elevated dark:bg-card transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4 flex-1">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
@@ -77,7 +77,7 @@ const AdminLayout: React.FC = () => {
               className="flex items-center gap-2 cursor-pointer"
               onClick={() => navigate('/admin')}
             >
-              <span className="text-2xl font-bold leading-none tracking-tight text-slate-900 dark:text-foreground">
+              <span className="text-2xl font-bold leading-none tracking-tight text-heading dark:text-foreground">
                 Agent
               </span>
               <svg
@@ -98,14 +98,14 @@ const AdminLayout: React.FC = () => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 sm:gap-4 px-4">
-            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 dark:hover:text-foreground">
+            <Button variant="ghost" size="icon" className="text-subtle hover:text-heading dark:hover:text-foreground">
               <Search className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-foreground"
+              className="text-subtle hover:text-heading dark:hover:text-foreground"
             >
               {theme === 'light' ? (
                 <Moon className="h-4 w-4" />
@@ -114,12 +114,12 @@ const AdminLayout: React.FC = () => {
               )}
             </Button>
 
-            <div className="pl-2 border-l border-slate-200 dark:border-border">
+            <div className="pl-2 border-l border-default dark:border-border">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-slate-200 dark:hover:ring-border transition-all">
+                  <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-[hsl(var(--border-default))] dark:hover:ring-border transition-all">
                     <AvatarImage src={user?.avatar} />
-                    <AvatarFallback className="bg-slate-900 dark:bg-primary text-white text-xs">
+                    <AvatarFallback className="bg-[hsl(var(--text-heading))] dark:bg-primary text-white text-xs">
                       {user?.name?.charAt(0) || 'A'}
                     </AvatarFallback>
                   </Avatar>
@@ -127,9 +127,9 @@ const AdminLayout: React.FC = () => {
                 <DropdownMenuContent className="w-64" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex items-center gap-3 py-2">
-                      <Avatar className="h-12 w-12 border-2 border-emerald-200 dark:border-primary/20">
+                      <Avatar className="h-12 w-12 border-2 border-[hsl(var(--app-brand-muted))] dark:border-primary/20">
                         <AvatarImage src={user?.avatar} />
-                        <AvatarFallback className="bg-slate-900 dark:bg-primary text-white font-semibold text-lg">
+                        <AvatarFallback className="bg-[hsl(var(--text-heading))] dark:bg-primary text-white font-semibold text-lg">
                           {user?.name?.charAt(0) || 'A'}
                         </AvatarFallback>
                       </Avatar>
@@ -140,7 +140,7 @@ const AdminLayout: React.FC = () => {
                         <p className="text-xs leading-none text-muted-foreground mb-1">
                           {user?.email || 'admin@example.com'}
                         </p>
-                        <Badge className="w-fit text-[10px] h-5 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-primary/10 dark:text-primary dark:border-primary/20">
+                        <Badge className="w-fit text-[10px] h-5 bg-brand-light text-brand border-[hsl(var(--app-brand-muted))] hover:bg-[hsl(var(--app-brand-light))] dark:bg-primary/10 dark:text-primary dark:border-primary/20">
                           <span className="mr-1">●</span> Admin
                         </Badge>
                       </div>

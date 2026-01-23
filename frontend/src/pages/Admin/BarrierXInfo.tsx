@@ -859,7 +859,7 @@ const BarrierXInfo: React.FC = () => {
                     {isExpanded && (
                       <div className="border-t dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-800/30 space-y-4">
                         {/* Owner & Deal Info Section */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-3 bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-3 bg-elevated dark:bg-gray-800 rounded-lg border dark:border-gray-700">
                           <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">Owner</p>
                             <p className="text-sm font-medium">{record.ownerName}</p>
