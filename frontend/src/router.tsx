@@ -3,9 +3,25 @@ import LoginPage from './components/LoginPage';
 import MeetingsPage from './components/MeetingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { isAuthenticated } from './services/authService';
-import UserLogsLayout from './pages/User/Logs/UserLogsLayout';
+import UserLayout from './layouts/UserLayout';
+import CallsLayout from './layouts/CallsLayout';
+import UserLogsPage from './pages/User/Logs/UserLogsPage';
+import UserLogsOverview from './pages/User/Logs/Overview';
 import UserCallsLog from './pages/User/Logs/UserCallsLog';
+import UserActivityLog from './pages/User/Logs/UserActivityLog';
+import UserCrmActionsLog from './pages/User/Logs/UserCrmActionsLog';
 import UserCallAnalytics from './pages/User/Logs/UserCallAnalytics';
+
+// Admin imports
+import AdminLayout from './pages/Admin/AdminLayout';
+import LogsLayout from './pages/Admin/Logs/LogsLayout';
+import LogsOverview from './pages/Admin/Logs/Overview';
+import CallsLog from './components/Admin/CallsLog';
+import WebhooksLog from './components/Admin/WebhooksLog';
+import CrmActionsLog from './components/Admin/CrmActionsLog';
+import SchedulerLog from './components/Admin/SchedulerLog';
+import ErrorsLog from './components/Admin/ErrorsLog';
+import BarrierXInfo from './pages/Admin/BarrierXInfo';
 
 const router = createBrowserRouter([
   {
@@ -16,29 +32,106 @@ const router = createBrowserRouter([
     path: '/login',
     element: <LoginPage />,
   },
+  // All user routes share the same layout (header persists across navigation)
   {
-    path: '/meetings',
     element: (
       <ProtectedRoute>
-        <MeetingsPage />
+        <UserLayout />
       </ProtectedRoute>
     ),
+    children: [
+      {
+        path: '/meetings',
+        element: <MeetingsPage />,
+      },
+      {
+        path: '/logs',
+        element: <UserLogsPage />,
+        children: [
+          {
+            index: true,
+            element: <UserLogsOverview />,
+          },
+          {
+            path: 'calls',
+            element: <UserCallsLog />,
+          },
+          {
+            path: 'activity',
+            element: <UserActivityLog />,
+          },
+          {
+            path: 'crm-actions',
+            element: <UserCrmActionsLog />,
+          },
+        ],
+      },
+      {
+        path: '/calls',
+        element: <CallsLayout />,
+        children: [
+          {
+            index: true,
+            element: <UserCallsLog />,
+          },
+          {
+            path: 'analytics',
+            element: <UserCallAnalytics />,
+          },
+        ],
+      },
+    ],
   },
+  // Admin Routes
   {
-    path: '/calls',
+    path: '/admin',
     element: (
       <ProtectedRoute>
-        <UserLogsLayout />
+        <AdminLayout />
       </ProtectedRoute>
     ),
     children: [
       {
         index: true,
-        element: <UserCallsLog />,
+        element: <Navigate to="/admin/meetings" replace />,
       },
       {
-        path: 'analytics',
-        element: <UserCallAnalytics />,
+        path: 'meetings',
+        element: <MeetingsPage />,
+      },
+      {
+        path: 'barrierx-info',
+        element: <BarrierXInfo />,
+      },
+      {
+        path: 'logs',
+        element: <LogsLayout />,
+        children: [
+          {
+            index: true,
+            element: <LogsOverview />,
+          },
+          {
+            path: 'calls',
+            element: <CallsLog />,
+          },
+          {
+            path: 'webhooks',
+            element: <WebhooksLog />,
+          },
+          {
+            path: 'crm-actions',
+            element: <CrmActionsLog />,
+          },
+          {
+            path: 'scheduler',
+            element: <SchedulerLog />,
+          },
+          {
+            path: 'errors',
+            element: <ErrorsLog />,
+          },
+        ],
       },
     ],
   },

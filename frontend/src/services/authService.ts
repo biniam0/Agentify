@@ -37,3 +37,7 @@ export const isAdmin = (): boolean => {
   return user?.email === 'tamiratkebede120@gmail.com';
 };
 
+export const getAuthHeader = (): { Authorization: string } | Record<string, never> => {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};

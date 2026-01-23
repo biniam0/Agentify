@@ -16,5 +16,11 @@ router.post('/create-meeting', webhookController.handleCreateMeeting);
 router.post('/create-task', webhookController.handleCreateTask);
 router.post('/create-deal', webhookController.handleCreateDeal);
 
+// Info Gathering Server Tools (unified agent with 3 tools)
+// Called during the call to save gathered answers
+router.post('/info-gathering/zero-score', webhookController.handleZeroScoreCallback);
+router.post('/info-gathering/lost-deal', webhookController.handleLostDealCallback);
+router.post('/info-gathering/inactivity', webhookController.handleInactivityCallback);
+
 export default router;
 

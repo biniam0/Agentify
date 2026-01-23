@@ -38,16 +38,16 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   className
 }) => {
   return (
-    <Card className={`bg-white shadow-sm border border-slate-100 ${className}`}>
+    <Card className={`bg-elevated dark:bg-card shadow-card border border-subtle dark:border-border ${className}`}>
       <CardHeader className="flex flex-row items-center justify-between pb-4 space-y-0">
         <div>
-          <CardTitle className="text-base font-semibold text-slate-900">{title}</CardTitle>
-          {description && <CardDescription className="text-slate-500 mt-1">{description}</CardDescription>}
+          <CardTitle className="text-base font-semibold text-heading dark:text-foreground">{title}</CardTitle>
+          {description && <CardDescription className="text-subtle dark:text-muted-foreground mt-1">{description}</CardDescription>}
         </div>
         {dateSelect && (
           <Select defaultValue="this-month">
-            <SelectTrigger className="w-[140px] h-9 text-xs bg-white border-slate-200">
-              <CalendarIcon className="w-3.5 h-3.5 mr-2 text-slate-400" />
+            <SelectTrigger className="w-[140px] h-9 text-xs bg-elevated dark:bg-card border-default dark:border-border">
+              <CalendarIcon className="w-3.5 h-3.5 mr-2 text-subtle" />
               <SelectValue placeholder="Select date" />
             </SelectTrigger>
             <SelectContent>
@@ -168,13 +168,13 @@ export const MetricCard: React.FC<{
   className?: string;
 }> = ({ label, value, icon: Icon, className }) => {
   return (
-    <div className={`p-6 bg-white rounded-xl border border-slate-100 shadow-sm flex items-start justify-between ${className}`}>
+    <div className={`p-6 bg-elevated dark:bg-card rounded-xl border border-subtle dark:border-border shadow-card flex items-start justify-between ${className}`}>
       <div>
-        <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
+        <div className="flex items-center gap-2 text-sm text-subtle dark:text-muted-foreground mb-2">
           <Icon className="w-4 h-4" />
           {label}
         </div>
-        <div className="text-2xl font-bold text-slate-900">{value}</div>
+        <div className="text-2xl font-bold text-heading dark:text-foreground">{value}</div>
       </div>
     </div>
   );

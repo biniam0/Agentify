@@ -5,9 +5,10 @@
  * Admin-only access required.
  */
 
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import * as loggingService from '../services/loggingService';
+import * as infoGatheringService from '../services/infoGatheringService';
 import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType } from '@prisma/client';
 import prisma from '../config/database';
 
@@ -564,25 +565,25 @@ export const getUserCallAnalytics = async (req: AuthRequest, res: Response): Pro
       durationAggregate
     ] = await Promise.all([
       prisma.callLog.count({ where }),
-      
+
       prisma.callLog.groupBy({
         by: ['status'],
         where,
         _count: { id: true },
       }),
-      
+
       prisma.callLog.groupBy({
         by: ['callType'],
         where,
         _count: { id: true },
       }),
-      
+
       prisma.callLog.groupBy({
         by: ['triggerSource'],
         where,
         _count: { id: true },
       }),
-      
+
       prisma.callLog.aggregate({
         where,
         _sum: { duration: true },
@@ -595,12 +596,12 @@ export const getUserCallAnalytics = async (req: AuthRequest, res: Response): Pro
     const triggerMap = new Map(triggerCounts.map(t => [t.triggerSource, t._count.id]));
 
     const successful = statusMap.get('COMPLETED') || 0;
-    const failed = (statusMap.get('FAILED') || 0) + 
-                   (statusMap.get('NO_ANSWER') || 0) + 
-                   (statusMap.get('BUSY') || 0);
-    const pending = (statusMap.get('INITIATED') || 0) + 
-                    (statusMap.get('RINGING') || 0) + 
-                    (statusMap.get('ANSWERED') || 0);
+    const failed = (statusMap.get('FAILED') || 0) +
+      (statusMap.get('NO_ANSWER') || 0) +
+      (statusMap.get('BUSY') || 0);
+    const pending = (statusMap.get('INITIATED') || 0) +
+      (statusMap.get('RINGING') || 0) +
+      (statusMap.get('ANSWERED') || 0);
 
     const analytics = {
       total,
@@ -686,3 +687,381 @@ export const getUserCallAnalyticsTimeseries = async (req: AuthRequest, res: Resp
   }
 };
 
+// ============================================
+// BARRIERX INFO GATHERING
+// ============================================
+
+/**
+ * Get all BarrierX info gathering records
+ */
+export const getBarrierXInfoGathering = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const {
+      status,
+      tenantSlug,
+      startDate,
+      endDate,
+      limit = 50,
+      offset = 0,
+    } = req.query;
+
+    const where: any = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (tenantSlug) {
+      where.tenantSlug = tenantSlug;
+    }
+
+    applyDateRange(where, 'createdAt', startDate as string, endDate as string);
+
+    const [records, total] = await Promise.all([
+      prisma.barrierXInfoGathering.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: parseInt(limit as string),
+        skip: parseInt(offset as string),
+      }),
+      prisma.barrierXInfoGathering.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      data: records,
+      total,
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
+    });
+  } catch (error: any) {
+    console.error('❌ Get BarrierX info gathering error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch BarrierX info gathering records',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Get single BarrierX info gathering record by ID
+ */
+export const getBarrierXInfoGatheringById = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const record = await prisma.barrierXInfoGathering.findUnique({
+      where: { id },
+    });
+
+    if (!record) {
+      res.status(404).json({ error: 'Record not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: record,
+    });
+  } catch (error: any) {
+    console.error('❌ Get BarrierX info gathering by ID error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch record',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Export BarrierX info gathering records as CSV
+ */
+export const exportBarrierXInfoGathering = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const {
+      status,
+      tenantSlug,
+      startDate,
+      endDate,
+    } = req.query;
+
+    const where: any = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (tenantSlug) {
+      where.tenantSlug = tenantSlug;
+    }
+
+    applyDateRange(where, 'createdAt', startDate as string, endDate as string);
+
+    const records = await prisma.barrierXInfoGathering.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Build CSV
+    const headers = [
+      'ID',
+      'Deal ID',
+      'Deal Name',
+      'Company',
+      'Tenant',
+      'Owner Name',
+      'Owner Email',
+      'Owner Phone',
+      'Status',
+      'Quantified Pain Points',
+      'Champion Info',
+      'Economic Buyer Info',
+      'Call Duration (s)',
+      'Transcript Summary',
+      'Initiated At',
+      'Completed At',
+    ];
+
+    const escapeCSV = (value: any): string => {
+      if (value === null || value === undefined) return '';
+      const str = String(value);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const rows = records.map(r => [
+      escapeCSV(r.id),
+      escapeCSV(r.dealId),
+      escapeCSV(r.dealName),
+      escapeCSV(r.companyName),
+      escapeCSV(r.tenantName || r.tenantSlug),
+      escapeCSV(r.ownerName),
+      escapeCSV(r.ownerEmail),
+      escapeCSV(r.ownerPhone),
+      escapeCSV(r.status),
+      escapeCSV(r.quantifiedPainPoints),
+      escapeCSV(r.championInfo),
+      escapeCSV(r.economicBuyerInfo),
+      escapeCSV(r.callDuration),
+      escapeCSV(r.transcriptSummary),
+      escapeCSV(r.initiatedAt?.toISOString()),
+      escapeCSV(r.completedAt?.toISOString()),
+    ]);
+
+    const csv = [
+      headers.join(','),
+      ...rows.map(row => row.join(',')),
+    ].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=barrierx-info-gathering-${new Date().toISOString().split('T')[0]}.csv`);
+    res.send(csv);
+  } catch (error: any) {
+    console.error('❌ Export BarrierX info gathering error:', error);
+    res.status(500).json({
+      error: 'Failed to export records',
+      details: error.message,
+    });
+  }
+};
+
+// ============================================
+// INFO GATHERING CALLS (ZERO SCORE + LOST DEAL)
+// ============================================
+
+/**
+ * Trigger zero-score info gathering calls
+ * Uses integrated service (no child process spawning)
+ */
+export const triggerZeroScoreCalls = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const triggeredBy = req.user?.email || 'Unknown';
+
+    console.log('\n🎯 ════════════════════════════════════════════════════');
+    console.log('🎯 TRIGGERING ZERO SCORE CALLS FROM ADMIN UI');
+    console.log('🎯 ════════════════════════════════════════════════════');
+    console.log(`⏰ Time: ${new Date().toISOString()}`);
+    console.log(`👤 Triggered by: ${triggeredBy}`);
+
+    const result = await infoGatheringService.startZeroScoreGathering(triggeredBy);
+
+    if (!result.success) {
+      res.status(409).json({
+        success: false,
+        error: result.error,
+        message: result.error,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Zero score calls job started',
+      startedAt: new Date(),
+    });
+  } catch (error: any) {
+    console.error('❌ Trigger zero score calls error:', error);
+    res.status(500).json({
+      error: 'Failed to trigger zero score calls',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Trigger lost deal questionnaire calls
+ */
+export const triggerLostDealCalls = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const triggeredBy = req.user?.email || 'Unknown';
+
+    console.log('\n❌ ════════════════════════════════════════════════════');
+    console.log('❌ TRIGGERING LOST DEAL CALLS FROM ADMIN UI');
+    console.log('❌ ════════════════════════════════════════════════════');
+    console.log(`⏰ Time: ${new Date().toISOString()}`);
+    console.log(`👤 Triggered by: ${triggeredBy}`);
+
+    const result = await infoGatheringService.startLostDealGathering(triggeredBy);
+
+    if (!result.success) {
+      res.status(409).json({
+        success: false,
+        error: result.error,
+        message: result.error,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Lost deal calls job started',
+      startedAt: new Date(),
+    });
+  } catch (error: any) {
+    console.error('❌ Trigger lost deal calls error:', error);
+    res.status(500).json({
+      error: 'Failed to trigger lost deal calls',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Get status of info gathering job (works for both types)
+ */
+export const getInfoGatheringStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const jobStatus = infoGatheringService.getJobStatus();
+    const dbStats = await infoGatheringService.getDbStats();
+
+    res.json({
+      success: true,
+      isRunning: jobStatus.isRunning,
+      type: jobStatus.type,
+      startedAt: jobStatus.startedAt,
+      triggeredBy: jobStatus.triggeredBy,
+
+      // Progress
+      totalDeals: jobStatus.totalDeals,
+      processedDeals: jobStatus.processedDeals,
+      eligibleDeals: jobStatus.totalDeals, // Alias for frontend compatibility
+      completedCalls: jobStatus.successfulCalls,
+      failedCalls: jobStatus.failedCalls,
+      skippedDeals: jobStatus.skippedDeals,
+
+      // Batch info
+      currentBatch: jobStatus.currentBatch,
+      totalBatches: jobStatus.totalBatches,
+
+      // Logs
+      recentOutput: jobStatus.recentLogs.slice(-20),
+      lastError: jobStatus.lastError,
+
+      // DB stats
+      dbStats,
+    });
+  } catch (error: any) {
+    console.error('❌ Get info gathering status error:', error);
+    res.status(500).json({
+      error: 'Failed to get job status',
+      details: error.message,
+    });
+  }
+};
+
+// Alias for backwards compatibility
+export const getZeroScoreCallsStatus = getInfoGatheringStatus;
+
+/**
+ * Stop the running info gathering job
+ */
+export const stopInfoGatheringCalls = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    console.log('\n⛔ Stopping info gathering job...');
+    console.log(`👤 Stopped by: ${req.user?.email || 'Unknown'}`);
+
+    const result = infoGatheringService.stopCurrentJob();
+
+    if (!result.success) {
+      res.status(400).json({
+        success: false,
+        error: result.error,
+        message: result.error,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Info gathering job stopped',
+    });
+  } catch (error: any) {
+    console.error('❌ Stop info gathering calls error:', error);
+    res.status(500).json({
+      error: 'Failed to stop job',
+      details: error.message,
+    });
+  }
+};
+
+// Alias for backwards compatibility
+export const stopZeroScoreCalls = stopInfoGatheringCalls;
+
+/**
+ * Trigger inactivity check calls
+ */
+export const triggerInactivityCalls = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const triggeredBy = req.user?.email || 'Unknown';
+
+    console.log('\n⏰ ════════════════════════════════════════════════════');
+    console.log('⏰ TRIGGERING INACTIVITY CHECK CALLS FROM ADMIN UI');
+    console.log('⏰ ════════════════════════════════════════════════════');
+    console.log(`⏰ Time: ${new Date().toISOString()}`);
+    console.log(`👤 Triggered by: ${triggeredBy}`);
+
+    const result = await infoGatheringService.startInactivityGathering(triggeredBy);
+
+    if (!result.success) {
+      res.status(409).json({
+        success: false,
+        error: result.error,
+        message: result.error,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Inactivity check calls job started',
+      startedAt: new Date(),
+    });
+  } catch (error: any) {
+    console.error('❌ Trigger inactivity calls error:', error);
+    res.status(500).json({
+      error: 'Failed to trigger inactivity calls',
+      details: error.message,
+    });
+  }
+};
