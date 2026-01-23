@@ -3,7 +3,8 @@ import LoginPage from './components/LoginPage';
 import MeetingsPage from './components/MeetingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { isAuthenticated } from './services/authService';
-import UserLogsLayout from './pages/User/Logs/UserLogsLayout';
+import UserLayout from './layouts/UserLayout';
+import CallsLayout from './layouts/CallsLayout';
 import UserLogsPage from './pages/User/Logs/UserLogsPage';
 import UserLogsOverview from './pages/User/Logs/Overview';
 import UserCallsLog from './pages/User/Logs/UserCallsLog';
@@ -31,55 +32,53 @@ const router = createBrowserRouter([
     path: '/login',
     element: <LoginPage />,
   },
+  // All user routes share the same layout (header persists across navigation)
   {
-    path: '/meetings',
     element: (
       <ProtectedRoute>
-        <MeetingsPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/logs',
-    element: (
-      <ProtectedRoute>
-        <UserLogsPage />
+        <UserLayout />
       </ProtectedRoute>
     ),
     children: [
       {
-        index: true,
-        element: <UserLogsOverview />,
+        path: '/meetings',
+        element: <MeetingsPage />,
       },
       {
-        path: 'calls',
-        element: <UserCallsLog />,
+        path: '/logs',
+        element: <UserLogsPage />,
+        children: [
+          {
+            index: true,
+            element: <UserLogsOverview />,
+          },
+          {
+            path: 'calls',
+            element: <UserCallsLog />,
+          },
+          {
+            path: 'activity',
+            element: <UserActivityLog />,
+          },
+          {
+            path: 'crm-actions',
+            element: <UserCrmActionsLog />,
+          },
+        ],
       },
       {
-        path: 'activity',
-        element: <UserActivityLog />,
-      },
-      {
-        path: 'crm-actions',
-        element: <UserCrmActionsLog />,
-      },
-    ],
-  },
-  {
-    path: '/calls',
-    element: (
-      <ProtectedRoute>
-        <UserLogsLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      {
-        index: true,
-        element: <UserCallsLog />,
-      },
-      {
-        path: 'analytics',
-        element: <UserCallAnalytics />,
+        path: '/calls',
+        element: <CallsLayout />,
+        children: [
+          {
+            index: true,
+            element: <UserCallsLog />,
+          },
+          {
+            path: 'analytics',
+            element: <UserCallAnalytics />,
+          },
+        ],
       },
     ],
   },

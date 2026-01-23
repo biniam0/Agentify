@@ -65,7 +65,7 @@ const UserCallAnalytics: React.FC = () => {
   const chartData = transformTimeseriesForCharts(timeseries, 12);
 
   return (
-    <div className="space-y-8 content-container">
+    <div className="space-y-8">
       {/* Call Analytics Page Header Card */}
       <div className="flex flex-col gap-2 pl-2">
         <h2 className="text-2xl font-bold text-heading dark:text-foreground">Call Analytics</h2>

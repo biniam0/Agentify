@@ -1,6 +1,7 @@
 /**
  * User Logs Page
  * Dedicated page for user logs accessible via /app/logs route
+ * Header is now provided by UserLayout (shared across all user pages)
  */
 
 import React from 'react';
@@ -11,7 +12,6 @@ import {
   FileText,
   Phone,
 } from 'lucide-react';
-import { BarrierXHeader } from './components/BarrierXHeader';
 import { Card } from '@/components/ui/card';
 
 const UserLogsPage: React.FC = () => {
@@ -30,14 +30,6 @@ const UserLogsPage: React.FC = () => {
     return location.pathname.startsWith(path);
   };
 
-  // Navigation items for the header
-  const navigationItems = [
-    { label: 'Meetings', path: '/meetings' },
-    { label: 'Logs', path: '/logs' },
-    { label: 'Calls', path: '/calls' },
-    { label: 'Analytics', path: '/calls/analytics' },
-  ];
-
   // Sidebar navigation items
   const sidebarItems = [
     { label: 'Overview', path: '/logs', icon: Activity },
@@ -47,51 +39,45 @@ const UserLogsPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-page dark:bg-background">
-      {/* Header - Using BarrierXHeader for consistency */}
-      <BarrierXHeader items={navigationItems} />
+    <div className="page-container py-8">
+      <div className="flex gap-6 content-container">
+        {/* Logs Sidebar */}
+        <aside className="w-64 flex-shrink-0">
+          <Card className="p-4 sticky top-24 bg-elevated dark:bg-card border border-default dark:border-border shadow-card">
+            <div className="flex items-center gap-2 mb-4 px-2">
+              <ArrowLeft className="w-4 h-4 cursor-pointer text-heading dark:text-foreground hover:text-brand transition-colors" onClick={handleBackToMeetings} />
+              <h2 className="text-lg font-semibold text-heading dark:text-foreground">My Logs</h2>
+            </div>
+            <nav className="space-y-1">
+              {sidebarItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className={`
+                      w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all
+                      ${active
+                        ? 'bg-brand text-white'
+                        : 'text-body dark:text-muted-foreground hover:text-heading dark:hover:text-foreground hover:bg-page dark:hover:bg-muted'
+                      }
+                    `}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </Card>
+        </aside>
 
-      {/* Main Content */}
-      <main className="page-container py-8">
-        <div className="flex gap-6 content-container">
-          {/* Logs Sidebar */}
-          <aside className="w-64 flex-shrink-0">
-            <Card className="p-4 sticky top-24 bg-elevated dark:bg-card border border-default dark:border-border shadow-card">
-              <div className="flex items-center gap-2 mb-4 px-2">
-                <ArrowLeft className="w-4 h-4 cursor-pointer text-heading dark:text-foreground hover:text-brand transition-colors" onClick={handleBackToMeetings} />
-                <h2 className="text-lg font-semibold text-heading dark:text-foreground">My Logs</h2>
-              </div>
-              <nav className="space-y-1">
-                {sidebarItems.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.path);
-                  return (
-                    <button
-                      key={item.path}
-                      onClick={() => navigate(item.path)}
-                      className={`
-                        w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all
-                        ${active
-                          ? 'bg-brand text-white'
-                          : 'text-body dark:text-muted-foreground hover:text-heading dark:hover:text-foreground hover:bg-page dark:hover:bg-muted'
-                        }
-                      `}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </nav>
-            </Card>
-          </aside>
-
-          {/* Logs Main Content - Renders child routes */}
-          <div className="flex-1 min-w-0">
-            <Outlet />
-          </div>
+        {/* Logs Main Content - Renders child routes */}
+        <div className="flex-1 min-w-0">
+          <Outlet />
         </div>
-      </main>
+      </div>
     </div>
   );
 };

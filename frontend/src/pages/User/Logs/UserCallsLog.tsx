@@ -111,7 +111,7 @@ const UserCallsLog: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 content-container">
+    <div className="space-y-8">
       {/* Call History Page Header Card */}
       <div className="flex flex-col gap-2 pl-2">
         <h2 className="text-2xl font-bold text-heading dark:text-foreground">Call History</h2>

@@ -27,7 +27,6 @@ import WebhooksLog from './Admin/WebhooksLog';
 import CrmActionsLog from './Admin/CrmActionsLog';
 import SchedulerLog from './Admin/SchedulerLog';
 import ErrorsLog from './Admin/ErrorsLog';
-import { BarrierXHeader } from '../pages/User/Logs/components/BarrierXHeader';
 import UserLogsOverview from '../pages/User/Logs/Overview';
 import UserCallsLog from '../pages/User/Logs/UserCallsLog';
 import UserActivityLog from '../pages/User/Logs/UserActivityLog';
@@ -308,17 +307,8 @@ const MeetingsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-page dark:bg-background">
-        {/* Header Skeleton - Hidden when inside AdminLayout */}
-        {!isInsideAdminLayout && (
-          <header className="bg-elevated dark:bg-card border-b border-subtle dark:border-border h-16">
-            <div className="page-container h-full flex items-center justify-between">
-              <Skeleton className="h-8 w-32" />
-              <Skeleton className="h-9 w-9 rounded-full" />
-            </div>
-          </header>
-        )}
-
+      <div className={isInsideAdminLayout ? "min-h-screen bg-page dark:bg-background" : ""}>
+        {/* No header skeleton needed - header is in UserLayout (for user pages) or AdminLayout (for admin pages) */}
         <main className="page-container py-8">
           <div className="space-y-8 content-container">
             {/* Page Header Skeleton */}
@@ -358,19 +348,7 @@ const MeetingsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-page dark:bg-background">
-      {/* Header - Hidden when inside AdminLayout to avoid duplicate headers */}
-      {!isInsideAdminLayout && (
-        <BarrierXHeader
-          items={[
-            { label: 'Meetings', path: '/meetings' },
-            { label: 'Logs', path: '/logs' },
-            { label: 'Calls', path: '/calls' },
-            { label: 'Analytics', path: '/calls/analytics' },
-          ]}
-        />
-      )}
-
+    <div className={isInsideAdminLayout ? "min-h-screen bg-page dark:bg-background" : ""}>
       {/* Admin Tabs - Only show when admin mode is active AND not inside AdminLayout */}
       {isAdminMode && !isInsideAdminLayout && (
         <div className="bg-elevated dark:bg-card border-b border-subtle dark:border-border">
