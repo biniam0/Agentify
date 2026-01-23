@@ -203,6 +203,20 @@ function hasNoRecentActivity(deal: Deal): boolean {
   return lastActivity < twoWeeksAgo;
 }
 
+/**
+ * Check if a deal was created within the specified number of days
+ * Used to filter "fresh" deals for Zero Score calling
+ */
+function isWithinDays(createdAt: string | undefined, days: number): boolean {
+  if (!createdAt) return false; // If no createdAt, exclude the deal
+
+  const createdDate = new Date(createdAt);
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+
+  return createdDate >= cutoffDate;
+}
+
 async function wasAlreadyCalled(dealId: string, type: GatheringType): Promise<boolean> {
   const client = await getRedisClient();
   if (!client) return false;
@@ -417,10 +431,20 @@ async function runZeroScoreGathering(): Promise<void> {
   log('🎯 Starting Zero Score Info Gathering');
   log('═══════════════════════════════════════════════════════════════');
 
-  const allDeals = await fetchDeals();
-  const eligibleDeals = allDeals.filter(({ deal }) => hasNoBarrierXScore(deal.userDealRiskScores));
+  // Only call deals created within the last 60 days (fresh deals)
+  const FRESHNESS_DAYS = 60;
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - FRESHNESS_DAYS);
+  log(`📅 Only calling deals created after: ${cutoffDate.toISOString().split('T')[0]}`);
 
-  log(`📊 Deals with no BarrierX score: ${eligibleDeals.length} / ${allDeals.length}`);
+  const allDeals = await fetchDeals();
+
+  // Filter: Zero BarrierX score AND created within 60 days
+  const eligibleDeals = allDeals.filter(({ deal }) =>
+    hasNoBarrierXScore(deal.userDealRiskScores) && isWithinDays(deal.createdAt, FRESHNESS_DAYS)
+  );
+
+  log(`📊 Deals with no BarrierX score AND created within ${FRESHNESS_DAYS} days: ${eligibleDeals.length} / ${allDeals.length}`);
 
   await processDeals(eligibleDeals, 'ZERO_SCORE');
 }
