@@ -40,6 +40,69 @@
     --deal-high: 142 76% 36%;
     --deal-medium: 38 92% 50%;
     --deal-low: 211 100% 50%;
+
+    /* Sidebar (shadcn) */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* ======================================
+       APP-SPECIFIC VARIABLES (BarrierX UI)
+       Derived from existing hardcoded styles
+       ====================================== */
+    
+    /* Page Layout */
+    --page-max-width: 1920px;
+    --content-max-width: 1600px;
+    --page-padding: 10%;
+    --header-height: 4rem;
+    
+    /* Text Colors (matching current slate usage) */
+    --text-heading: 222.2 47.4% 11.2%;     /* = slate-900 */
+    --text-body: 215.3 19.3% 34.5%;        /* = slate-600 */
+    --text-muted: 215.4 16.3% 46.9%;       /* = slate-500 */
+    
+    /* Page Backgrounds */
+    --page-bg: 210 40% 98%;                /* = slate-50 */
+    --page-bg-elevated: 0 0% 100%;         /* = white */
+    --table-header-bg: 210 40% 98%;        /* = slate-50 */
+    
+    /* Borders */
+    --border-subtle: 214.3 31.8% 91.4%;    /* = slate-100 */
+    --border-default: 213 27% 84%;         /* = slate-200 */
+    
+    /* Brand Color (emerald theme) */
+    --app-brand: 160 84% 39%;              /* = emerald-600 */
+    --app-brand-hover: 160 84% 34%;        /* = emerald-700 */
+    --app-brand-light: 152 81% 96%;        /* = emerald-50 */
+    --app-brand-muted: 156 72% 67%;        /* = emerald-400 */
+    
+    /* Status Badge Colors */
+    --status-success-bg: 142 76% 36%;
+    --status-success-text: 142 71% 45%;    /* = green-600 */
+    --status-error-bg: 0 84% 60%;
+    --status-error-text: 0 72% 51%;        /* = red-600 */
+    --status-warning-bg: 38 92% 50%;
+    --status-warning-text: 45 93% 47%;     /* = yellow-600 */
+    --status-info-bg: 211 100% 50%;
+    --status-info-text: 217 91% 60%;       /* = blue-500 */
+    --status-pending-bg: 38 92% 50%;
+    --status-pending-text: 45 93% 47%;
+    
+    /* Icon Accent Colors */
+    --icon-blue: 217 91% 60%;              /* = blue-500 */
+    --icon-green: 142 71% 45%;             /* = green-500 */
+    --icon-purple: 271 81% 56%;            /* = purple-500 */
+    --icon-orange: 24.6 95% 53.1%;         /* = orange-500 */
+    
+    /* Card Styling */
+    --card-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --card-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1);
   }
 
   .dark {
@@ -73,6 +136,57 @@
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
     --info: 211 100% 50%;
+
+    /* Sidebar (shadcn) */
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* ======================================
+       APP-SPECIFIC VARIABLES - DARK MODE
+       ====================================== */
+    
+    /* Text Colors (light text on dark) */
+    --text-heading: 210 40% 98%;           /* light heading */
+    --text-body: 217 10% 65%;              /* muted body */
+    --text-muted: 215 20% 55%;             /* dimmer muted */
+    
+    /* Page Backgrounds */
+    --page-bg: 222 47% 11%;                /* dark background */
+    --page-bg-elevated: 217 33% 17%;       /* card-level dark */
+    --table-header-bg: 217 33% 14%;        /* darker table header */
+    
+    /* Borders */
+    --border-subtle: 217 33% 20%;
+    --border-default: 217 33% 24%;
+    
+    /* Brand (stays vibrant in dark) */
+    --app-brand: 160 84% 39%;
+    --app-brand-hover: 160 84% 45%;
+    --app-brand-light: 160 84% 15%;
+    --app-brand-muted: 156 72% 50%;
+    
+    /* Status Badge Colors (brighter for dark mode) */
+    --status-success-text: 142 71% 55%;
+    --status-error-text: 0 72% 61%;
+    --status-warning-text: 45 93% 55%;
+    --status-info-text: 217 91% 70%;
+    --status-pending-text: 45 93% 55%;
+    
+    /* Icon Accent Colors (slightly brighter) */
+    --icon-blue: 217 91% 70%;
+    --icon-green: 142 71% 55%;
+    --icon-purple: 271 81% 66%;
+    --icon-orange: 24.6 95% 60%;
+    
+    /* Card Styling */
+    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+    --card-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.4);
   }
 }
 
@@ -128,6 +242,126 @@
 
   .hover-scale:hover {
     transform: scale(1.02);
+  }
+
+  /* ======================================
+     APP UTILITY CLASSES (BarrierX UI)
+     Use these instead of hardcoded Tailwind
+     ====================================== */
+
+  /* Page Layout Utilities */
+  .page-container {
+    @apply max-w-[1920px] mx-auto;
+    padding-left: var(--page-padding);
+    padding-right: var(--page-padding);
+  }
+
+  .content-container {
+    @apply max-w-[1600px] mx-auto;
+  }
+
+  /* Text Utilities */
+  .text-heading {
+    color: hsl(var(--text-heading));
+  }
+
+  .text-body {
+    color: hsl(var(--text-body));
+  }
+
+  .text-subtle {
+    color: hsl(var(--text-muted));
+  }
+
+  .text-brand {
+    color: hsl(var(--app-brand));
+  }
+
+  /* Background Utilities */
+  .bg-page {
+    background-color: hsl(var(--page-bg));
+  }
+
+  .bg-elevated {
+    background-color: hsl(var(--page-bg-elevated));
+  }
+
+  .bg-table-header {
+    background-color: hsl(var(--table-header-bg));
+  }
+
+  /* Brand Utilities */
+  .bg-brand {
+    background-color: hsl(var(--app-brand));
+  }
+
+  .bg-brand-light {
+    background-color: hsl(var(--app-brand-light));
+  }
+
+  .hover\:bg-brand-hover:hover {
+    background-color: hsl(var(--app-brand-hover));
+  }
+
+  /* Border Utilities */
+  .border-subtle {
+    border-color: hsl(var(--border-subtle));
+  }
+
+  .border-default {
+    border-color: hsl(var(--border-default));
+  }
+
+  /* Status Badge Utilities */
+  .badge-success {
+    background-color: hsl(var(--status-success-bg) / 0.1);
+    color: hsl(var(--status-success-text));
+  }
+
+  .badge-error {
+    background-color: hsl(var(--status-error-bg) / 0.1);
+    color: hsl(var(--status-error-text));
+  }
+
+  .badge-warning {
+    background-color: hsl(var(--status-warning-bg) / 0.1);
+    color: hsl(var(--status-warning-text));
+  }
+
+  .badge-info {
+    background-color: hsl(var(--status-info-bg) / 0.1);
+    color: hsl(var(--status-info-text));
+  }
+
+  .badge-pending {
+    background-color: hsl(var(--status-pending-bg) / 0.1);
+    color: hsl(var(--status-pending-text));
+  }
+
+  /* Icon Color Utilities */
+  .icon-blue {
+    color: hsl(var(--icon-blue));
+  }
+
+  .icon-green {
+    color: hsl(var(--icon-green));
+  }
+
+  .icon-purple {
+    color: hsl(var(--icon-purple));
+  }
+
+  .icon-orange {
+    color: hsl(var(--icon-orange));
+  }
+
+  /* Card Shadow Utilities */
+  .shadow-card {
+    box-shadow: var(--card-shadow);
+  }
+
+  .hover\:shadow-card-hover:hover {
+    box-shadow: var(--card-shadow-hover);
   }
 }
 

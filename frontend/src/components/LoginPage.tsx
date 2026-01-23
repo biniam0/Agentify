@@ -39,12 +39,12 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-page dark:bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-[515px]">
         {/* AgentX Logo */}
         <div className="flex flex-col items-center mb-10">
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-4xl font-bold leading-none tracking-tight text-slate-900">
+            <span className="text-4xl font-bold leading-none tracking-tight text-heading dark:text-foreground">
               Agent
             </span>
             <svg
@@ -61,22 +61,22 @@ const LoginPage: React.FC = () => {
               <path d="M14 14L0 0H14V14Z" fill="#53A17D" />
             </svg>
           </div>
-          <p className="text-slate-600 text-center">AI-Powered Sales Meeting Automation</p>
+          <p className="text-body dark:text-muted-foreground text-center">AI-Powered Sales Meeting Automation</p>
         </div>
 
         {/* Login Card */}
-        <Card className="bg-white border border-slate-100 shadow-sm overflow-hidden">
+        <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-card overflow-hidden">
           <CardContent className="p-8">
             {/* Header */}
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome back</h2>
-              <p className="text-slate-600">Enter your credentials to access your account</p>
+              <h2 className="text-2xl font-bold text-heading dark:text-foreground mb-2">Welcome back</h2>
+              <p className="text-body dark:text-muted-foreground">Enter your credentials to access your account</p>
             </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-700 font-medium">
+                <Label htmlFor="email" className="text-body dark:text-foreground font-medium">
                   Email Address
                 </Label>
                 <Input
@@ -86,12 +86,12 @@ const LoginPage: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your-email@barrierx.ai"
-                  className="h-11 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20"
+                  className="h-11 border-default dark:border-border focus:border-[hsl(var(--app-brand))] focus:ring-[hsl(var(--app-brand))]/20"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-700 font-medium">
+                <Label htmlFor="password" className="text-body dark:text-foreground font-medium">
                   Password
                 </Label>
                 <div className="relative">
@@ -101,12 +101,12 @@ const LoginPage: React.FC = () => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-11 pr-10 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20"
+                    className="h-11 pr-10 border-default dark:border-border focus:border-[hsl(var(--app-brand))] focus:ring-[hsl(var(--app-brand))]/20"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-body dark:hover:text-foreground transition-colors"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -114,7 +114,7 @@ const LoginPage: React.FC = () => {
               </div>
 
               {error && (
-                <Alert variant="destructive" className="border-red-200 bg-red-50">
+                <Alert variant="destructive" className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
@@ -123,7 +123,7 @@ const LoginPage: React.FC = () => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-11 bg-[#2D6A4F] hover:bg-[#236141] text-white font-medium transition-all"
+                className="w-full h-11 bg-brand hover:bg-brand-hover text-white font-medium transition-all"
                 size="lg"
               >
                 {loading ? (
@@ -143,7 +143,7 @@ const LoginPage: React.FC = () => {
         </Card>
 
         {/* Footer */}
-        <p className="text-center text-sm text-slate-500 mt-6">
+        <p className="text-center text-sm text-subtle dark:text-muted-foreground mt-6">
           Automate your sales calls with intelligence
         </p>
       </div>

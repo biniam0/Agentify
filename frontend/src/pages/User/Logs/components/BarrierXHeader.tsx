@@ -59,14 +59,14 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
   };
 
   return (
-    <header className="bg-white border-b border-slate-100 sticky top-0 z-50">
-      <div className="max-w-[1920px] mx-auto px-[10%] h-16 flex items-center justify-between">
+    <header className="bg-elevated border-b border-subtle sticky top-0 z-50 dark:bg-card dark:border-border">
+      <div className="page-container h-16 flex items-center justify-between">
 
         <div
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => navigate('/')}
         >
-          <span className="text-3xl font-bold leading-none tracking-tight text-slate-900">
+          <span className="text-3xl font-bold leading-none tracking-tight text-heading">
             Agent
           </span>
 
@@ -96,8 +96,8 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
                 className={`
                   px-4 py-1.5 rounded-md text-sm font-medium transition-all
                   ${isActive
-                    ? 'bg-emerald-50/50 text-slate-900'
-                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-brand-light text-heading dark:bg-primary/10'
+                    : 'text-subtle hover:text-heading hover:bg-[hsl(var(--page-bg))] dark:hover:bg-muted'
                   }
                 `}
               >
@@ -109,26 +109,26 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 sm:gap-4">
-          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600">
+          <Button variant="ghost" size="icon" className="text-subtle hover:text-heading dark:hover:text-foreground">
             <Search className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600">
+          <Button variant="ghost" size="icon" className="text-subtle hover:text-heading dark:hover:text-foreground">
             <HelpCircle className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600">
+          <Button variant="ghost" size="icon" className="text-subtle hover:text-heading dark:hover:text-foreground">
             <Settings className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 relative">
+          <Button variant="ghost" size="icon" className="text-subtle hover:text-heading dark:hover:text-foreground relative">
             <Bell className="h-4 w-4" />
-            <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-red-500 rounded-full border border-white"></span>
+            <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-red-500 rounded-full border border-white dark:border-card"></span>
           </Button>
 
-          <div className="pl-2 border-l border-slate-200">
+          <div className="pl-2 border-l border-default dark:border-border">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-slate-200 transition-all">
+                <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-[hsl(var(--border-default))] dark:hover:ring-border transition-all">
                   <AvatarImage src={userAvatar || user?.avatar} />
-                  <AvatarFallback className="bg-slate-900 text-white text-xs">
+                  <AvatarFallback className="bg-[hsl(var(--text-heading))] text-white dark:bg-foreground dark:text-background text-xs">
                     {userName?.charAt(0) || user?.name?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
@@ -138,7 +138,7 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
                   <div className="flex items-center gap-3 py-2">
                     <Avatar className="h-12 w-12 border-2 border-primary/20">
                       <AvatarImage src={userAvatar || user?.avatar} />
-                      <AvatarFallback className="bg-slate-900 text-white font-semibold text-lg">
+                      <AvatarFallback className="bg-[hsl(var(--text-heading))] text-white dark:bg-foreground dark:text-background font-semibold text-lg">
                         {userName?.charAt(0) || user?.name?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -149,7 +149,7 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
                       <p className="text-xs leading-none text-muted-foreground mb-1">
                         {user?.email || 'user@example.com'}
                       </p>
-                      <Badge className="w-fit text-[10px] h-5 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100">
+                      <Badge className="w-fit text-[10px] h-5 bg-brand-light text-brand border-[hsl(var(--app-brand-muted))] hover:bg-[hsl(var(--app-brand-light))]">
                         <span className="mr-1">●</span> Online
                       </Badge>
                     </div>
