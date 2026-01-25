@@ -7,7 +7,7 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
 ## ✨ Features
 
 - 🔐 **Hybrid Authentication** - AgentX JWT (7-day) + BarrierX tokens (1-hour)
-- 📞 **Automated Calls** - Pre-meeting (T-15) and post-meeting (T+30) via ElevenLabs
+- 📞 **Automated Calls** - Pre-meeting (T-20) and post-meeting (T+30) via ElevenLabs
 - 🔄 **Smart Call Retry** - Auto-retry on no-answer (3 attempts, 1 min interval)
 - 📅 **Meeting Management** - Fetch and manage user meetings from BarrierX
 - 🤖 **AI Voice Agents** - Pre-call preparation & post-call follow-up agents
@@ -162,7 +162,7 @@ All meeting endpoints require `Authorization: Bearer YOUR_JWT_TOKEN` header.
 GET /api/meetings
 ```
 
-**Trigger Pre-Meeting Call (T-15 minutes)**
+**Trigger Pre-Meeting Call (T-20 minutes)**
 ```http
 POST /api/meetings/trigger/pre-call
 Content-Type: application/json
@@ -298,7 +298,7 @@ If not specified or left empty, all tenants/pipelines will be included.
 ### 📋 Processing Steps (Both Modes)
 
 3. **Filters** meetings:
-   - **Pre-call**: Meetings starting in 13-17 minutes (T-15 ±2 min buffer)
+   - **Pre-call**: Meetings starting in 18-22 minutes (T-20 ±2 min buffer)
    - **Post-call**: Meetings ended 3-7 minutes ago (T+5 ±2 min buffer)
 4. **Triggers** ElevenLabs calls to sales rep's phone
 5. **Logs** results with detailed console output

@@ -728,6 +728,7 @@ export const getRecommendations = async (
     indicatorId: string;
     isCompleted: boolean;
   }>;
+  isUsingMockData: boolean;
 }> => {
   // Check if deal has recommendations from BarrierX
   if (deal?.recommendations && deal.recommendations.length > 0) {
@@ -736,47 +737,49 @@ export const getRecommendations = async (
       success: true,
       dealId,
       recommendations: deal.recommendations,
+      isUsingMockData: false,
     };
   }
 
   // Fallback recommendations (only when real recommendations are missing/empty in the bulk response)
+  // These are universal best practices applicable to any type of deal
   const mockRecommendations = [
     {
-      note: 'Schedule a direct meeting with the economic buyer to confirm budget approval authority, understand the approval process, and verify allocated budget availability. Document confirmation and identify any remaining approval steps needed.',
-      title: 'Confirm Economic Buyer Budget Authority',
-      severity: 'Critical',
+      note: 'Ask the prospect to walk you through their decision-making process, including who needs to approve, what criteria they will use, and their target timeline for making a decision. Document this clearly.',
+      title: 'Confirm Decision Timeline and Next Steps',
+      severity: 'High',
       isAssigned: false,
       indicatorId: 'mock-indicator-1',
       isCompleted: false,
     },
     {
-      note: 'Create a formal decision authority map identifying all stakeholders, their roles, approval levels, and required steps for deal approval. Share with the champion to ensure alignment and prevent delays from unclear authority.',
-      title: 'Document Decision-Making Authority and Process',
-      severity: 'Critical',
+      note: 'Identify all stakeholders involved in this decision. Understand each person\'s role, their primary concerns, and what success looks like for them individually. Map out any potential blockers or champions.',
+      title: 'Identify Key Stakeholders and Their Concerns',
+      severity: 'High',
       isAssigned: false,
       indicatorId: 'mock-indicator-2',
       isCompleted: false,
     },
     {
-      note: 'Request written confirmation from the economic buyer committing budget and internal resources for implementation. Include specific resource allocation, timeline commitments, and participation requirements.',
-      title: 'Secure Formal Budget and Resource Commitment',
-      severity: 'Critical',
+      note: 'Confirm whether budget has been allocated for this initiative. Ask about the approval process, any competing priorities for the budget, and whether there are timing considerations around fiscal periods.',
+      title: 'Validate Budget Availability and Approval Process',
+      severity: 'High',
       isAssigned: false,
       indicatorId: 'mock-indicator-3',
       isCompleted: false,
     },
     {
-      note: "Develop and present a detailed ROI analysis quantifying business impact, cost savings, and payback period. Align metrics with the customer's strategic priorities and demonstrate clear value within 12 months.",
-      title: 'Prepare and Present a Formal ROI Analysis',
-      severity: 'High',
+      note: 'Ask the prospect to define what a successful outcome looks like for them. Understand the specific metrics or results they expect, and ensure your solution can deliver on these expectations.',
+      title: 'Clarify Success Criteria and Expected Outcomes',
+      severity: 'Medium',
       isAssigned: false,
       indicatorId: 'mock-indicator-4',
       isCompleted: false,
     },
     {
-      note: 'Send the formal contract with clear deliverables, timelines, and terms before month-end to capitalize on current budget availability and maintain deal momentum while stakeholders are engaged.',
-      title: 'Finalize Contract Terms Before Period Close(Dummy Data)',
-      severity: 'High',
+      note: 'Proactively ask about any concerns, hesitations, or potential obstacles that could delay or prevent this deal from moving forward. Address these openly and document any unresolved issues.',
+      title: 'Document Any Objections or Potential Blockers',
+      severity: 'Medium',
       isAssigned: false,
       indicatorId: 'mock-indicator-5',
       isCompleted: false,
@@ -784,7 +787,7 @@ export const getRecommendations = async (
   ];
 
   console.log(`🔧 Using fallback recommendations for deal ${dealId} (BarrierX bulk response has no recommendations)`);
-  return { success: true, dealId, recommendations: mockRecommendations };
+  return { success: true, dealId, recommendations: mockRecommendations, isUsingMockData: true };
 };
 
 /**
