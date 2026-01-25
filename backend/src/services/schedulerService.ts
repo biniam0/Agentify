@@ -5,6 +5,7 @@ import * as barrierxService from './barrierxService';
 import * as meetingService from './meetingService';
 import * as loggingService from './loggingService';
 import * as calledMeetingsCache from '../utils/calledMeetingsCache';
+import * as smsNotificationService from './smsNotificationService';
 
 interface MeetingTemplate {
   id: string;
@@ -156,19 +157,28 @@ const processTimeTemplates = (timeStr: string): string => {
 
 
 // Process user data and filter meetings (OPTIMIZED)
+// Now also returns meetings that need SMS notifications
 const processUserMeetings = (userData: any) => {
   const allPreMeetings: any[] = [];
   const allPostMeetings: any[] = [];
+  const allSmsNotifications: any[] = []; // NEW: Meetings needing SMS notification
 
   // Early exit if no deals
   if (!userData.deals || userData.deals.length === 0) {
-    return { preMeetings: allPreMeetings, postMeetings: allPostMeetings };
+    return { preMeetings: allPreMeetings, postMeetings: allPostMeetings, smsNotifications: allSmsNotifications };
   }
 
   // ✅ Cache time values - calculate once, reuse for all meetings
   const now = Date.now();
   const twentyMinutesFromNow = now + 20 * 60 * 1000;
   const thirtyMinutesAgo = now - 30 * 60 * 1000;
+  
+  // SMS notification window: configurable minutes before meeting (default 30 min)
+  // We check for meetings starting between notificationMinutesBefore and (notificationMinutesBefore - 10) minutes
+  // This creates a 10-minute window to catch meetings in the scheduler's 5-minute cycles
+  const smsNotifyMinutes = config.twilio.notificationMinutesBefore;
+  const smsWindowStart = now + (smsNotifyMinutes - 5) * 60 * 1000;  // e.g., T-25 min
+  const smsWindowEnd = now + (smsNotifyMinutes + 5) * 60 * 1000;    // e.g., T-35 min
 
   // Cache user info to avoid repeated access
   const userInfo = {
@@ -207,8 +217,12 @@ const processUserMeetings = (userData: any) => {
       // Check for post-meeting (T+30: ended within last 30 minutes)
       const isPostMeeting = endTime >= thirtyMinutesAgo && endTime <= now;
 
+      // NEW: Check for SMS notification window (e.g., T-25 to T-35 for 30-min notification)
+      const needsSmsNotification = config.twilio.smsEnabled && 
+        startTime >= smsWindowStart && startTime <= smsWindowEnd;
+
       // ✅ Filter before building - only create objects for matching meetings
-      if (isPreMeeting || isPostMeeting) {
+      if (isPreMeeting || isPostMeeting || needsSmsNotification) {
         // Lazy initialization of dealContext (only when we have a match)
         if (!dealContext) {
           dealContext = {
@@ -236,18 +250,21 @@ const processUserMeetings = (userData: any) => {
           user: userInfo,
         };
 
-        // Add to appropriate array
+        // Add to appropriate arrays
         if (isPreMeeting) {
           allPreMeetings.push(meetingObj);
         }
         if (isPostMeeting) {
           allPostMeetings.push(meetingObj);
         }
+        if (needsSmsNotification) {
+          allSmsNotifications.push(meetingObj);
+        }
       }
     }
   }
 
-  return { preMeetings: allPreMeetings, postMeetings: allPostMeetings };
+  return { preMeetings: allPreMeetings, postMeetings: allPostMeetings, smsNotifications: allSmsNotifications };
 };
 
 // Lock to prevent concurrent executions
@@ -276,6 +293,18 @@ const runAutomationJob = async () => {
 
     // Cleanup old call tracking entries
     cleanupOldEntries();
+    
+    // Cleanup old SMS notification entries
+    smsNotificationService.cleanupOldNotifications();
+    
+    // Log SMS notification status
+    if (config.twilio.smsEnabled) {
+      console.log(`📱 SMS notifications: ENABLED (${config.twilio.notificationMinutesBefore} min before)`);
+      const smsStats = smsNotificationService.getNotificationStats();
+      console.log(`📊 Tracked SMS notifications: ${smsStats.totalTracked}`);
+    } else {
+      console.log(`📱 SMS notifications: DISABLED`);
+    }
 
     let dealsMap: Map<string, any[]>;
     let usersToProcess: Array<{ id: string; name: string; email: string; barrierxUserId: string; tenantSlug: string }> = [];
@@ -345,6 +374,7 @@ const runAutomationJob = async () => {
 
     let totalPreMeetings = 0;
     let totalPostMeetings = 0;
+    let totalSmsNotifications = 0;
 
     // Process each user
     for (const dbUser of usersToProcess) {
@@ -388,10 +418,40 @@ const runAutomationJob = async () => {
         })),
       };
 
-      const { preMeetings, postMeetings } = processUserMeetings(userData);
+      const { preMeetings, postMeetings, smsNotifications } = processUserMeetings(userData);
 
-      if (preMeetings.length > 0 || postMeetings.length > 0) {
+      if (preMeetings.length > 0 || postMeetings.length > 0 || smsNotifications.length > 0) {
         console.log(`\n📋 User: ${dbUser.name} (${dbUser.email})`);
+      }
+
+      // ============================================
+      // SEND SMS NOTIFICATIONS (before voice calls)
+      // ============================================
+      if (smsNotifications.length > 0 && config.twilio.smsEnabled) {
+        console.log(`  📱 ${smsNotifications.length} SMS notification(s) to send:`);
+        for (const meeting of smsNotifications) {
+          // Get customer name from contacts
+          const customer = meeting.contacts && meeting.contacts.length > 0 
+            ? meeting.contacts[0] 
+            : null;
+          const customerName = customer?.name || meeting.deal.company || 'the prospect';
+
+          console.log(`     - ${meeting.title} (starts at ${new Date(meeting.startTime).toLocaleTimeString()})`);
+
+          const smsResult = await smsNotificationService.sendPreCallNotification({
+            ownerPhone: meeting.deal.owner?.phone || '',
+            ownerName: meeting.deal.owner?.name || meeting.user.name || 'Sales Rep',
+            meetingTitle: meeting.title,
+            meetingStartTime: meeting.startTime,
+            customerName: customerName,
+            dealName: meeting.deal.dealName,
+            meetingId: meeting.id,
+          });
+
+          if (smsResult.success) {
+            totalSmsNotifications++;
+          }
+        }
       }
 
       // Trigger pre-meeting calls (T-20)
@@ -509,25 +569,28 @@ const runAutomationJob = async () => {
     }
 
     console.log(`\n✅ Job completed!`);
+    console.log(`   SMS notifications sent: ${totalSmsNotifications}`);
     console.log(`   Pre-meeting calls triggered: ${totalPreMeetings}`);
     console.log(`   Post-meeting calls triggered: ${totalPostMeetings}`);
     console.log(`   Next run in 5 minutes\n`);
 
-    // Log scheduler completion - ONLY if calls were triggered (Phase 1 optimization)
+    // Log scheduler completion - ONLY if calls or SMS were triggered (Phase 1 optimization)
     const totalCalls = totalPreMeetings + totalPostMeetings;
-    if (schedulerLogId && totalCalls > 0) {
+    const totalActivity = totalCalls + totalSmsNotifications;
+    if (schedulerLogId && totalActivity > 0) {
       await loggingService.logSchedulerComplete(schedulerLogId.id, {
         status: 'SUCCESS',
         totalUsers: usersToProcess.length,
         preCallsTriggered: totalPreMeetings,
         postCallsTriggered: totalPostMeetings,
         errorsCount: 0,
+        metadata: { smsNotificationsSent: totalSmsNotifications },
       });
-      console.log(`📊 Scheduler run logged (${totalCalls} calls triggered)`);
+      console.log(`📊 Scheduler run logged (${totalCalls} calls, ${totalSmsNotifications} SMS)`);
     } else if (schedulerLogId) {
       // Delete the initial log entry since nothing happened
       await loggingService.deleteSchedulerLog(schedulerLogId.id);
-      console.log(`🔇 Scheduler run not logged (0 calls, no activity)`);
+      console.log(`🔇 Scheduler run not logged (0 calls, 0 SMS, no activity)`);
     }
 
   } catch (error: any) {

@@ -52,5 +52,14 @@ export const config = {
     username: process.env.REDIS_USERNAME || 'default',
     password: process.env.REDIS_PASSWORD || '',
   },
+  twilio: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID || '',
+    authToken: process.env.TWILIO_AUTH_TOKEN || '',
+    smsFromNumber: process.env.TWILIO_SMS_FROM || '',
+    // Enable/disable SMS notifications (set to 'true' to enable)
+    smsEnabled: process.env.TWILIO_SMS_ENABLED === 'true',
+    // Minutes before meeting to send SMS notification (default: 30 minutes)
+    notificationMinutesBefore: parseInt(process.env.SMS_NOTIFICATION_MINUTES_BEFORE || '30'),
+  },
 };
 
