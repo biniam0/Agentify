@@ -17,6 +17,7 @@ import AdminLayout from './pages/Admin/AdminLayout';
 import LogsLayout from './pages/Admin/Logs/LogsLayout';
 import LogsOverview from './pages/Admin/Logs/Overview';
 import CallsLog from './components/Admin/CallsLog';
+import SmsLog from './components/Admin/SmsLog';
 import WebhooksLog from './components/Admin/WebhooksLog';
 import CrmActionsLog from './components/Admin/CrmActionsLog';
 import SchedulerLog from './components/Admin/SchedulerLog';
@@ -114,6 +115,10 @@ const router = createBrowserRouter([
           {
             path: 'calls',
             element: <CallsLog />,
+          },
+          {
+            path: 'sms',
+            element: <SmsLog />,
           },
           {
             path: 'webhooks',
