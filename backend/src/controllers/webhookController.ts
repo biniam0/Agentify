@@ -1147,6 +1147,10 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
       owner_email: owner.email || originalVars?.owner_email,
       owner_phone: owner.phone || originalVars?.owner_phone,
 
+      // Meeting context (pass to agent for inbound calls)
+      meeting_id: recentCall.meetingId,
+      meeting_title: recentCall.meetingTitle,
+
       // Fresh context from BarrierX
       recent_notes_summary: recentNotesText,
       open_tasks_list: openTasksList,
