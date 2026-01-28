@@ -9,7 +9,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import * as loggingService from '../services/loggingService';
 import * as infoGatheringService from '../services/infoGatheringService';
-import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType } from '@prisma/client';
+import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType, SmsStatus } from '@prisma/client';
 import prisma from '../config/database';
 
 const applyDateRange = (
@@ -275,6 +275,50 @@ export const getCrmActionLogs = async (req: AuthRequest, res: Response): Promise
     console.error('❌ Get CRM action logs error:', error);
     res.status(500).json({
       error: 'Failed to fetch CRM action logs',
+      details: error.message,
+    });
+  }
+};
+
+// ============================================
+// SMS LOGS
+// ============================================
+
+export const getSmsLogs = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const {
+      userId,
+      userEmail,
+      status,
+      meetingId,
+      startDate,
+      endDate,
+      limit = 50,
+      offset = 0,
+    } = req.query;
+
+    const result = await loggingService.getSmsLogs({
+      userId: userId as string,
+      userEmail: userEmail as string,
+      status: status as SmsStatus,
+      meetingId: meetingId as string,
+      startDate: startDate ? new Date(startDate as string) : undefined,
+      endDate: endDate ? new Date(endDate as string) : undefined,
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
+    });
+
+    res.json({
+      success: true,
+      data: result.logs,
+      total: result.total,
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
+    });
+  } catch (error: any) {
+    console.error('❌ Get SMS logs error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch SMS logs',
       details: error.message,
     });
   }

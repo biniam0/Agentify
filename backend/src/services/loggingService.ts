@@ -11,12 +11,14 @@ import {
   Status,
   CallType,
   CallStatus,
+  CallDirection,
   TriggerSource,
   CrmActionType,
   WebhookType,
   SchedulerJobType,
   ErrorType,
-  Severity
+  Severity,
+  SmsStatus
 } from '@prisma/client';
 
 // ============================================
@@ -80,6 +82,7 @@ export const updateActivityLog = async (id: string, data: {
 
 export const logCallInitiation = async (data: {
   callType: CallType;
+  callDirection?: CallDirection;
   userId: string;
   userName: string;
   userEmail: string;
@@ -120,6 +123,7 @@ export const updateCallLog = async (
   conversationId: string,
   data: {
     status?: CallStatus;
+    callDirection?: CallDirection;
     answeredAt?: Date;
     completedAt?: Date;
     duration?: number;
@@ -148,6 +152,7 @@ export const updateCallLogByCallSid = async (
   data: {
     conversationId?: string;
     status?: CallStatus;
+    callDirection?: CallDirection;
     answeredAt?: Date;
     completedAt?: Date;
     duration?: number;
@@ -350,6 +355,103 @@ export const logError = async (data: {
   } catch (error) {
     console.error('❌ Failed to log error:', error);
     return null;
+  }
+};
+
+// ============================================
+// SMS LOGGING
+// ============================================
+
+export const logSmsNotification = async (data: {
+  messageSid?: string;
+  status: SmsStatus;
+  toPhone: string;
+  fromPhone: string;
+  messageBody?: string;
+  userId: string;
+  barrierxUserId?: string;
+  hubspotOwnerId?: string;
+  userName?: string;
+  userEmail?: string;
+  ownerName?: string;
+  dealId?: string;
+  dealName?: string;
+  meetingId?: string;
+  meetingTitle?: string;
+  errorMessage?: string;
+  twilioErrorCode?: string;
+  triggerSource?: TriggerSource;
+}) => {
+  try {
+    return await prisma.smsLog.create({
+      data: {
+        ...data,
+        triggerSource: data.triggerSource || 'SCHEDULED',
+      },
+    });
+  } catch (error) {
+    console.error('❌ Failed to log SMS notification:', error);
+    return null;
+  }
+};
+
+export const updateSmsLog = async (
+  id: string,
+  data: {
+    status?: SmsStatus;
+    messageSid?: string;
+    errorMessage?: string;
+    twilioErrorCode?: string;
+  }
+) => {
+  try {
+    return await prisma.smsLog.update({
+      where: { id },
+      data,
+    });
+  } catch (error) {
+    console.error('❌ Failed to update SMS log:', error);
+    return null;
+  }
+};
+
+export const getSmsLogs = async (filters: {
+  userId?: string;
+  userEmail?: string;
+  status?: SmsStatus;
+  meetingId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  limit?: number;
+  offset?: number;
+}) => {
+  try {
+    const where: any = {};
+
+    if (filters.userId) where.userId = filters.userId;
+    if (filters.userEmail) where.userEmail = filters.userEmail;
+    if (filters.status) where.status = filters.status;
+    if (filters.meetingId) where.meetingId = filters.meetingId;
+    if (filters.startDate || filters.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) where.createdAt.gte = filters.startDate;
+      if (filters.endDate) where.createdAt.lte = filters.endDate;
+    }
+
+    const [logs, total] = await Promise.all([
+      prisma.smsLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: filters.limit || 50,
+        skip: filters.offset || 0,
+      }),
+      prisma.smsLog.count({ where }),
+    ]);
+
+    return { logs, total };
+  } catch (error) {
+    console.error('❌ Failed to get SMS logs:', error);
+    return { logs: [], total: 0 };
   }
 };
 

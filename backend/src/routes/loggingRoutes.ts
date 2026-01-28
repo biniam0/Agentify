@@ -39,6 +39,9 @@ router.get('/scheduler', adminProtected, loggingController.getSchedulerLogs);
 // CRM ACTION LOGS
 router.get('/crm-actions', adminProtected, loggingController.getCrmActionLogs);
 
+// SMS LOGS
+router.get('/sms', adminProtected, loggingController.getSmsLogs);
+
 // ANALYTICS
 router.get('/analytics/calls', adminProtected, loggingController.getCallAnalytics);
 router.get('/analytics/dashboard', adminProtected, loggingController.getDashboardStats);

@@ -11,6 +11,7 @@ import {
   ChevronRight,
   FileText,
   HelpCircle,
+  MessageSquare,
   Phone,
   Settings,
   Target,
@@ -65,6 +66,11 @@ const logsNavItems = [
     title: 'Calls',
     url: '/admin/logs/calls',
     icon: Phone,
+  },
+  {
+    title: 'SMS',
+    url: '/admin/logs/sms',
+    icon: MessageSquare,
   },
   {
     title: 'Webhooks',

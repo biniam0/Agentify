@@ -446,6 +446,12 @@ const runAutomationJob = async () => {
             customerName: customerName,
             dealName: meeting.deal.dealName,
             meetingId: meeting.id,
+            // Additional context for logging
+            userId: meeting.user.databaseUserId || meeting.user.userId,
+            barrierxUserId: meeting.user.userId,
+            hubspotOwnerId: meeting.deal.owner?.hubspotId || meeting.deal.owner?.id,
+            userEmail: meeting.user.email,
+            dealId: meeting.deal.id,
           });
 
           if (smsResult.success) {

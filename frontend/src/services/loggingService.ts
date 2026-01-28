@@ -135,6 +135,29 @@ export interface CrmActionLog {
     completedAt?: string;
 }
 
+export interface SmsLog {
+    id: string;
+    messageSid?: string;
+    status: 'QUEUED' | 'SENT' | 'DELIVERED' | 'FAILED';
+    toPhone: string;
+    fromPhone: string;
+    messageBody?: string;
+    userId: string;
+    barrierxUserId?: string;
+    hubspotOwnerId?: string;
+    userName?: string;
+    userEmail?: string;
+    ownerName?: string;
+    dealId?: string;
+    dealName?: string;
+    meetingId?: string;
+    meetingTitle?: string;
+    errorMessage?: string;
+    twilioErrorCode?: string;
+    triggerSource: 'MANUAL' | 'SCHEDULED' | 'RETRY' | 'WEBHOOK';
+    createdAt: string;
+}
+
 export interface DashboardStats {
     totalCallsToday: number;
     successRate: number;
@@ -301,6 +324,28 @@ export const getCrmActionLogs = async (filters?: {
         });
     }
     const response = await api.get(`/logs/crm-actions?${params.toString()}`);
+    return response.data;
+};
+
+export const getSmsLogs = async (filters?: {
+    userId?: string;
+    userEmail?: string;
+    status?: string;
+    meetingId?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    offset?: number;
+}): Promise<PaginatedResponse<SmsLog>> => {
+    const params = new URLSearchParams();
+    if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                params.append(key, value.toString());
+            }
+        });
+    }
+    const response = await api.get(`/logs/sms?${params.toString()}`);
     return response.data;
 };
 

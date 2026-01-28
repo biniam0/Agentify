@@ -312,6 +312,53 @@ model ErrorLog {
   @@index([errorType, createdAt(sort: Desc)])
 }
 
+// SMS Log - Track SMS notifications sent to deal owners
+model SmsLog {
+  id String @id @default(uuid())
+
+  // SMS Details
+  messageSid  String? // Twilio message SID
+  status      SmsStatus @default(QUEUED)
+  toPhone     String
+  fromPhone   String
+  messageBody String?   @db.Text
+
+  // User identifiers (standardized)
+  userId         String  // AgentX database user ID
+  barrierxUserId String? // BarrierX user ID
+  hubspotOwnerId String? // HubSpot owner ID
+
+  // User info
+  userName  String?
+  userEmail String?
+  ownerName String?
+
+  // Deal & Meeting context
+  dealId       String?
+  dealName     String?
+  meetingId    String?
+  meetingTitle String?
+
+  // Error tracking
+  errorMessage    String?
+  twilioErrorCode String?
+
+  // Trigger source
+  triggerSource TriggerSource @default(SCHEDULED)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userEmail])
+  @@index([status])
+  @@index([createdAt])
+  @@index([meetingId])
+  // ⚡ Composite indexes for common queries
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+}
+
 // ============================================
 // BARRIERX INFO GATHERING
 // ============================================
@@ -538,4 +585,11 @@ enum Severity {
 enum CallDirection {
   OUTBOUND
   INBOUND
+}
+
+enum SmsStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
 }
