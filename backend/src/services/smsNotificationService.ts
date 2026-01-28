@@ -109,6 +109,12 @@ interface PreCallNotificationParams {
   customerName: string;
   dealName: string;
   meetingId: string;
+  // Additional context for logging
+  userId?: string;          // AgentX database user ID
+  barrierxUserId?: string;  // BarrierX user ID
+  hubspotOwnerId?: string;  // HubSpot owner ID
+  userEmail?: string;
+  dealId?: string;
 }
 
 /**
@@ -131,7 +137,20 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
   messageSid?: string;
   error?: string;
 }> => {
-  const { ownerPhone, ownerName, meetingTitle, meetingStartTime, customerName, dealName, meetingId } = params;
+  const { 
+    ownerPhone, 
+    ownerName, 
+    meetingTitle, 
+    meetingStartTime, 
+    customerName, 
+    dealName, 
+    meetingId,
+    userId,
+    barrierxUserId,
+    hubspotOwnerId,
+    userEmail,
+    dealId,
+  } = params;
 
   // Check if already notified
   if (hasBeenNotified(meetingId, meetingStartTime)) {
@@ -188,6 +207,26 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
     // Mark as notified to prevent duplicates
     markAsNotified(meetingId, meetingStartTime, message.sid);
 
+    // Log to database
+    await loggingService.logSmsNotification({
+      messageSid: message.sid,
+      status: 'SENT',
+      toPhone: ownerPhone,
+      fromPhone: config.twilio.smsFromNumber,
+      messageBody: messageBody,
+      userId: userId || 'unknown',
+      barrierxUserId,
+      hubspotOwnerId,
+      userName: ownerName,
+      userEmail,
+      ownerName,
+      dealId,
+      dealName,
+      meetingId,
+      meetingTitle,
+      triggerSource: 'SCHEDULED',
+    });
+
     return {
       success: true,
       messageSid: message.sid,
@@ -196,7 +235,27 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
   } catch (error: any) {
     console.error(`       ❌ SMS sending failed:`, error.message);
 
-    // Log error
+    // Log failed SMS to database
+    await loggingService.logSmsNotification({
+      status: 'FAILED',
+      toPhone: ownerPhone,
+      fromPhone: config.twilio.smsFromNumber || '',
+      userId: userId || 'unknown',
+      barrierxUserId,
+      hubspotOwnerId,
+      userName: ownerName,
+      userEmail,
+      ownerName,
+      dealId,
+      dealName,
+      meetingId,
+      meetingTitle,
+      errorMessage: error.message,
+      twilioErrorCode: error.code?.toString(),
+      triggerSource: 'SCHEDULED',
+    });
+
+    // Also log error
     await loggingService.logError({
       errorType: 'EXTERNAL_SERVICE',
       severity: 'MEDIUM',
