@@ -11,6 +11,7 @@ import {
   Status,
   CallType,
   CallStatus,
+  CallDirection,
   TriggerSource,
   CrmActionType,
   WebhookType,
@@ -80,6 +81,7 @@ export const updateActivityLog = async (id: string, data: {
 
 export const logCallInitiation = async (data: {
   callType: CallType;
+  callDirection?: CallDirection;
   userId: string;
   userName: string;
   userEmail: string;
@@ -120,6 +122,7 @@ export const updateCallLog = async (
   conversationId: string,
   data: {
     status?: CallStatus;
+    callDirection?: CallDirection;
     answeredAt?: Date;
     completedAt?: Date;
     duration?: number;
@@ -148,6 +151,7 @@ export const updateCallLogByCallSid = async (
   data: {
     conversationId?: string;
     status?: CallStatus;
+    callDirection?: CallDirection;
     answeredAt?: Date;
     completedAt?: Date;
     duration?: number;
