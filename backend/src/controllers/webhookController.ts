@@ -166,6 +166,7 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
     const callDuration = metadata.call_duration_secs || 0;
     const terminationReason = metadata.termination_reason || 'Unknown';
     const phoneCall = metadata.phone_call || {};
+    const callSid = phoneCall.call_sid;
     const calledNumber = phoneCall.external_number || 'Unknown';
 
     console.log(`📞 Called Number: ${calledNumber}`);
@@ -187,6 +188,7 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
     const customerName = dynamicVariables.customer_name;
     const tenantSlug = dynamicVariables.tenant_slug;
     const hubspotOwnerId = dynamicVariables.hubspot_owner_id;
+    const isInboundCall = dynamicVariables.is_inbound_call === 'true';
 
     console.log(`💼 Deal ID: ${dealId}`);
     console.log(`👤 Customer: ${customerName}`);
@@ -255,15 +257,27 @@ Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
     });
 
     // Update call log with completion data
-    if (conversationId) {
-      await loggingService.updateCallLog(conversationId, {
-        status: 'COMPLETED',
-        completedAt: new Date(event_timestamp * 1000),
-        duration: callDuration,
-        callSuccessful: callSuccessful === 'success',
-        transcriptSummary: transcriptSummary,
-        webhookData: req.body,
-      });
+    const completionUpdate = {
+      conversationId,
+      status: 'COMPLETED' as const,
+      completedAt: new Date(event_timestamp * 1000),
+      duration: callDuration,
+      callSuccessful: callSuccessful === 'success',
+      transcriptSummary: transcriptSummary,
+      webhookData: req.body,
+      ...(isInboundCall ? { callDirection: 'INBOUND' as const } : {}),
+    };
+
+    // Prefer updating by Call SID (covers inbound calls created before conversationId exists)
+    if (callSid) {
+      const result = await loggingService.updateCallLogByCallSid(callSid, completionUpdate);
+
+      // Fallback: if nothing was updated by callSid, try conversationId-based update
+      if (result?.count === 0 && conversationId) {
+        await loggingService.updateCallLog(conversationId, completionUpdate);
+      }
+    } else if (conversationId) {
+      await loggingService.updateCallLog(conversationId, completionUpdate);
     }
 
     // Log note creation as CRM action
@@ -1214,6 +1228,7 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
 
     await loggingService.logCallInitiation({
       callType: 'POST_CALL',
+      callDirection: 'INBOUND',
       userId: dbUser?.id || recentCall.userId, // Use correct DB UUID; fallback to stored value if user not found
       userName: recentCall.userName,
       userEmail: recentCall.userEmail,
