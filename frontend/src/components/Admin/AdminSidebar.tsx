@@ -120,19 +120,19 @@ export function AdminSidebar() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               onClick={() => navigate('/admin')}
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-brand text-white">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
                 <svg
-                  className="size-4"
+                  className="h-[1.25rem] w-auto"
                   viewBox="0 0 42 28"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  <path d="M42 28H28V14L42 28Z" fill="currentColor" />
-                  <path d="M28 14V0L42 2.00272e-06L28 14Z" fill="currentColor" opacity="0.7" />
-                  <path d="M14 28V14H28L14 28Z" fill="currentColor" opacity="0.7" />
-                  <path d="M28 14H14V0L28 14Z" fill="currentColor" />
-                  <path d="M14 28H0L14 14V28Z" fill="currentColor" />
-                  <path d="M14 14L0 0H14V14Z" fill="currentColor" />
+                  <path d="M42 28H28V14L42 28Z" fill="#53A17D" />
+                  <path d="M28 14V0L42 2.00272e-06L28 14Z" fill="#2D6A4F" />
+                  <path d="M14 28V14H28L14 28Z" fill="#2D6A4F" />
+                  <path d="M28 14H14V0L28 14Z" fill="#53A17D" />
+                  <path d="M14 28H0L14 14V28Z" fill="#53A17D" />
+                  <path d="M14 14L0 0H14V14Z" fill="#53A17D" />
                 </svg>
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
