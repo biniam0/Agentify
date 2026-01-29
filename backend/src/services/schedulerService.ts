@@ -446,6 +446,11 @@ const runAutomationJob = async () => {
             customerName: customerName,
             dealName: meeting.deal.dealName,
             meetingId: meeting.id,
+            // Deal context for enhanced SMS
+            dealAmount: meeting.deal.amount,
+            dealStage: meeting.deal.stage,
+            risks: meeting.deal.userDealRiskScores,
+            recommendations: meeting.deal.recommendations,
             // Additional context for logging
             userId: meeting.user.databaseUserId || meeting.user.userId,
             barrierxUserId: meeting.user.userId,
