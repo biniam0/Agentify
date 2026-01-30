@@ -171,7 +171,11 @@ const processUserMeetings = (userData: any) => {
   // ✅ Cache time values - calculate once, reuse for all meetings
   const now = Date.now();
   const twentyMinutesFromNow = now + 20 * 60 * 1000;
-  const thirtyMinutesAgo = now - 30 * 60 * 1000;
+  
+  // Post-call timing: 18 minutes after meeting end (with ±3 min tolerance)
+  // Window: 15-21 minutes after meeting ended (ensures >15 min delay)
+  const twentyOneMinutesAgo = now - 21 * 60 * 1000;  // 18 min + 3 min tolerance
+  const fifteenMinutesAgo = now - 15 * 60 * 1000;    // 18 min - 3 min tolerance
   
   // SMS notification window: configurable minutes before meeting (default 30 min)
   // We check for meetings starting between notificationMinutesBefore and (notificationMinutesBefore - 10) minutes
@@ -214,8 +218,8 @@ const processUserMeetings = (userData: any) => {
       // Check for pre-meeting (T-20: upcoming within next 20 minutes)
       const isPreMeeting = startTime >= now && startTime <= twentyMinutesFromNow;
 
-      // Check for post-meeting (T+30: ended within last 30 minutes)
-      const isPostMeeting = endTime >= thirtyMinutesAgo && endTime <= now;
+      // Check for post-meeting (T+18: ended 15-21 minutes ago)
+      const isPostMeeting = endTime >= twentyOneMinutesAgo && endTime <= fifteenMinutesAgo;
 
       // NEW: Check for SMS notification window (e.g., T-25 to T-35 for 30-min notification)
       const needsSmsNotification = config.twilio.smsEnabled && 
@@ -521,7 +525,7 @@ const runAutomationJob = async () => {
         }
       }
 
-      // Trigger post-meeting calls (T+30)
+      // Trigger post-meeting calls (T+18: 18 minutes after meeting ends, minimum 15 min)
       if (postMeetings.length > 0) {
         console.log(`  📞 ${postMeetings.length} post-meeting call(s) to trigger:`);
         for (const meeting of postMeetings) {

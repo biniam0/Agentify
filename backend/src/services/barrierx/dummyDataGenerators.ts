@@ -88,13 +88,14 @@ export const generateDummyMeetings = (deal: any, contacts: Contact[]): Meeting[]
     });
   }
 
-  // Follow-up meeting (30 minutes after current time for post-call testing)
-  const postMeetingTime = now + 30 * 60 * 1000;
+  // Follow-up meeting (ended 18 minutes ago for post-call testing)
+  const postMeetingEndTime = now - 18 * 60 * 1000; // Ended 18 min ago
+  const postMeetingStartTime = postMeetingEndTime - 30 * 60 * 1000; // Started 48 min ago
   meetings.push({
     id: `m-${deal.id}-post`,
     title: `Follow-up: ${deal.dealName}`,
-    startTime: new Date(postMeetingTime).toISOString(),
-    endTime: new Date(postMeetingTime + 30 * 60 * 1000).toISOString(),
+    startTime: new Date(postMeetingStartTime).toISOString(),
+    endTime: new Date(postMeetingEndTime).toISOString(),
     status: 'scheduled' as const,
     agenda: `Follow-up discussion and next steps for ${deal.dealName}`,
     participants: contacts,

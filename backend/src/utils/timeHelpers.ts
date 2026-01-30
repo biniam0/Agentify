@@ -20,14 +20,16 @@ export const getT20Window = (): TimeWindow => {
 };
 
 /**
- * Get time window for T+30 (30 minutes ago)
+ * Get time window for T+18 (18 minutes after meeting ends)
  * Used for post-meeting calls
+ * Includes ±3 minute tolerance for scheduler cycles (15-21 min window)
+ * Ensures post-calls trigger at minimum 15 minutes after meeting end
  */
-export const getT30Window = (): TimeWindow => {
+export const getT18Window = (): TimeWindow => {
   const now = Date.now();
   return {
-    start: now - 30 * 60 * 1000, // 30 minutes ago
-    end: now,
+    start: now - 21 * 60 * 1000, // 21 minutes ago (18 min + 3 min tolerance)
+    end: now - 15 * 60 * 1000,   // 15 minutes ago (18 min - 3 min tolerance)
   };
 };
 
@@ -41,11 +43,12 @@ export const isInT20Window = (startTime: string): boolean => {
 };
 
 /**
- * Check if a meeting is in the T+30 window (ended within last 30 minutes)
+ * Check if a meeting is in the T+18 window (ended 18 minutes ago, ±3 min tolerance)
+ * This checks if meeting ended 15-21 minutes ago
  */
-export const isInT30Window = (endTime: string): boolean => {
+export const isInT18Window = (endTime: string): boolean => {
   const meetingEnd = new Date(endTime).getTime();
-  const window = getT30Window();
+  const window = getT18Window();
   return meetingEnd >= window.start && meetingEnd <= window.end;
 };
 
@@ -60,10 +63,10 @@ export const isMeetingOngoing = (startTime: string, endTime: string): boolean =>
 };
 
 /**
- * Filter meetings based on T-20 and T+30 logic
+ * Filter meetings based on T-20 and T+18 logic
  * Returns meetings that are either:
  * - Starting within next 20 minutes (T-20)
- * - Ended within last 30 minutes (T+30)
+ * - Ended 18 minutes ago (T+18, with ±3 min tolerance = 15-21 min window)
  * - Currently ongoing
  */
 export const filterMeetingsByTimeWindow = <T extends { startTime: string; endTime: string }>(
@@ -72,7 +75,7 @@ export const filterMeetingsByTimeWindow = <T extends { startTime: string; endTim
   return meetings.filter((meeting) => {
     return (
       isInT20Window(meeting.startTime) ||
-      isInT30Window(meeting.endTime) ||
+      isInT18Window(meeting.endTime) ||
       isMeetingOngoing(meeting.startTime, meeting.endTime)
     );
   });

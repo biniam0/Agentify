@@ -222,7 +222,7 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
 
 /**
  * Trigger post-meeting call via ElevenLabs
- * Calls customer 30 minutes after meeting ends
+ * Calls customer 18 minutes after meeting ends (15-21 min window)
  */
 export const triggerPostMeetingCall = async (payload: PostCallPayload): Promise<any> => {
   try {
