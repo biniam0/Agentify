@@ -3,7 +3,7 @@
  * 
  * Handles automated info gathering calls for:
  * - Zero Score: Deals with no BarrierX scores
- * - Lost Deals: Deals marked as "Closed Lost"
+ * - Lost Deals: Deals marked as "Lost"
  * - Inactivity: Deals with no activity for 2 weeks (Future)
  * 
  * Integrated directly into the backend for better control and easier stopping.
@@ -177,10 +177,10 @@ function hasNoBarrierXScore(riskScores: DealRiskScores | null | undefined): bool
   return true;
 }
 
-function isClosedLost(stage: string): boolean {
+function isLost(stage: string): boolean {
   if (!stage) return false;
   const lowerStage = stage.toLowerCase();
-  return lowerStage.includes('closed lost') || lowerStage === 'closedlost';
+  return lowerStage === 'lost';
 }
 
 /**
@@ -455,9 +455,9 @@ async function runLostDealGathering(): Promise<void> {
   log('═══════════════════════════════════════════════════════════════');
 
   const allDeals = await fetchDeals();
-  const eligibleDeals = allDeals.filter(({ deal }) => isClosedLost(deal.stage));
+  const eligibleDeals = allDeals.filter(({ deal }) => isLost(deal.stage));
 
-  log(`📊 Closed Lost deals: ${eligibleDeals.length} / ${allDeals.length}`);
+  log(`📊 Lost deals: ${eligibleDeals.length} / ${allDeals.length}`);
 
   await processDeals(eligibleDeals, 'LOST_DEAL');
 }

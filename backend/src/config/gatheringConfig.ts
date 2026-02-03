@@ -84,12 +84,12 @@ export const GATHERING_CONFIGS: Record<GatheringType, GatheringTypeConfig> = {
 
     LOST_DEAL: {
         displayName: 'Lost Deal',
-        description: 'Deals marked as Closed Lost',
+        description: 'Deals marked as Lost',
         callType: 'LOST_DEAL_QUESTIONNAIRE',
 
         // Context message template
         contextMessageTemplate: (dealName: string) =>
-            `This is a call to gather feedback about deal "${dealName}" which was marked as Closed Lost.`,
+            `This is a call to gather feedback about deal "${dealName}" which was marked as Lost.`,
 
         // Additional dynamic variables specific to lost deals
         additionalDynamicVariables: {
@@ -101,8 +101,8 @@ export const GATHERING_CONFIGS: Record<GatheringType, GatheringTypeConfig> = {
 
         // Deal filter
         dealFilter: {
-            filterFn: 'isClosedLost',
-            filterDescription: 'deals marked as "Closed Lost"',
+            filterFn: 'isLost',
+            filterDescription: 'deals marked as "Lost"',
         },
 
         // Questions

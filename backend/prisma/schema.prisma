@@ -434,7 +434,7 @@ model BarrierXInfoGathering {
 
 enum GatheringType {
   ZERO_SCORE // Deals with no BarrierX score
-  LOST_DEAL // Deals marked as Closed Lost
+  LOST_DEAL // Deals marked as Lost
   INACTIVITY // Deals with no activity for 2 weeks
 }
 
