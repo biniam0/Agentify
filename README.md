@@ -15,7 +15,7 @@
 AgentX automates sales meeting follow-ups using AI voice calls:
 
 - **📞 Pre-Meeting Calls (T-20 min)** - AI calls sales rep to review deal context, risks, and recommendations
-- **📞 Post-Meeting Calls (T+30 min)** - AI calls to capture meeting outcomes, next steps, and action items
+- **📞 Post-Meeting Calls (T+15 min)** - AI calls to capture meeting outcomes, next steps, and action items
 - **🤖 AI Voice Agents** - Natural conversations powered by ElevenLabs Conversational AI
 - **📊 CRM Integration** - Syncs with BarrierX for real-time deal, contact, and meeting data
 - **⚡ Automated Scheduling** - Runs every 3 minutes to trigger timely calls

@@ -547,7 +547,7 @@ const BarrierXInfo: React.FC = () => {
                     Lost Deal Questionnaire
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Gather loss reasons from Closed Lost deals
+                    Gather loss reasons from Lost deals
                   </p>
                 </div>
               </div>
@@ -574,7 +574,7 @@ const BarrierXInfo: React.FC = () => {
                 ) : (
                   <>
                     <div className="text-sm text-gray-500">
-                      Calls "Closed Lost" deal owners
+                      Calls "Lost" deal owners
                     </div>
                     <Button
                       variant="default"

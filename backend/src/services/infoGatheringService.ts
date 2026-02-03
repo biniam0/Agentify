@@ -3,7 +3,7 @@
  * 
  * Handles automated info gathering calls for:
  * - Zero Score: Deals with no BarrierX scores
- * - Lost Deals: Deals marked as "Closed Lost"
+ * - Lost Deals: Deals marked as "Lost"
  * - Inactivity: Deals with no activity for 2 weeks (Future)
  * 
  * Integrated directly into the backend for better control and easier stopping.
@@ -177,10 +177,10 @@ function hasNoBarrierXScore(riskScores: DealRiskScores | null | undefined): bool
   return true;
 }
 
-function isClosedLost(stage: string): boolean {
+function isLost(stage: string): boolean {
   if (!stage) return false;
   const lowerStage = stage.toLowerCase();
-  return lowerStage.includes('closed lost') || lowerStage === 'closedlost';
+  return lowerStage === 'lost';
 }
 
 /**
@@ -201,6 +201,59 @@ function hasNoRecentActivity(deal: Deal): boolean {
 
   const lastActivity = new Date(lastActivityStr);
   return lastActivity < twoWeeksAgo;
+}
+
+/**
+ * Spread deals by owner - reorder deals so same-owner deals are spread across different batches.
+ * This ensures all deals are called, but the same person isn't called back-to-back.
+ * Uses a round-robin approach across different owners.
+ */
+function spreadByOwner(
+  deals: Array<{ tenant: Tenant; deal: Deal }>
+): Array<{ tenant: Tenant; deal: Deal }> {
+  // Group deals by owner
+  const ownerDeals = new Map<string, Array<{ tenant: Tenant; deal: Deal }>>();
+
+  for (const item of deals) {
+    const { deal } = item;
+    const ownerKey = deal.owner?.email || deal.owner?.phone || deal.id;
+
+    if (!ownerDeals.has(ownerKey)) {
+      ownerDeals.set(ownerKey, []);
+    }
+    ownerDeals.get(ownerKey)!.push(item);
+  }
+
+  // Sort each owner's deals by date (most recent first)
+  for (const dealList of ownerDeals.values()) {
+    dealList.sort((a, b) => {
+      const dateA = new Date(a.deal.updatedAt || a.deal.createdAt || '1970-01-01');
+      const dateB = new Date(b.deal.updatedAt || b.deal.createdAt || '1970-01-01');
+      return dateB.getTime() - dateA.getTime(); // Most recent first
+    });
+  }
+
+  // Round-robin: take one deal from each owner in turn
+  const result: Array<{ tenant: Tenant; deal: Deal }> = [];
+  const ownerQueues = Array.from(ownerDeals.values());
+  const ownerCount = ownerQueues.length;
+
+  let round = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    hasMore = false;
+    for (let i = 0; i < ownerCount; i++) {
+      const queue = ownerQueues[i];
+      if (round < queue.length) {
+        result.push(queue[round]);
+        hasMore = true;
+      }
+    }
+    round++;
+  }
+
+  return result;
 }
 
 /**
@@ -234,6 +287,31 @@ async function markAsCalled(dealId: string, type: GatheringType): Promise<void> 
   // Use modular config for Redis key (each type has its own namespace)
   const key = getRedisKey(type, dealId);
   await client.setEx(key, REDIS_TTL_SECONDS, new Date().toISOString());
+}
+
+/**
+ * Interruptible delay that respects jobState.shouldStop.
+ * Checks every 5 seconds if the job should stop.
+ * Returns true if the delay completed, false if interrupted.
+ */
+async function interruptibleDelay(ms: number): Promise<boolean> {
+  const checkInterval = 5000; // Check every 5 seconds
+  let elapsed = 0;
+
+  while (elapsed < ms && !jobState.shouldStop) {
+    const remaining = ms - elapsed;
+    const waitTime = Math.min(checkInterval, remaining);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+    elapsed += waitTime;
+
+    // Log countdown every minute
+    if (elapsed % 60000 === 0 && elapsed < ms) {
+      const minutesRemaining = Math.ceil((ms - elapsed) / 60000);
+      log(`   ⏳ ${minutesRemaining} minute(s) remaining before next batch...`);
+    }
+  }
+
+  return !jobState.shouldStop;
 }
 
 // ============================================
@@ -440,11 +518,16 @@ async function runZeroScoreGathering(): Promise<void> {
   const allDeals = await fetchDeals();
 
   // Filter: Zero BarrierX score AND created within 60 days
-  const eligibleDeals = allDeals.filter(({ deal }) =>
+  const filteredDeals = allDeals.filter(({ deal }) =>
     hasNoBarrierXScore(deal.userDealRiskScores) && isWithinDays(deal.createdAt, FRESHNESS_DAYS)
   );
 
-  log(`📊 Deals with no BarrierX score AND created within ${FRESHNESS_DAYS} days: ${eligibleDeals.length} / ${allDeals.length}`);
+  // Spread deals by owner - reorder so same owner's deals are in different batches
+  const eligibleDeals = spreadByOwner(filteredDeals);
+
+  // Count unique owners for logging
+  const uniqueOwners = new Set(filteredDeals.map(({ deal }) => deal.owner?.email || deal.owner?.phone || deal.id)).size;
+  log(`📊 Zero score deals: ${filteredDeals.length} (within ${FRESHNESS_DAYS} days), Unique owners: ${uniqueOwners}`);
 
   await processDeals(eligibleDeals, 'ZERO_SCORE');
 }
@@ -455,9 +538,15 @@ async function runLostDealGathering(): Promise<void> {
   log('═══════════════════════════════════════════════════════════════');
 
   const allDeals = await fetchDeals();
-  const eligibleDeals = allDeals.filter(({ deal }) => isClosedLost(deal.stage));
+  const lostDeals = allDeals.filter(({ deal }) => isLost(deal.stage));
 
-  log(`📊 Closed Lost deals: ${eligibleDeals.length} / ${allDeals.length}`);
+  // Spread deals by owner - reorder so same owner's deals are in different batches
+  // This ensures all deals are called, but same person isn't called back-to-back
+  const eligibleDeals = spreadByOwner(lostDeals);
+
+  // Count unique owners for logging
+  const uniqueOwners = new Set(lostDeals.map(({ deal }) => deal.owner?.email || deal.owner?.phone || deal.id)).size;
+  log(`📊 Lost deals: ${lostDeals.length}, Unique owners: ${uniqueOwners} (deals reordered to spread same-owner calls)`);
 
   await processDeals(eligibleDeals, 'LOST_DEAL');
 }
@@ -473,7 +562,7 @@ async function runInactivityGathering(): Promise<void> {
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
   log(`📅 Checking for deals not updated since: ${twoWeeksAgo.toISOString()}`);
 
-  const eligibleDeals = allDeals.filter(({ deal }) => {
+  const filteredDeals = allDeals.filter(({ deal }) => {
     // Skip closed deals - we only want active deals
     const lowerStage = deal.stage?.toLowerCase() || '';
     if (lowerStage.includes('closed')) {
@@ -484,7 +573,12 @@ async function runInactivityGathering(): Promise<void> {
     return hasNoRecentActivity(deal);
   });
 
-  log(`📊 Inactive deals (2+ weeks no activity): ${eligibleDeals.length} / ${allDeals.length}`);
+  // Spread deals by owner - reorder so same owner's deals are in different batches
+  const eligibleDeals = spreadByOwner(filteredDeals);
+
+  // Count unique owners for logging
+  const uniqueOwners = new Set(filteredDeals.map(({ deal }) => deal.owner?.email || deal.owner?.phone || deal.id)).size;
+  log(`📊 Inactive deals: ${filteredDeals.length} (2+ weeks no activity), Unique owners: ${uniqueOwners}`);
 
   await processDeals(eligibleDeals, 'INACTIVITY');
 }
@@ -601,6 +695,21 @@ async function processDeals(
 
     const percentComplete = Math.round((batchEnd / callableDeals.length) * 100);
     log(`\n📈 Overall progress: ${batchEnd}/${callableDeals.length} (${percentComplete}%)`);
+
+    // Add configurable delay between batches (if more batches remaining)
+    if (batchIndex < jobState.totalBatches - 1 && !jobState.shouldStop) {
+      const delayMs = getGatheringConfig(type).delayBetweenBatchesMs;
+      if (delayMs > 0) {
+        const delayMinutes = Math.round(delayMs / 60000);
+        log(`\n⏳ Waiting ${delayMinutes} minute(s) before next batch to prevent call flooding...`);
+        const completed = await interruptibleDelay(delayMs);
+        if (!completed) {
+          log('⛔ Job stopped during delay - exiting');
+          break;
+        }
+        log('✅ Delay completed, proceeding to next batch');
+      }
+    }
   }
 
   // Summary
