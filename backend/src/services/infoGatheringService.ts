@@ -518,11 +518,16 @@ async function runZeroScoreGathering(): Promise<void> {
   const allDeals = await fetchDeals();
 
   // Filter: Zero BarrierX score AND created within 60 days
-  const eligibleDeals = allDeals.filter(({ deal }) =>
+  const filteredDeals = allDeals.filter(({ deal }) =>
     hasNoBarrierXScore(deal.userDealRiskScores) && isWithinDays(deal.createdAt, FRESHNESS_DAYS)
   );
 
-  log(`📊 Deals with no BarrierX score AND created within ${FRESHNESS_DAYS} days: ${eligibleDeals.length} / ${allDeals.length}`);
+  // Spread deals by owner - reorder so same owner's deals are in different batches
+  const eligibleDeals = spreadByOwner(filteredDeals);
+
+  // Count unique owners for logging
+  const uniqueOwners = new Set(filteredDeals.map(({ deal }) => deal.owner?.email || deal.owner?.phone || deal.id)).size;
+  log(`📊 Zero score deals: ${filteredDeals.length} (within ${FRESHNESS_DAYS} days), Unique owners: ${uniqueOwners}`);
 
   await processDeals(eligibleDeals, 'ZERO_SCORE');
 }
@@ -557,7 +562,7 @@ async function runInactivityGathering(): Promise<void> {
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
   log(`📅 Checking for deals not updated since: ${twoWeeksAgo.toISOString()}`);
 
-  const eligibleDeals = allDeals.filter(({ deal }) => {
+  const filteredDeals = allDeals.filter(({ deal }) => {
     // Skip closed deals - we only want active deals
     const lowerStage = deal.stage?.toLowerCase() || '';
     if (lowerStage.includes('closed')) {
@@ -568,7 +573,12 @@ async function runInactivityGathering(): Promise<void> {
     return hasNoRecentActivity(deal);
   });
 
-  log(`📊 Inactive deals (2+ weeks no activity): ${eligibleDeals.length} / ${allDeals.length}`);
+  // Spread deals by owner - reorder so same owner's deals are in different batches
+  const eligibleDeals = spreadByOwner(filteredDeals);
+
+  // Count unique owners for logging
+  const uniqueOwners = new Set(filteredDeals.map(({ deal }) => deal.owner?.email || deal.owner?.phone || deal.id)).size;
+  log(`📊 Inactive deals: ${filteredDeals.length} (2+ weeks no activity), Unique owners: ${uniqueOwners}`);
 
   await processDeals(eligibleDeals, 'INACTIVITY');
 }
