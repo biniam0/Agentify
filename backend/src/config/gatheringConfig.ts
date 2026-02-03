@@ -46,6 +46,9 @@ export interface GatheringTypeConfig {
 
     // Fields saved to database
     savedFields: string[];
+
+    // Delay between batches in milliseconds (to prevent call flooding)
+    delayBetweenBatchesMs: number;
 }
 
 // ============================================
@@ -80,6 +83,9 @@ export const GATHERING_CONFIGS: Record<GatheringType, GatheringTypeConfig> = {
 
         // Database fields
         savedFields: ['quantifiedPainPoints', 'championInfo', 'economicBuyerInfo'],
+
+        // 5 minutes between batches
+        delayBetweenBatchesMs: 5 * 60 * 1000,
     },
 
     LOST_DEAL: {
@@ -114,6 +120,9 @@ export const GATHERING_CONFIGS: Record<GatheringType, GatheringTypeConfig> = {
 
         // Database fields
         savedFields: ['lossReason', 'competitorName', 'lessonsLearned'],
+
+        // 30 minutes between batches (longer gap for lost deals to prevent flooding)
+        delayBetweenBatchesMs: 30 * 60 * 1000,
     },
 
     INACTIVITY: {
@@ -143,6 +152,9 @@ export const GATHERING_CONFIGS: Record<GatheringType, GatheringTypeConfig> = {
 
         // Database fields
         savedFields: ['currentStatus', 'blockers', 'nextSteps'],
+
+        // 10 minutes between batches
+        delayBetweenBatchesMs: 10 * 60 * 1000,
     },
 };
 

@@ -204,6 +204,59 @@ function hasNoRecentActivity(deal: Deal): boolean {
 }
 
 /**
+ * Spread deals by owner - reorder deals so same-owner deals are spread across different batches.
+ * This ensures all deals are called, but the same person isn't called back-to-back.
+ * Uses a round-robin approach across different owners.
+ */
+function spreadByOwner(
+  deals: Array<{ tenant: Tenant; deal: Deal }>
+): Array<{ tenant: Tenant; deal: Deal }> {
+  // Group deals by owner
+  const ownerDeals = new Map<string, Array<{ tenant: Tenant; deal: Deal }>>();
+
+  for (const item of deals) {
+    const { deal } = item;
+    const ownerKey = deal.owner?.email || deal.owner?.phone || deal.id;
+
+    if (!ownerDeals.has(ownerKey)) {
+      ownerDeals.set(ownerKey, []);
+    }
+    ownerDeals.get(ownerKey)!.push(item);
+  }
+
+  // Sort each owner's deals by date (most recent first)
+  for (const dealList of ownerDeals.values()) {
+    dealList.sort((a, b) => {
+      const dateA = new Date(a.deal.updatedAt || a.deal.createdAt || '1970-01-01');
+      const dateB = new Date(b.deal.updatedAt || b.deal.createdAt || '1970-01-01');
+      return dateB.getTime() - dateA.getTime(); // Most recent first
+    });
+  }
+
+  // Round-robin: take one deal from each owner in turn
+  const result: Array<{ tenant: Tenant; deal: Deal }> = [];
+  const ownerQueues = Array.from(ownerDeals.values());
+  const ownerCount = ownerQueues.length;
+
+  let round = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    hasMore = false;
+    for (let i = 0; i < ownerCount; i++) {
+      const queue = ownerQueues[i];
+      if (round < queue.length) {
+        result.push(queue[round]);
+        hasMore = true;
+      }
+    }
+    round++;
+  }
+
+  return result;
+}
+
+/**
  * Check if a deal was created within the specified number of days
  * Used to filter "fresh" deals for Zero Score calling
  */
@@ -234,6 +287,31 @@ async function markAsCalled(dealId: string, type: GatheringType): Promise<void> 
   // Use modular config for Redis key (each type has its own namespace)
   const key = getRedisKey(type, dealId);
   await client.setEx(key, REDIS_TTL_SECONDS, new Date().toISOString());
+}
+
+/**
+ * Interruptible delay that respects jobState.shouldStop.
+ * Checks every 5 seconds if the job should stop.
+ * Returns true if the delay completed, false if interrupted.
+ */
+async function interruptibleDelay(ms: number): Promise<boolean> {
+  const checkInterval = 5000; // Check every 5 seconds
+  let elapsed = 0;
+
+  while (elapsed < ms && !jobState.shouldStop) {
+    const remaining = ms - elapsed;
+    const waitTime = Math.min(checkInterval, remaining);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+    elapsed += waitTime;
+
+    // Log countdown every minute
+    if (elapsed % 60000 === 0 && elapsed < ms) {
+      const minutesRemaining = Math.ceil((ms - elapsed) / 60000);
+      log(`   ⏳ ${minutesRemaining} minute(s) remaining before next batch...`);
+    }
+  }
+
+  return !jobState.shouldStop;
 }
 
 // ============================================
@@ -455,9 +533,15 @@ async function runLostDealGathering(): Promise<void> {
   log('═══════════════════════════════════════════════════════════════');
 
   const allDeals = await fetchDeals();
-  const eligibleDeals = allDeals.filter(({ deal }) => isLost(deal.stage));
+  const lostDeals = allDeals.filter(({ deal }) => isLost(deal.stage));
 
-  log(`📊 Lost deals: ${eligibleDeals.length} / ${allDeals.length}`);
+  // Spread deals by owner - reorder so same owner's deals are in different batches
+  // This ensures all deals are called, but same person isn't called back-to-back
+  const eligibleDeals = spreadByOwner(lostDeals);
+
+  // Count unique owners for logging
+  const uniqueOwners = new Set(lostDeals.map(({ deal }) => deal.owner?.email || deal.owner?.phone || deal.id)).size;
+  log(`📊 Lost deals: ${lostDeals.length}, Unique owners: ${uniqueOwners} (deals reordered to spread same-owner calls)`);
 
   await processDeals(eligibleDeals, 'LOST_DEAL');
 }
@@ -601,6 +685,21 @@ async function processDeals(
 
     const percentComplete = Math.round((batchEnd / callableDeals.length) * 100);
     log(`\n📈 Overall progress: ${batchEnd}/${callableDeals.length} (${percentComplete}%)`);
+
+    // Add configurable delay between batches (if more batches remaining)
+    if (batchIndex < jobState.totalBatches - 1 && !jobState.shouldStop) {
+      const delayMs = getGatheringConfig(type).delayBetweenBatchesMs;
+      if (delayMs > 0) {
+        const delayMinutes = Math.round(delayMs / 60000);
+        log(`\n⏳ Waiting ${delayMinutes} minute(s) before next batch to prevent call flooding...`);
+        const completed = await interruptibleDelay(delayMs);
+        if (!completed) {
+          log('⛔ Job stopped during delay - exiting');
+          break;
+        }
+        log('✅ Delay completed, proceeding to next batch');
+      }
+    }
   }
 
   // Summary
