@@ -30,6 +30,7 @@ interface Deal {
   attachments?: Array<{ id: string; name?: string; url?: string }>;
   recommendations?: Array<{
     note: string;
+    risk: string;
     title: string;
     severity: string;
     isAssigned: boolean;
@@ -98,15 +99,17 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
     // Get customer contact for context/variables
     const customer = contacts && contacts.length > 0 ? contacts[0] : null;
 
-    // Fetch risks and recommendations from BarrierX
-    // Pass dealData to getRecommendations so it can use real recommendations if available
-    const [risksData, recommendationsData] = await Promise.all([
-      barrierxService.getRisks(dealData.id, dealData as any),
-      barrierxService.getRecommendations(dealData.id, dealData as any),
-    ]);
-
-    const risks = risksData.risks || [];
+    // Fetch recommendations from BarrierX (risks are now extracted from recommendation.risk field)
+    const recommendationsData = await barrierxService.getRecommendations(dealData.id, dealData as any);
     const recommendations = recommendationsData.recommendations || [];
+
+    // Sort recommendations by severity (Critical → High → Mid) for risk prioritization
+    const severityOrder = ['Critical', 'High', 'Mid'];
+    const sortedRecs = [...recommendations].sort((a, b) => {
+      const aIdx = severityOrder.indexOf(a.severity);
+      const bIdx = severityOrder.indexOf(b.severity);
+      return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
+    });
 
     // Prepare dynamic variables for ElevenLabs
     const dynamicVariables = {
@@ -123,11 +126,20 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       deal_stage: dealData.stage || 'early stage',
       deal_summary: dealData.summary || '',
 
-      // Risk & Action recommendations
-      risk_1: risks[0]?.description || 'No risks identified',
-      risk_2: risks[1]?.description || '',
-      risk_3: risks[2]?.description || '',
-      // Quick summary for initial briefing
+      // Risks (extracted from recommendation.risk field, sorted by severity)
+      // Agent should summarize these for briefing as they can be lengthy
+      risks: sortedRecs.length > 0
+        ? sortedRecs.map((rec, i) => `Risk ${i + 1}: ${rec.risk || 'No details available'}`).join('\n\n')
+        : 'No significant risks identified',
+
+      risks_full: sortedRecs.length > 0
+        ? sortedRecs.map((rec, i) =>
+          `Risk ${i + 1} [${rec.severity}]: ${rec.title}\nDetails: ${rec.risk || 'No additional details available'}`
+        ).join('\n\n')
+        : 'No significant risks identified',
+      risk_count: sortedRecs.length,
+
+      // Recommended actions
       recommended_actions: recommendations.length > 0
         ? recommendations.map((rec, index) => `${index + 1}. ${rec.title}`).join('; ')
         : 'No specific actions recommended at this time',
