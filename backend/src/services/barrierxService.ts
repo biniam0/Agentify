@@ -73,6 +73,7 @@ export interface Deal {
   }>;
   recommendations?: Array<{
     note: string;
+    risk: string;
     title: string;
     severity: string;
     isAssigned: boolean;
@@ -722,6 +723,7 @@ export const getRecommendations = async (
   dealId: string;
   recommendations: Array<{
     note: string;
+    risk: string;
     title: string;
     severity: string;
     isAssigned: boolean;
@@ -746,6 +748,7 @@ export const getRecommendations = async (
   const mockRecommendations = [
     {
       note: 'Ask the prospect to walk you through their decision-making process, including who needs to approve, what criteria they will use, and their target timeline for making a decision. Document this clearly.',
+      risk: 'Decision timeline and approval process are unclear. Without understanding the decision-making chain, the deal may stall unexpectedly or miss critical approval windows.',
       title: 'Confirm Decision Timeline and Next Steps',
       severity: 'High',
       isAssigned: false,
@@ -754,6 +757,7 @@ export const getRecommendations = async (
     },
     {
       note: 'Identify all stakeholders involved in this decision. Understand each person\'s role, their primary concerns, and what success looks like for them individually. Map out any potential blockers or champions.',
+      risk: 'Key stakeholders and their influence on the decision are not fully mapped. Unknown blockers or missing champions could derail the deal at a critical stage.',
       title: 'Identify Key Stakeholders and Their Concerns',
       severity: 'High',
       isAssigned: false,
@@ -762,6 +766,7 @@ export const getRecommendations = async (
     },
     {
       note: 'Confirm whether budget has been allocated for this initiative. Ask about the approval process, any competing priorities for the budget, and whether there are timing considerations around fiscal periods.',
+      risk: 'Budget availability and approval process are not confirmed. The deal could be delayed or lost if budget is not secured or competes with other priorities.',
       title: 'Validate Budget Availability and Approval Process',
       severity: 'High',
       isAssigned: false,
@@ -770,6 +775,7 @@ export const getRecommendations = async (
     },
     {
       note: 'Ask the prospect to define what a successful outcome looks like for them. Understand the specific metrics or results they expect, and ensure your solution can deliver on these expectations.',
+      risk: 'Success criteria and expected outcomes are not clearly defined. Misalignment on expectations could lead to dissatisfaction or scope disputes post-sale.',
       title: 'Clarify Success Criteria and Expected Outcomes',
       severity: 'Medium',
       isAssigned: false,
@@ -778,6 +784,7 @@ export const getRecommendations = async (
     },
     {
       note: 'Proactively ask about any concerns, hesitations, or potential obstacles that could delay or prevent this deal from moving forward. Address these openly and document any unresolved issues.',
+      risk: 'Potential objections or blockers have not been surfaced. Unaddressed concerns could emerge late in the sales cycle and delay or prevent closing.',
       title: 'Document Any Objections or Potential Blockers',
       severity: 'Medium',
       isAssigned: false,
