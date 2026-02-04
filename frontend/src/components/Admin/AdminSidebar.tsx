@@ -7,6 +7,7 @@ import {
   Activity,
   AlertCircle,
   Bell,
+  Briefcase,
   Calendar,
   ChevronRight,
   FileText,
@@ -47,6 +48,11 @@ const mainNavItems = [
     title: 'Clients Meetings',
     url: '/admin/meetings',
     icon: Calendar,
+  },
+  {
+    title: 'Clients Deals',
+    url: '/admin/deals',
+    icon: Briefcase,
   },
   {
     title: 'BarrierX Info',

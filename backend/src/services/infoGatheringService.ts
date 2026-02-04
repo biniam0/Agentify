@@ -923,3 +923,86 @@ export async function getDbStats() {
     total: pendingCount + completedCount + failedCount + inProgressCount,
   };
 }
+
+/**
+ * Trigger a single deal info gathering call
+ * Used by the admin UI to manually trigger calls for specific deals
+ */
+export async function triggerSingleDealCall(
+  tenant: Tenant,
+  deal: Deal,
+  type: GatheringType,
+  triggeredBy: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  conversationId?: string;
+  callSid?: string;
+  recordId?: string;
+}> {
+  log(`🎯 Single deal call triggered by ${triggeredBy}`);
+  log(`   Deal: ${deal.dealName}`);
+  log(`   Type: ${type}`);
+  log(`   Tenant: ${tenant.name}`);
+
+  // Check required config
+  if (!config.barrierx.apiKey) {
+    return { success: false, error: 'BARRIERX_API_KEY not configured' };
+  }
+  if (!config.elevenlabs.apiKey) {
+    return { success: false, error: 'ELEVENLABS_KEY not configured' };
+  }
+  if (!config.elevenlabs.infoGatheringAgentId) {
+    return { success: false, error: 'ELEVENLABS_INFO_GATHERING_AGENT_ID not configured' };
+  }
+
+  // Check phone number
+  if (!deal.owner?.phone) {
+    return { success: false, error: 'Deal owner has no phone number' };
+  }
+
+  // Check if already called (optional - can be bypassed for manual triggers)
+  const alreadyCalled = await wasAlreadyCalled(deal.id, type);
+  if (alreadyCalled) {
+    log(`   ⚠️ Deal was already called for ${type} - proceeding anyway (manual trigger)`);
+  }
+
+  // Trigger the call
+  log(`   📞 Triggering ${type} call...`);
+  const result = await triggerCall(tenant, deal, type);
+
+  if (result.error) {
+    log(`   ❌ Failed to initiate: ${result.error}`);
+    
+    // Still create a record to track the failed attempt
+    const recordId = await createInfoGatheringRecord(tenant, deal, type);
+    
+    return {
+      success: false,
+      error: result.error,
+      recordId,
+    };
+  }
+
+  log(`   ✅ Call initiated!`);
+  log(`      Conversation ID: ${result.conversationId}`);
+
+  // Create tracking record
+  const recordId = await createInfoGatheringRecord(
+    tenant,
+    deal,
+    type,
+    result.conversationId,
+    result.callSid
+  );
+
+  // Mark as called in Redis
+  await markAsCalled(deal.id, type);
+
+  return {
+    success: true,
+    conversationId: result.conversationId,
+    callSid: result.callSid,
+    recordId,
+  };
+}
