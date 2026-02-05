@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import * as loggingService from '@/services/loggingService';
 import { StatsHeader, FilterTabs, SearchBar } from './components/LogListComponents';
 import { LogTableRow, LogItem } from './components/LogTableRow';
+import { isVoicemailCall } from '@/utils/callUtils';
 
 const UserCallsLog: React.FC = () => {
   const [logs, setLogs] = useState<loggingService.CallLog[]>([]);
@@ -84,6 +85,9 @@ const UserCallsLog: React.FC = () => {
 
     // Tier 1: Call direction
     callDirection: log.callDirection || 'OUTBOUND',
+
+    // Tier 1: Voicemail detection
+    wasVoicemail: isVoicemailCall(log.webhookData, log.transcriptSummary),
 
     details: log.callSuccessful ? [] : [
       {

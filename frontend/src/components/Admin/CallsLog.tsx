@@ -2,7 +2,7 @@
  * Calls Log Component - Display call logs with filtering
  */
 
-import { Phone, Filter, Download, Clock, User, Building2, Calendar, AlertCircle, CheckCircle2, XCircle, ChevronDown, ChevronUp, MessageSquare, RotateCcw } from 'lucide-react';
+import { Phone, Filter, Download, Clock, User, Building2, Calendar, AlertCircle, CheckCircle2, XCircle, ChevronDown, ChevronUp, MessageSquare, RotateCcw, Voicemail } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -10,6 +10,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import * as loggingService from '../../services/loggingService';
+import { isVoicemailCall } from '../../utils/callUtils';
 
 const CallsLog: React.FC = () => {
   const [logs, setLogs] = useState<loggingService.CallLog[]>([]);
@@ -212,6 +213,15 @@ const CallsLog: React.FC = () => {
                                   }
                                 >
                                   {log.callSuccessful ? '✓ Successful' : '✗ Unsuccessful'}
+                                </Badge>
+                              )}
+                              {isVoicemailCall(log.webhookData, log.transcriptSummary) && (
+                                <Badge 
+                                  variant="outline" 
+                                  className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 px-3 py-1"
+                                >
+                                  <Voicemail className="w-3 h-3 mr-1" />
+                                  Voicemail
                                 </Badge>
                               )}
                             </div>

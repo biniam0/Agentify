@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ChevronDown, ChevronUp, CheckCircle2, MessageSquare, AlertCircle, ArrowDownCircle, ArrowUpCircle, RotateCcw, Calendar, Briefcase, Link as LinkIcon, XCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, CheckCircle2, MessageSquare, AlertCircle, ArrowDownCircle, ArrowUpCircle, RotateCcw, Calendar, Briefcase, Link as LinkIcon, XCircle, Voicemail } from 'lucide-react';
 import { format } from 'date-fns';
 import { CallTimeline } from './CallTimeline';
 
@@ -36,6 +36,9 @@ export interface LogItem {
 
     // Tier 1: Call direction
     callDirection: 'INBOUND' | 'OUTBOUND';
+
+    // Tier 1: Voicemail detection
+    wasVoicemail?: boolean;
 
     details?: {
         action: string;
@@ -135,9 +138,15 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                 onClick={() => onToggle(item.id)}
             >
                 <div className="col-span-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         {getActivityBadge(item.activityType)}
                         {getDirectionBadge(item.callDirection)}
+                        {item.wasVoicemail && (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800 px-2 py-0.5" title="Voicemail">
+                                <Voicemail className="h-3 w-3 mr-1" />
+                                VM
+                            </Badge>
+                        )}
                     </div>
                 </div>
                 <div className="col-span-3">
