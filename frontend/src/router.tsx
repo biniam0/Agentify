@@ -23,6 +23,7 @@ import CrmActionsLog from './components/Admin/CrmActionsLog';
 import SchedulerLog from './components/Admin/SchedulerLog';
 import ErrorsLog from './components/Admin/ErrorsLog';
 import BarrierXInfo from './pages/Admin/BarrierXInfo';
+import ClientsDeals from './pages/Admin/ClientsDeals';
 
 const router = createBrowserRouter([
   {
@@ -99,6 +100,10 @@ const router = createBrowserRouter([
       {
         path: 'meetings',
         element: <MeetingsPage />,
+      },
+      {
+        path: 'deals',
+        element: <ClientsDeals />,
       },
       {
         path: 'barrierx-info',
