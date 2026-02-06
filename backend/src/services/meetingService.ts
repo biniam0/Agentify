@@ -91,20 +91,6 @@ interface Recommendation {
 }
 
 /**
- * Get risk text with fallback chain: risk -> note -> title
- * Never returns "No details available"
- */
-function getRiskText(rec: Recommendation): string {
-  const risk = (rec.risk || '').trim();
-  if (risk && risk !== 'No details available') return risk;
-  
-  const note = (rec.note || '').trim();
-  if (note) return note;
-  
-  return rec.title || 'Risk details pending';
-}
-
-/**
  * Check if a recommendation has real risk content
  */
 function hasRealRiskContent(rec: Recommendation): boolean {
@@ -139,16 +125,18 @@ function processRecommendations(recommendations: Recommendation[]): {
 
 /**
  * Build risks string for agent
+ * Uses real data or mock - no mixed/fallback scenarios
  */
 function buildRisksString(recs: Recommendation[], useMock: boolean): string {
   if (useMock) {
     return MOCK_RISKS.map((r, i) => `Risk ${i + 1}: ${r.risk}`).join('\n\n');
   }
-  return recs.map((rec, i) => `Risk ${i + 1}: ${getRiskText(rec)}`).join('\n\n');
+  return recs.map((rec, i) => `Risk ${i + 1}: ${rec.risk}`).join('\n\n');
 }
 
 /**
  * Build full risks string for agent (with severity and title)
+ * Uses real data or mock - no mixed/fallback scenarios
  */
 function buildRisksFullString(recs: Recommendation[], useMock: boolean): string {
   if (useMock) {
@@ -157,7 +145,7 @@ function buildRisksFullString(recs: Recommendation[], useMock: boolean): string 
     ).join('\n\n');
   }
   return recs.map((rec, i) => 
-    `Risk ${i + 1} [${rec.severity}]: ${rec.title}\nDetails: ${getRiskText(rec)}`
+    `Risk ${i + 1} [${rec.severity}]: ${rec.title}\nDetails: ${rec.risk}`
   ).join('\n\n');
 }
 
