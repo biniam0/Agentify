@@ -5,6 +5,174 @@ import { formatMeetingTime } from '../utils/riskGenerator';
 import * as barrierxService from './barrierxService';
 import { Contact } from './barrierxService';
 
+// ============================================
+// CONSTANTS
+// ============================================
+
+const MAX_RECOMMENDATIONS = 10;
+
+// Severity order for sorting (lower index = higher priority)
+const SEVERITY_ORDER: Record<string, number> = {
+  'Critical': 0,
+  'High': 1,
+  'Mid': 2,
+  'Medium': 2, // Handle both 'Mid' and 'Medium'
+};
+
+// Mock data for when no real data is available
+const MOCK_RISKS = [
+  {
+    title: 'Confirm Decision Timeline and Next Steps',
+    risk: 'Decision timeline and approval process are unclear. Without understanding the decision-making chain, the deal may stall unexpectedly or miss critical approval windows.',
+    severity: 'High',
+  },
+  {
+    title: 'Identify Key Stakeholders and Their Concerns',
+    risk: 'Key stakeholders and their influence on the decision are not fully mapped. Unknown blockers or missing champions could derail the deal at a critical stage.',
+    severity: 'High',
+  },
+  {
+    title: 'Validate Budget Availability and Approval Process',
+    risk: 'Budget availability and approval process are not confirmed. The deal could be delayed or lost if budget is not secured or competes with other priorities.',
+    severity: 'High',
+  },
+  {
+    title: 'Clarify Success Criteria and Expected Outcomes',
+    risk: 'Success criteria and expected outcomes are not clearly defined. Misalignment on expectations could lead to dissatisfaction or scope disputes post-sale.',
+    severity: 'Medium',
+  },
+  {
+    title: 'Document Any Objections or Potential Blockers',
+    risk: 'Potential objections or blockers have not been surfaced. Unaddressed concerns could emerge late in the sales cycle and delay or prevent closing.',
+    severity: 'Medium',
+  },
+];
+
+const MOCK_ACTIONS = [
+  {
+    title: 'Confirm Decision Timeline and Next Steps',
+    note: 'Ask the prospect to walk you through their decision-making process, including who needs to approve, what criteria they will use, and their target timeline for making a decision. Document this clearly.',
+    severity: 'High',
+  },
+  {
+    title: 'Identify Key Stakeholders and Their Concerns',
+    note: 'Identify all stakeholders involved in this decision. Understand each person\'s role, their primary concerns, and what success looks like for them individually. Map out any potential blockers or champions.',
+    severity: 'High',
+  },
+  {
+    title: 'Validate Budget Availability and Approval Process',
+    note: 'Confirm whether budget has been allocated for this initiative. Ask about the approval process, any competing priorities for the budget, and whether there are timing considerations around fiscal periods.',
+    severity: 'High',
+  },
+  {
+    title: 'Clarify Success Criteria and Expected Outcomes',
+    note: 'Ask the prospect to define what a successful outcome looks like for them. Understand the specific metrics or results they expect, and ensure your solution can deliver on these expectations.',
+    severity: 'Medium',
+  },
+  {
+    title: 'Document Any Objections or Potential Blockers',
+    note: 'Proactively ask about any concerns, hesitations, or potential obstacles that could delay or prevent this deal from moving forward. Address these openly and document any unresolved issues.',
+    severity: 'Medium',
+  },
+];
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+interface Recommendation {
+  note: string;
+  risk: string;
+  title: string;
+  severity: string;
+  isAssigned: boolean;
+  indicatorId: string;
+  isCompleted: boolean;
+}
+
+/**
+ * Check if a recommendation has real risk content
+ */
+function hasRealRiskContent(rec: Recommendation): boolean {
+  const risk = (rec.risk || '').trim();
+  return risk.length > 0 && risk !== 'No details available';
+}
+
+/**
+ * Process recommendations: filter completed, sort by severity, limit to max
+ */
+function processRecommendations(recommendations: Recommendation[]): {
+  activeRecs: Recommendation[];
+  hasAnyRealRisk: boolean;
+} {
+  // Filter out completed recommendations
+  const activeRecs = recommendations
+    .filter(rec => !rec.isCompleted)
+    // Sort by severity (Critical -> High -> Mid/Medium -> Unknown)
+    .sort((a, b) => {
+      const aIdx = SEVERITY_ORDER[a.severity] ?? 3;
+      const bIdx = SEVERITY_ORDER[b.severity] ?? 3;
+      return aIdx - bIdx;
+    })
+    // Limit to max
+    .slice(0, MAX_RECOMMENDATIONS);
+
+  // Check if any recommendation has real risk content
+  const hasAnyRealRisk = activeRecs.some(hasRealRiskContent);
+
+  return { activeRecs, hasAnyRealRisk };
+}
+
+/**
+ * Build risks string for agent
+ * Uses real data or mock - no mixed/fallback scenarios
+ */
+function buildRisksString(recs: Recommendation[], useMock: boolean): string {
+  if (useMock) {
+    return MOCK_RISKS.map((r, i) => `Risk ${i + 1}: ${r.risk}`).join('\n\n');
+  }
+  return recs.map((rec, i) => `Risk ${i + 1}: ${rec.risk}`).join('\n\n');
+}
+
+/**
+ * Build full risks string for agent (with severity and title)
+ * Uses real data or mock - no mixed/fallback scenarios
+ */
+function buildRisksFullString(recs: Recommendation[], useMock: boolean): string {
+  if (useMock) {
+    return MOCK_RISKS.map((r, i) => 
+      `Risk ${i + 1} [${r.severity}]: ${r.title}\nDetails: ${r.risk}`
+    ).join('\n\n');
+  }
+  return recs.map((rec, i) => 
+    `Risk ${i + 1} [${rec.severity}]: ${rec.title}\nDetails: ${rec.risk}`
+  ).join('\n\n');
+}
+
+/**
+ * Build actions string for agent
+ */
+function buildActionsString(recs: Recommendation[], useMock: boolean): string {
+  if (useMock) {
+    return MOCK_ACTIONS.map((r, i) => `${i + 1}. ${r.title}`).join('; ');
+  }
+  return recs.map((rec, i) => `${i + 1}. ${rec.title}`).join('; ');
+}
+
+/**
+ * Build full recommendations string for agent (with context)
+ */
+function buildRecommendationsFullString(recs: Recommendation[], useMock: boolean): string {
+  if (useMock) {
+    return MOCK_ACTIONS.map((r, i) => 
+      `Action ${i + 1} [${r.severity}]: ${r.title}\nContext: ${r.note}`
+    ).join('\n\n');
+  }
+  return recs.map((rec, i) => 
+    `Action ${i + 1} [${rec.severity}]: ${rec.title}\nContext: ${rec.note || 'No additional context available'}`
+  ).join('\n\n');
+}
+
 /**
  * Get timezone offset string (e.g., "+03:00", "-05:00")
  */
@@ -103,13 +271,27 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
     const recommendationsData = await barrierxService.getRecommendations(dealData.id, dealData as any);
     const recommendations = recommendationsData.recommendations || [];
 
-    // Sort recommendations by severity (Critical → High → Mid) for risk prioritization
-    const severityOrder = ['Critical', 'High', 'Mid'];
-    const sortedRecs = [...recommendations].sort((a, b) => {
-      const aIdx = severityOrder.indexOf(a.severity);
-      const bIdx = severityOrder.indexOf(b.severity);
-      return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
-    });
+    // Process recommendations: filter completed, sort by severity, limit to max 10
+    const { activeRecs, hasAnyRealRisk } = processRecommendations(recommendations);
+
+    // Determine what data to use:
+    // - Recommendations: use real if any active, else mock
+    // - Risks: use real if any have content, else mock
+    const useRealRecommendations = activeRecs.length > 0;
+    const useRealRisks = useRealRecommendations && hasAnyRealRisk;
+    const useMockForRecommendations = !useRealRecommendations || recommendationsData.isUsingMockData;
+    const useMockForRisks = !useRealRisks;
+
+    // Log processing results
+    console.log(`       📊 Recommendations processed:`);
+    console.log(`          Total: ${recommendations.length}, Active: ${activeRecs.length}`);
+    console.log(`          Has real risks: ${hasAnyRealRisk}`);
+    console.log(`          Using mock recommendations: ${useMockForRecommendations}`);
+    console.log(`          Using mock risks: ${useMockForRisks}`);
+
+    // Build dynamic variables
+    const risksData = useMockForRisks ? MOCK_RISKS : activeRecs;
+    const actionsData = useMockForRecommendations ? MOCK_ACTIONS : activeRecs;
 
     // Prepare dynamic variables for ElevenLabs
     const dynamicVariables = {
@@ -128,32 +310,20 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
 
       // Risks (extracted from recommendation.risk field, sorted by severity)
       // Agent should summarize these for briefing as they can be lengthy
-      risks: sortedRecs.length > 0
-        ? sortedRecs.map((rec, i) => `Risk ${i + 1}: ${rec.risk || 'No details available'}`).join('\n\n')
-        : 'No significant risks identified',
+      risks: buildRisksString(activeRecs, useMockForRisks),
+      risks_full: buildRisksFullString(activeRecs, useMockForRisks),
+      risk_count: risksData.length,
 
-      risks_full: sortedRecs.length > 0
-        ? sortedRecs.map((rec, i) =>
-          `Risk ${i + 1} [${rec.severity}]: ${rec.title}\nDetails: ${rec.risk || 'No additional details available'}`
-        ).join('\n\n')
-        : 'No significant risks identified',
-      risk_count: sortedRecs.length,
-
-      // Recommended actions
-      recommended_actions: recommendations.length > 0
-        ? recommendations.map((rec, index) => `${index + 1}. ${rec.title}`).join('; ')
-        : 'No specific actions recommended at this time',
-      action_count: recommendations.length,
+      // Recommended actions (sorted by severity)
+      recommended_actions: buildActionsString(activeRecs, useMockForRecommendations),
+      action_count: actionsData.length,
 
       // Full context with notes for detailed discussion
-      recommendations_full: recommendations.length > 0
-        ? recommendations.map((rec, index) =>
-          `Action ${index + 1} [${rec.severity}]: ${rec.title}\nContext: ${rec.note}`
-        ).join('\n\n')
-        : 'No specific actions recommended at this time',
+      recommendations_full: buildRecommendationsFullString(activeRecs, useMockForRecommendations),
 
-      // Flag to indicate if using general/mock recommendations (not deal-specific from BarrierX)
-      using_mock: recommendationsData.isUsingMockData || false,
+      // Flag to indicate if using general/mock data (not deal-specific from BarrierX)
+      using_mock: useMockForRecommendations,
+      using_mock_risks: useMockForRisks,
 
       // Owner (sales rep) context
       owner_name: dealData.owner?.name || userData.name || 'Sales Rep',
