@@ -104,7 +104,9 @@ export const cleanupOldNotifications = (): void => {
 interface Recommendation {
   title: string;
   note?: string;
+  risk?: string;
   severity?: string;
+  isCompleted?: boolean;
 }
 
 interface PreCallNotificationParams {
@@ -153,93 +155,145 @@ const formatDealAmount = (amount?: number): string => {
   return `$${amount.toLocaleString()}`;
 };
 
+// Severity order for sorting (lower index = higher priority)
+const SEVERITY_ORDER: Record<string, number> = {
+  'critical': 0,
+  'high': 1,
+  'mid': 2,
+  'medium': 2,
+};
+
+// Mock risks for when no real data is available
+const MOCK_RISKS_SMS = [
+  'Decision timeline and approval process are unclear.',
+  'Key stakeholders and their influence on the decision are not fully mapped.',
+  'Budget availability and approval process are not confirmed.',
+  'Success criteria and expected outcomes are not clearly defined.',
+];
+
 /**
- * Extract top risks from userDealRiskScores
- * Returns array of risk descriptions (max 3)
- * 
- * BarrierX data structure:
- * userDealRiskScores: {
- *   subCategoryRisk: {
- *     ChampionRisks: 0.04,      // Higher score = higher risk (0-1 scale)
- *     DealVelocity: 0.1,
- *     CompetitionRisks: 0,
- *     ...
- *   }
- * }
+ * Extract first sentence from text (for SMS brevity)
+ * Returns first sentence, truncated if too long
  */
-const extractTopRisks = (risks?: Record<string, any>, maxRisks: number = 3): string[] => {
-  if (!risks) return [];
-
-  // Get subCategoryRisk object (where actual risk scores are stored)
-  const subCategoryRisks = risks.subCategoryRisk || risks;
-
-  // Risk category mappings: BarrierX key -> Human readable description
-  const riskMappings: Record<string, string> = {
-    'ChampionRisks': 'Champion engagement needs attention',
-    'DealVelocity': 'Deal velocity tracking behind schedule',
-    'CompetitionRisks': 'Competitive activity detected',
-    'DecisionProcessRisks': 'Decision process unclear',
-    'DecisionCriteriaRisks': 'Decision criteria not established',
-    'EconomicBuyerAuthorityRisks': 'Economic buyer authority unclear',
-    'EngagementRelationshipRisks': 'Stakeholder engagement needs work',
-    'FinancialRisks': 'Financial concerns identified',
-    'ContractualLegalRisks': 'Contractual/legal issues pending',
-    'InternalSalesProcessRisks': 'Internal sales process gaps',
-    'MetricsValueRisks': 'Value metrics not validated',
-    'PainPriorityRisks': 'Pain points not prioritized',
-    'SolutionFitRisks': 'Solution fit concerns',
-    'PaperProcessProcurementRisks': 'Procurement process unclear',
-    'ImplementationPostSaleRisks': 'Implementation risks identified',
-    'IndustryMarketRisks': 'Industry/market concerns',
-    'ExternalOrganizationalStabilityRisks': 'Organizational stability concerns',
-    'TouchPoints': 'Insufficient touchpoints',
-  };
-
-  // Extract risks with scores > 0, sorted by score descending (higher = more risky)
-  const risksWithScores: { key: string; score: number; description: string }[] = [];
-
-  for (const [key, score] of Object.entries(subCategoryRisks)) {
-    if (typeof score === 'number' && score > 0 && riskMappings[key]) {
-      risksWithScores.push({
-        key,
-        score,
-        description: riskMappings[key],
-      });
+const getFirstSentence = (text: string, maxLength: number = 120): string => {
+  if (!text) return '';
+  
+  const trimmed = text.trim();
+  
+  // Find first sentence ending (. ! ?)
+  const match = trimmed.match(/^[^.!?]+[.!?]/);
+  if (match) {
+    const sentence = match[0].trim();
+    // If first sentence is still too long, truncate with ellipsis
+    if (sentence.length > maxLength) {
+      return sentence.substring(0, maxLength - 3) + '...';
     }
+    return sentence;
+  }
+  
+  // No sentence ending found, truncate
+  if (trimmed.length > maxLength) {
+    return trimmed.substring(0, maxLength - 3) + '...';
+  }
+  return trimmed;
+};
+
+/**
+ * Extract top risks from recommendations array
+ * Uses first sentence of rec.risk field with fallback to title
+ * Returns array of risk descriptions (max 4)
+ */
+const extractTopRisks = (recommendations?: Recommendation[], maxRisks: number = 4): string[] => {
+  if (!recommendations || recommendations.length === 0) {
+    return MOCK_RISKS_SMS.slice(0, maxRisks);
   }
 
-  // Sort by score descending (highest risk first)
-  risksWithScores.sort((a, b) => b.score - a.score);
+  // Filter out completed, sort by severity
+  const activeRecs = recommendations
+    .filter(rec => !rec.isCompleted)
+    .sort((a, b) => {
+      const aSeverity = (a.severity || '').toLowerCase();
+      const bSeverity = (b.severity || '').toLowerCase();
+      const aIdx = SEVERITY_ORDER[aSeverity] ?? 3;
+      const bIdx = SEVERITY_ORDER[bSeverity] ?? 3;
+      return aIdx - bIdx;
+    })
+    .slice(0, maxRisks);
 
-  // Return top N risk descriptions
-  return risksWithScores.slice(0, maxRisks).map(r => r.description);
+  // If no active recommendations, use mock
+  if (activeRecs.length === 0) {
+    return MOCK_RISKS_SMS.slice(0, maxRisks);
+  }
+
+  // Check if any recommendation has real risk content
+  const hasAnyRealRisk = activeRecs.some(rec => {
+    const risk = (rec.risk || '').trim();
+    return risk.length > 0 && risk !== 'No details available';
+  });
+
+  // If no real risks, use mock
+  if (!hasAnyRealRisk) {
+    return MOCK_RISKS_SMS.slice(0, maxRisks);
+  }
+
+  // Extract first sentence of risk with fallback to title
+  return activeRecs.map(rec => {
+    const risk = (rec.risk || '').trim();
+    if (risk && risk !== 'No details available') {
+      return getFirstSentence(risk);
+    }
+    // Fallback to title
+    return rec.title || '';
+  }).filter(text => text.length > 0);
 };
+
+// Mock recommendations for when no real data is available
+const MOCK_RECOMMENDATIONS_SMS = [
+  'Confirm Decision Timeline and Next Steps',
+  'Identify Key Stakeholders and Their Concerns',
+  'Validate Budget Availability and Approval Process',
+  'Clarify Success Criteria and Expected Outcomes',
+  'Document Any Objections or Potential Blockers',
+];
 
 /**
  * Extract top recommendation titles prioritized by severity
  * Order: Critical → High → Mid (picks up to maxRecs total)
+ * Filters out completed recommendations
  */
 const extractRecommendationTitles = (recommendations?: Recommendation[], maxRecs: number = 5): string[] => {
-  if (!recommendations || recommendations.length === 0) return [];
+  if (!recommendations || recommendations.length === 0) {
+    return MOCK_RECOMMENDATIONS_SMS.slice(0, maxRecs);
+  }
 
-  // Define severity priority (case-insensitive matching)
-  const severityOrder = ['critical', 'high', 'mid'];
+  // Filter out completed, sort by severity
+  const activeRecs = recommendations
+    .filter(rec => !rec.isCompleted)
+    .sort((a, b) => {
+      const aSeverity = (a.severity || '').toLowerCase();
+      const bSeverity = (b.severity || '').toLowerCase();
+      const aIdx = SEVERITY_ORDER[aSeverity] ?? 3;
+      const bIdx = SEVERITY_ORDER[bSeverity] ?? 3;
+      return aIdx - bIdx;
+    })
+    .slice(0, maxRecs);
 
-  // Sort recommendations by severity priority
-  const sorted = [...recommendations].sort((a, b) => {
-    const aSeverity = (a.severity || '').toLowerCase();
-    const bSeverity = (b.severity || '').toLowerCase();
-    const aIndex = severityOrder.indexOf(aSeverity);
-    const bIndex = severityOrder.indexOf(bSeverity);
-    // Unknown severities go to the end
-    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
-  });
+  // If no active recommendations, use mock
+  if (activeRecs.length === 0) {
+    return MOCK_RECOMMENDATIONS_SMS.slice(0, maxRecs);
+  }
 
-  // Take top N by severity, extract titles
-  return sorted
-    .slice(0, maxRecs)
+  // Extract titles
+  const titles = activeRecs
     .map(rec => rec.title)
     .filter(title => title && title.trim().length > 0);
+
+  // If no titles, use mock
+  if (titles.length === 0) {
+    return MOCK_RECOMMENDATIONS_SMS.slice(0, maxRecs);
+  }
+
+  return titles;
 };
 
 /**
@@ -304,8 +358,9 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
     const meetingTime = formatTimeForSms(meetingStartTime);
     const firstName = ownerName.split(' ')[0];
 
-    // Extract risks and recommendations
-    const topRisks = extractTopRisks(risks, 4);
+    // Extract risks (from recommendations) and recommendation titles
+    // Both now use the recommendations array for consistency with phone calls
+    const topRisks = extractTopRisks(recommendations, 4);
     const topRecommendations = extractRecommendationTitles(recommendations, 5);
 
     // Build deal info line
