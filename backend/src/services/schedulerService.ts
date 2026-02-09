@@ -461,6 +461,7 @@ const runAutomationJob = async () => {
             hubspotOwnerId: meeting.deal.owner?.hubspotId || meeting.deal.owner?.id,
             userEmail: meeting.user.email,
             dealId: meeting.deal.id,
+            tenantSlug: meeting.deal.tenantSlug,
           });
 
           if (smsResult.success) {
