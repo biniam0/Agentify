@@ -128,6 +128,7 @@ interface PreCallNotificationParams {
   hubspotOwnerId?: string;  // HubSpot owner ID
   userEmail?: string;
   dealId?: string;
+  tenantSlug?: string;  // For AgentX log link (platform.barrierx.ai/{tenantSlug}/agentx)
 }
 
 /**
@@ -321,6 +322,7 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
     hubspotOwnerId,
     userEmail,
     dealId,
+    tenantSlug,
   } = params;
 
   // Check if already notified
@@ -382,8 +384,12 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
       recommendationsSection = `\n✅ Recommendations:\n${topRecommendations.map(r => `• ${r}`).join('\n')}\n`;
     }
 
+    // AgentX log link: with tenant slug -> /{tenantSlug}/agentx, else base URL only
+    const baseUrl = config.barrierx.baseUrl.replace(/\/$/, '');
+    const agentxLogUrl = tenantSlug ? `${baseUrl}/${tenantSlug}/agentx` : baseUrl;
+
     // Compose enhanced SMS message
-    const messageBody = `📞 Pre-Meeting Brief Alert\n\nHi ${firstName}!\n\nBriefing call coming at ${meetingTime}\nMeeting: "${meetingTitle}"\nDeal: ${dealName}\n${dealInfoLine}${risksSection}${recommendationsSection}\nGet ready! 🎯`;
+    const messageBody = `📞 Pre-Meeting Brief Alert\n\nHi ${firstName}!\n\nBriefing call coming at ${meetingTime}\nMeeting: "${meetingTitle}"\nDeal: ${dealName}\n${dealInfoLine}${risksSection}${recommendationsSection}\nGet ready! 🎯\n\nView logs: ${agentxLogUrl}`;
 
     console.log(`       📱 Sending SMS to: ${ownerPhone}`);
     console.log(`       📝 Message: ${messageBody}`);
