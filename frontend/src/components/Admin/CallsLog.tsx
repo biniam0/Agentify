@@ -31,7 +31,7 @@ const CallsLog: React.FC = () => {
         limit,
         offset: page * limit,
       });
-      
+
       if (response.success) {
         setLogs(response.data);
         setTotal(response.total);
@@ -45,7 +45,7 @@ const CallsLog: React.FC = () => {
   };
 
   const getCallTypeColor = (type: string) => {
-    return type === 'PRE_CALL' 
+    return type === 'PRE_CALL'
       ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
       : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800';
   };
@@ -176,7 +176,7 @@ const CallsLog: React.FC = () => {
               {logs.map((log) => {
                 const isExpanded = expandedLogId === log.id;
                 return (
-                  <Card 
+                  <Card
                     key={log.id}
                     className="border-2 hover:border-primary/50 transition-all duration-200"
                   >
@@ -205,10 +205,10 @@ const CallsLog: React.FC = () => {
                                 </Badge>
                               )}
                               {typeof log.callSuccessful === 'boolean' && (
-                                <Badge 
-                                  variant="outline" 
-                                  className={log.callSuccessful 
-                                    ? "border-green-300 text-green-700" 
+                                <Badge
+                                  variant="outline"
+                                  className={log.callSuccessful
+                                    ? "border-green-300 text-green-700"
                                     : "border-red-300 text-red-700"
                                   }
                                 >
@@ -216,8 +216,8 @@ const CallsLog: React.FC = () => {
                                 </Badge>
                               )}
                               {isVoicemailCall(log.webhookData, log.transcriptSummary) && (
-                                <Badge 
-                                  variant="outline" 
+                                <Badge
+                                  variant="outline"
                                   className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 px-3 py-1"
                                 >
                                   <Voicemail className="w-3 h-3 mr-1" />
@@ -228,23 +228,23 @@ const CallsLog: React.FC = () => {
 
                             {/* Primary Info */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <DataField 
-                                label="User" 
+                              <DataField
+                                label="User"
                                 value={log.userName}
                                 icon={User}
                               />
-                              <DataField 
-                                label="Email" 
+                              <DataField
+                                label="Email"
                                 value={log.userEmail}
                                 icon={User}
                               />
-                              <DataField 
-                                label="Deal" 
+                              <DataField
+                                label="Deal"
                                 value={log.dealName}
                                 icon={Building2}
                               />
-                              <DataField 
-                                label="Meeting" 
+                              <DataField
+                                label="Meeting"
                                 value={log.meetingTitle}
                                 icon={Calendar}
                               />
@@ -265,20 +265,20 @@ const CallsLog: React.FC = () => {
                       <div className="p-4 space-y-4">
                         {/* Contact & Timing Info */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <DataField 
-                            label="Phone Number" 
+                          <DataField
+                            label="Phone Number"
                             value={log.phoneNumber ? (
                               <code className="text-xs bg-muted px-2 py-1 rounded">{log.phoneNumber}</code>
                             ) : null}
                             icon={Phone}
                           />
-                          <DataField 
-                            label="Owner" 
+                          <DataField
+                            label="Owner"
                             value={log.ownerName}
                             icon={User}
                           />
-                          <DataField 
-                            label="Agent ID" 
+                          <DataField
+                            label="Agent ID"
                             value={log.agentId ? (
                               <code className="text-xs bg-muted px-2 py-1 rounded">{log.agentId.substring(0, 12)}...</code>
                             ) : null}
@@ -341,52 +341,52 @@ const CallsLog: React.FC = () => {
                             <span className="text-xs font-semibold">Technical Details & IDs</span>
                             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                           </Button>
-                          
+
                           {isExpanded && (
                             <div className="mt-3 space-y-3 p-3 bg-muted/30 rounded-lg">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <DataField 
-                                  label="Conversation ID" 
+                                <DataField
+                                  label="Conversation ID"
                                   value={log.conversationId ? (
                                     <code className="text-xs bg-background px-2 py-1 rounded break-all">
                                       {log.conversationId}
                                     </code>
                                   ) : null}
                                 />
-                                <DataField 
-                                  label="Call SID" 
+                                <DataField
+                                  label="Call SID"
                                   value={log.callSid ? (
                                     <code className="text-xs bg-background px-2 py-1 rounded break-all">
                                       {log.callSid}
                                     </code>
                                   ) : null}
                                 />
-                                <DataField 
-                                  label="User ID" 
+                                <DataField
+                                  label="User ID"
                                   value={log.userId ? (
                                     <code className="text-xs bg-background px-2 py-1 rounded break-all">
                                       {log.userId}
                                     </code>
                                   ) : null}
                                 />
-                                <DataField 
-                                  label="Deal ID" 
+                                <DataField
+                                  label="Deal ID"
                                   value={log.dealId ? (
                                     <code className="text-xs bg-background px-2 py-1 rounded break-all">
                                       {log.dealId}
                                     </code>
                                   ) : null}
                                 />
-                                <DataField 
-                                  label="Meeting ID" 
+                                <DataField
+                                  label="Meeting ID"
                                   value={log.meetingId ? (
                                     <code className="text-xs bg-background px-2 py-1 rounded break-all">
                                       {log.meetingId}
                                     </code>
                                   ) : null}
                                 />
-                                <DataField 
-                                  label="Parent Call ID" 
+                                <DataField
+                                  label="Parent Call ID"
                                   value={log.parentCallId ? (
                                     <code className="text-xs bg-background px-2 py-1 rounded break-all">
                                       {log.parentCallId}

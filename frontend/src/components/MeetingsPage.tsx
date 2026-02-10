@@ -4,11 +4,15 @@ import {
   ArrowLeft,
   Briefcase,
   Calendar,
+  Clock,
   FileText,
+  Mail,
   Phone,
+  PhoneOutgoing,
   Search,
   Shield,
   Timer,
+  Users,
   Webhook,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
@@ -752,51 +756,131 @@ const MeetingsPage: React.FC = () => {
           closeConfirmation();
         }
       }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Confirm {confirmModal.type === 'pre' ? 'Pre-Meeting' : 'Post-Meeting'} Call
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to trigger a {confirmModal.type === 'pre' ? 'pre-meeting' : 'post-meeting'} call for this meeting?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+        <AlertDialogContent className="sm:max-w-[480px] p-0 overflow-hidden">
+          {/* Header with colored accent */}
+          <div className="px-6 pt-6 pb-4 bg-brand-light dark:bg-primary/5">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand dark:bg-primary">
+                <PhoneOutgoing className="h-5 w-5 text-white" />
+              </div>
+              <AlertDialogHeader className="space-y-1 flex-1 text-left">
+                <AlertDialogTitle className="text-base font-semibold">
+                  {confirmModal.type === 'pre' ? 'Pre-Meeting' : 'Post-Meeting'} Call
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-sm">
+                  This will trigger an automated {confirmModal.type === 'pre' ? 'pre-meeting' : 'post-meeting'} call to the deal owner.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+            </div>
+          </div>
 
           {confirmModal.meeting && (
-            <Card className="bg-muted/50 border border-border shadow-none">
-              <CardContent className="p-4 space-y-3">
-                <div>
-                  <p className="font-medium text-foreground text-sm leading-snug">{confirmModal.meeting.title}</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">Deal: {confirmModal.meeting.dealName}</p>
+            <div className="px-6 py-4 space-y-4">
+              {/* Meeting Info */}
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Meeting Details</p>
+                <div className="rounded-lg border border-border bg-muted/30 p-3.5 space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground text-sm leading-snug">{confirmModal.meeting.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{formatDate(confirmModal.meeting.startTime)}</p>
+                    </div>
+                  </div>
+                  {confirmModal.meeting.agenda && (
+                    <p className="text-xs text-muted-foreground pl-[26px] line-clamp-2">{confirmModal.meeting.agenda}</p>
+                  )}
+                  <div className="flex items-center gap-4 pl-[26px] text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {new Date(confirmModal.meeting.endTime).getTime() - new Date(confirmModal.meeting.startTime).getTime() > 0
+                        ? `${Math.round((new Date(confirmModal.meeting.endTime).getTime() - new Date(confirmModal.meeting.startTime).getTime()) / 60000)} min`
+                        : 'N/A'}
+                    </span>
+                    {confirmModal.meeting.participants && confirmModal.meeting.participants.length > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {confirmModal.meeting.participants.length} participant{confirmModal.meeting.participants.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
                 </div>
+              </div>
 
-                {confirmModal.meeting.owner && (
-                  <>
-                    <div className="flex items-start gap-2.5 text-sm pt-3 border-t border-border">
-                      <Briefcase className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              {/* Deal Info */}
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Deal Info</p>
+                <div className="rounded-lg border border-border bg-muted/30 p-3.5">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[11px] text-muted-foreground mb-0.5">Deal Name</p>
+                      <p className="text-sm font-medium text-foreground truncate">{confirmModal.meeting.dealName}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground mb-0.5">Amount</p>
+                      <p className="text-sm font-semibold text-foreground">${formatDealAmount(confirmModal.meeting.dealAmount)}</p>
+                    </div>
+                    {confirmModal.meeting.dealCompany && (
                       <div>
-                        <p className="text-xs text-muted-foreground">Owner</p>
-                        <p className="font-medium text-foreground text-sm">{confirmModal.meeting.owner.name}</p>
+                        <p className="text-[11px] text-muted-foreground mb-0.5">Company</p>
+                        <p className="text-sm text-foreground">{confirmModal.meeting.dealCompany}</p>
+                      </div>
+                    )}
+                    {confirmModal.meeting.dealStage && (
+                      <div>
+                        <p className="text-[11px] text-muted-foreground mb-0.5">Stage</p>
+                        <p className="text-sm text-foreground">{formatDealStage(confirmModal.meeting.dealStage)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Owner / Call Target */}
+              {confirmModal.meeting.owner && (
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Call Target</p>
+                  <div className="rounded-lg border border-border bg-muted/30 p-3.5">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-9 w-9 rounded-full bg-pink-100 dark:bg-pink-500/20 flex items-center justify-center flex-shrink-0 ring-1 ring-pink-200/60 dark:ring-pink-500/30">
+                        <span className="text-xs font-bold text-pink-700 dark:text-pink-300 leading-none">
+                          {confirmModal.meeting.owner.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">{confirmModal.meeting.owner.name}</p>
+                        <p className="text-xs text-muted-foreground">Deal Owner</p>
                       </div>
                     </div>
-
-                    <div className="flex items-start gap-2.5 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Calling</p>
-                        <p className="font-medium text-foreground text-sm">{confirmModal.meeting.owner.phone}</p>
+                    <div className="grid grid-cols-2 gap-2 pl-12">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Phone className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{confirmModal.meeting.owner.phone}</span>
                       </div>
+                      {confirmModal.meeting.owner.email && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Mail className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{confirmModal.meeting.owner.email}</span>
+                        </div>
+                      )}
                     </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={closeConfirmation} disabled={callLoading}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleTriggerCall} disabled={callLoading}>
-              {callLoading ? 'Triggering...' : 'Confirm'}
+          <AlertDialogFooter className="px-6 py-4 border-t border-border bg-muted/20">
+            <AlertDialogCancel onClick={closeConfirmation} disabled={callLoading} className="flex-1 sm:flex-none">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleTriggerCall}
+              disabled={callLoading}
+              className="flex-1 sm:flex-none gap-1.5 bg-brand hover:bg-brand-hover text-white"
+            >
+              <PhoneOutgoing className="h-3.5 w-3.5" />
+              {callLoading ? 'Triggering...' : `Trigger ${confirmModal.type === 'pre' ? 'Pre' : 'Post'}-Call`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

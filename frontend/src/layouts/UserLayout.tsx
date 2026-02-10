@@ -12,7 +12,7 @@ const UserLayout: React.FC = () => {
   // Navigation items for the header - shared across all user pages
   const navigationItems = [
     { label: 'Meetings', path: '/meetings' },
-    { label: 'Logs', path: '/logs' },
+    // { label: 'Logs', path: '/logs' },
     { label: 'Calls', path: '/calls' },
     { label: 'Analytics', path: '/calls/analytics' },
   ];
