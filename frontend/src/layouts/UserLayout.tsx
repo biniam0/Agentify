@@ -18,7 +18,7 @@ const UserLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-page dark:bg-background">
+    <div className="min-h-screen bg-white dark:bg-background">
       {/* Shared Header - stays mounted across all child routes */}
       <BarrierXHeader items={navigationItems} />
       

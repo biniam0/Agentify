@@ -4,16 +4,12 @@ import {
   ArrowLeft,
   Briefcase,
   Calendar,
-  Clock,
   FileText,
   Phone,
   Search,
   Shield,
   Timer,
-  TrendingUp,
-  Users,
   Webhook,
-  Zap
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -42,9 +38,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog';
-import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Switch } from './ui/switch';
 const MeetingsPage: React.FC = () => {
@@ -215,22 +210,6 @@ const MeetingsPage: React.FC = () => {
     });
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'outline' | 'destructive', className: string }> = {
-      scheduled: { variant: 'default', className: 'bg-primary/10 text-primary border-primary/20' },
-      in_progress: { variant: 'secondary', className: 'bg-warning/10 text-warning border-warning/20' },
-      completed: { variant: 'outline', className: 'bg-success/10 text-success border-success/20' },
-    };
-
-    const config = statusConfig[status] || { variant: 'default', className: '' };
-
-    return (
-      <Badge variant={config.variant} className={config.className}>
-        {status.replace('_', ' ').toUpperCase()}
-      </Badge>
-    );
-  };
-
   const getTimeUntilMeeting = (startTime: string) => {
     const now = new Date();
     const meetingTime = new Date(startTime);
@@ -252,6 +231,10 @@ const MeetingsPage: React.FC = () => {
     return 'Soon';
   };
 
+  const isMeetingPast = (startTime: string) => {
+    return new Date(startTime).getTime() < Date.now();
+  };
+
   const formatDealAmount = (amount?: number) => {
     if (!amount) return 'N/A';
     if (amount >= 1000000) {
@@ -260,19 +243,6 @@ const MeetingsPage: React.FC = () => {
       return `${(amount / 1000).toFixed(1)}K`;
     }
     return `${amount}`;
-  };
-
-  const getDealProgressByStage = (stage?: string) => {
-    const stageProgress: Record<string, number> = {
-      'qualifiedtobuy': 20,
-      'appointmentscheduled': 40,
-      'presentationscheduled': 60,
-      'decisionmakerboughtin': 80,
-      'contractsent': 90,
-      'closedwon': 100,
-      'closedlost': 0,
-    };
-    return stageProgress[stage?.toLowerCase() || ''] || 45;
   };
 
   const formatDealStage = (stage?: string) => {
@@ -284,13 +254,16 @@ const MeetingsPage: React.FC = () => {
       .trim();
   };
 
-  const getRiskLevel = (riskScores?: any) => {
-    if (!riskScores || !riskScores.totalDealRisk) return null;
-    const totalRisk = riskScores.totalDealRisk;
-    if (totalRisk >= 70) return { level: 'High', color: 'text-destructive bg-destructive/10 border-destructive/20' };
-    if (totalRisk >= 40) return { level: 'Medium', color: 'text-warning bg-warning/10 border-warning/20' };
-    if (totalRisk > 0) return { level: 'Low', color: 'text-success bg-success/10 border-success/20' };
-    return { level: 'None', color: 'text-muted-foreground bg-muted/10 border-muted/20' };
+  const getStageBadgeStyle = (stage?: string) => {
+    const s = stage?.toLowerCase() || '';
+    if (s.includes('appointment')) return 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20';
+    if (s.includes('qualified')) return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20';
+    if (s.includes('presentation')) return 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20';
+    if (s.includes('decision')) return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
+    if (s.includes('contract')) return 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-500/20';
+    if (s.includes('closedwon')) return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20';
+    if (s.includes('closedlost')) return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20';
+    return 'bg-brand-light text-brand border-[hsl(var(--app-brand-muted))]';
   };
 
   // Filter meetings based on search query
@@ -307,37 +280,57 @@ const MeetingsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className={isInsideAdminLayout ? "min-h-screen bg-page dark:bg-background" : ""}>
+      <div className={isInsideAdminLayout ? "min-h-screen bg-white dark:bg-background" : ""}>
         {/* No header skeleton needed - header is in UserLayout (for user pages) or AdminLayout (for admin pages) */}
         <main className="page-container py-8">
           <div className="space-y-8 content-container">
             {/* Page Header Skeleton */}
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-              <div className="space-y-2 pl-2">
-                <Skeleton className="h-8 w-48" />
+              <div className="space-y-2.5 pl-2">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-7 w-40" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
                 <Skeleton className="h-4 w-72" />
               </div>
-              <Skeleton className="h-20 w-72 rounded-lg" />
+              <Skeleton className="h-[60px] w-64 rounded-xl" />
             </div>
 
             {/* Meeting Cards Skeleton Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i} className="bg-elevated dark:bg-card border border-default dark:border-border shadow-card overflow-hidden">
-                  <CardHeader className="space-y-2 border-b border-subtle dark:border-border">
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </CardHeader>
-                  <CardContent className="space-y-3 pt-4">
-                    <Skeleton className="h-12 w-full rounded-lg" />
-                    <Skeleton className="h-4 w-2/3" />
-                    <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-2 w-full rounded-full" />
-                  </CardContent>
-                  <CardFooter className="flex gap-2 border-t border-subtle dark:border-border bg-page dark:bg-muted/20">
-                    <Skeleton className="flex-1 h-9 rounded-md" />
-                    <Skeleton className="flex-1 h-9 rounded-md" />
-                  </CardFooter>
+                <Card key={i} className="bg-elevated dark:bg-card border border-default dark:border-border shadow-card overflow-hidden rounded-lg">
+                  {/* Stage badge skeleton */}
+                  <div className="px-5 pt-5">
+                    <Skeleton className="h-6 w-28 rounded-md" />
+                  </div>
+                  {/* Title + Meta skeleton */}
+                  <div className="px-5 pt-3 pb-4 space-y-2">
+                    <Skeleton className="h-5 w-4/5" />
+                    <Skeleton className="h-3.5 w-3/5" />
+                  </div>
+                  {/* Risk bar skeleton */}
+                  <div className="mx-5 py-3 border-t border-subtle dark:border-border space-y-2">
+                    <div className="flex justify-between">
+                      <Skeleton className="h-3.5 w-16" />
+                      <Skeleton className="h-3.5 w-8" />
+                    </div>
+                    <Skeleton className="h-[5px] w-full rounded-full" />
+                  </div>
+                  {/* Info grid skeleton */}
+                  <div className="mx-5 py-3 border-t border-subtle dark:border-border grid grid-cols-2 gap-y-4 gap-x-4">
+                    {[1, 2, 3, 4, 5, 6].map((j) => (
+                      <div key={j} className="space-y-1">
+                        <Skeleton className="h-3 w-12" />
+                        <Skeleton className="h-4 w-20" />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Footer skeleton */}
+                  <div className="p-4 border-t border-subtle dark:border-border flex gap-2 mt-auto">
+                    <Skeleton className="flex-1 h-8 rounded-md" />
+                    <Skeleton className="flex-1 h-8 rounded-md" />
+                  </div>
                 </Card>
               ))}
             </div>
@@ -353,25 +346,25 @@ const MeetingsPage: React.FC = () => {
       {isAdminMode && !isInsideAdminLayout && (
         <div className="bg-elevated dark:bg-card border-b border-subtle dark:border-border">
           <div className="page-container">
-            <div className="flex gap-1">
+            <div className="flex gap-0">
               <button
                 onClick={() => setAdminTab('meetings')}
-                className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${adminTab === 'meetings'
-                    ? 'border-[hsl(var(--app-brand))] text-heading'
-                    : 'border-transparent text-subtle hover:text-heading'
+                className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors duration-150 border-b-2 ${adminTab === 'meetings'
+                    ? 'border-[hsl(var(--app-brand))] text-heading dark:text-foreground'
+                    : 'border-transparent text-subtle hover:text-heading dark:hover:text-foreground'
                   }`}
               >
-                <Calendar className="w-4 h-4 mr-2 inline" />
+                <Calendar className="w-4 h-4" />
                 Clients Meetings
               </button>
               <button
                 onClick={() => setAdminTab('logs')}
-                className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${adminTab === 'logs'
-                    ? 'border-[hsl(var(--app-brand))] text-heading'
-                    : 'border-transparent text-subtle hover:text-heading'
+                className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors duration-150 border-b-2 ${adminTab === 'logs'
+                    ? 'border-[hsl(var(--app-brand))] text-heading dark:text-foreground'
+                    : 'border-transparent text-subtle hover:text-heading dark:hover:text-foreground'
                   }`}
               >
-                <Activity className="w-4 h-4 mr-2 inline" />
+                <Activity className="w-4 h-4" />
                 Logs
               </button>
             </div>
@@ -389,22 +382,22 @@ const MeetingsPage: React.FC = () => {
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
                 <div className="flex flex-col gap-2 pl-2">
                   <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-bold text-heading dark:text-foreground">
+                    <h2 className="text-2xl font-bold tracking-tight text-heading dark:text-foreground">
                       {isAdminMode ? 'Client Meetings' : 'My Meetings'}
                     </h2>
                     {isAdminMode && (
-                      <span className="px-2.5 py-1 text-xs font-medium bg-brand-light text-brand rounded-full border border-[hsl(var(--app-brand-muted))]">
-                        <Shield className="h-3 w-3 mr-1 inline" />
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium bg-brand-light text-brand rounded-full border border-[hsl(var(--app-brand-muted))]">
+                        <Shield className="h-3 w-3" />
                         Admin
                       </span>
                     )}
-                    <span className="px-2.5 py-1 text-xs font-medium bg-[hsl(var(--page-bg))] text-body rounded-full dark:bg-muted dark:text-muted-foreground">
+                    <span className="px-2.5 py-0.5 text-xs font-medium bg-orange-50 text-orange-600 rounded-full border border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20">
                       {searchQuery
                         ? `${filteredMeetings.length} of ${meetings.length}`
                         : `${meetings.length} total`}
                     </span>
                   </div>
-                  <p className="text-body dark:text-muted-foreground">
+                  <p className="text-sm text-body dark:text-muted-foreground leading-relaxed">
                     {isAdminMode
                       ? `Manage all users' meetings${totalUsers > 0 ? ` across ${totalUsers} users` : ''}`
                       : 'Track your upcoming meetings and trigger pre/post meeting calls'
@@ -413,18 +406,18 @@ const MeetingsPage: React.FC = () => {
                 </div>
 
                 {/* Automation Toggle Card */}
-                <Card className="md:w-auto bg-elevated dark:bg-card border border-default dark:border-border shadow-card">
+                <Card className="md:w-auto bg-elevated dark:bg-card border border-default dark:border-border shadow-card rounded-xl">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between space-x-4">
+                    <div className="flex items-center justify-between gap-5">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-brand-light dark:bg-primary/10 flex items-center justify-center">
-                          <Phone className="h-5 w-5 text-brand dark:text-primary" />
+                        <div className="h-9 w-9 rounded-lg bg-brand-light dark:bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Phone className="h-4 w-4 text-brand dark:text-primary" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-heading dark:text-foreground">
+                          <p className="text-sm font-semibold text-heading dark:text-foreground leading-tight">
                             Auto-Dialing
                           </p>
-                          <p className="text-xs text-subtle dark:text-muted-foreground">
+                          <p className="text-xs text-subtle dark:text-muted-foreground mt-0.5">
                             {isEnabled ? 'System operational' : 'Currently disabled'}
                           </p>
                         </div>
@@ -448,19 +441,19 @@ const MeetingsPage: React.FC = () => {
               )}
 
               {filteredMeetings.length === 0 ? (
-                <Card className="text-center py-16 bg-elevated dark:bg-card border border-default dark:border-border shadow-card">
+                <Card className="text-center py-16 bg-elevated dark:bg-card border border-default dark:border-border shadow-card rounded-xl">
                   <CardContent>
-                    <div className="inline-block p-4 rounded-full bg-[hsl(var(--page-bg))] dark:bg-muted mb-4">
+                    <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-[hsl(var(--page-bg))] dark:bg-muted mb-5">
                       {searchQuery ? (
-                        <Search className="h-12 w-12 text-subtle" />
+                        <Search className="h-7 w-7 text-subtle" />
                       ) : (
-                        <Calendar className="h-12 w-12 text-subtle" />
+                        <Calendar className="h-7 w-7 text-subtle" />
                       )}
                     </div>
-                    <h3 className="text-xl font-semibold text-heading dark:text-foreground mb-2">
+                    <h3 className="text-lg font-semibold text-heading dark:text-foreground mb-1.5">
                       {searchQuery ? 'No meetings found' : 'No meetings scheduled'}
                     </h3>
-                    <p className="text-subtle dark:text-muted-foreground">
+                    <p className="text-sm text-subtle dark:text-muted-foreground max-w-sm mx-auto">
                       {searchQuery
                         ? `No meetings match "${searchQuery}". Try a different search term.`
                         : 'Your upcoming meetings will appear here'}
@@ -470,7 +463,7 @@ const MeetingsPage: React.FC = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => setSearchQuery('')}
-                        className="mt-4 border-default hover:bg-page dark:border-border dark:hover:bg-muted"
+                        className="mt-5 border-default hover:bg-page dark:border-border dark:hover:bg-muted"
                       >
                         Clear search
                       </Button>
@@ -482,146 +475,133 @@ const MeetingsPage: React.FC = () => {
                   {filteredMeetings.map((meeting) => (
                     <Card
                       key={meeting.id}
-                      className="group bg-elevated dark:bg-card border border-default dark:border-border shadow-card hover:shadow-card-hover transition-all duration-200 flex flex-col overflow-hidden"
+                      className="group glass-card border border-default dark:border-border shadow-card hover:shadow-card-hover hover:border-[hsl(var(--text-muted)/0.3)] transition-[box-shadow,border-color] duration-200 flex flex-col overflow-hidden rounded-lg"
                     >
-                      {/* Header */}
-                      <CardHeader className="pb-3 border-b border-subtle dark:border-border">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex items-start gap-3 flex-1">
-                            <div className="p-2 rounded-lg bg-brand-light dark:bg-primary/10">
-                              <Calendar className="h-4 w-4 text-brand dark:text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <CardTitle className="text-sm font-semibold text-heading dark:text-foreground line-clamp-2 mb-1">
-                                {meeting.title}
-                              </CardTitle>
-                              {meeting.agenda && (
-                                <CardDescription className="line-clamp-1 text-xs text-subtle">
-                                  {meeting.agenda}
-                                </CardDescription>
-                              )}
-                            </div>
-                          </div>
-                          {getStatusBadge(meeting.status)}
-                        </div>
+                      {/* Stage Badge */}
+                      <div className="px-5 pt-5">
+                        <span className={`inline-block px-2.5 py-1 text-[11px] font-semibold rounded-md border truncate max-w-[180px] ${getStageBadgeStyle(meeting.dealStage)}`}>
+                          {formatDealStage(meeting.dealStage)}
+                        </span>
+                      </div>
 
-                        {/* Time info */}
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand bg-brand-light px-2.5 py-1 rounded-full dark:bg-primary/10 dark:text-primary">
-                            <Zap className="h-3 w-3" />
-                            {getTimeUntilMeeting(meeting.startTime)}
-                          </span>
-                          <span className="inline-flex items-center gap-1.5 text-xs text-subtle">
-                            <Clock className="h-3 w-3" />
-                            {new Date(meeting.endTime).getTime() - new Date(meeting.startTime).getTime() > 0
-                              ? `${Math.round((new Date(meeting.endTime).getTime() - new Date(meeting.startTime).getTime()) / 60000)} min`
-                              : 'N/A'}
-                          </span>
-                        </div>
-                      </CardHeader>
-
-                      <CardContent className="flex-1 space-y-3 pt-4">
-                        {/* Deal info */}
-                        <div className="flex items-center justify-between p-2.5 rounded-lg bg-page dark:bg-muted/50 border border-subtle dark:border-border">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Briefcase className="h-4 w-4 text-subtle flex-shrink-0" />
-                            <span className="font-medium text-sm text-heading dark:text-foreground truncate">
-                              {meeting.dealName}
-                            </span>
-                          </div>
-                          <span className="text-sm font-semibold text-brand dark:text-primary flex-shrink-0">
-                            ${formatDealAmount(meeting.dealAmount)}
-                          </span>
-                        </div>
-
-                        {/* Meeting date and Company */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-xs text-subtle px-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            <span>{formatDate(meeting.startTime)}</span>
-                          </div>
+                      {/* Title + Meta */}
+                      <div className="px-5 pt-3 pb-4">
+                        <h3 className="font-semibold text-[15px] text-heading dark:text-foreground leading-snug line-clamp-2">
+                          {meeting.title}
+                        </h3>
+                        <div className="flex items-center gap-1 text-xs text-subtle mt-1.5 flex-wrap">
                           {meeting.dealCompany && (
-                            <div className="flex items-center gap-2 text-xs px-1">
-                              <Briefcase className="h-3.5 w-3.5 text-subtle" />
-                              <span className="font-medium text-body dark:text-foreground">
-                                {meeting.dealCompany}
-                              </span>
-                            </div>
+                            <>
+                              <Briefcase className="h-3 w-3 flex-shrink-0" />
+                              <span>{meeting.dealCompany}</span>
+                              <span className="mx-0.5 opacity-40">·</span>
+                            </>
                           )}
-                          {isAdminMode && meeting.owner && (
-                            <div className="flex items-center gap-2 text-xs px-1">
-                              <Users className="h-3.5 w-3.5 text-subtle" />
-                              <span className="font-medium text-body dark:text-foreground">
-                                Owner: {meeting.owner.name}
-                              </span>
-                            </div>
-                          )}
+                          <Calendar className="h-3 w-3 flex-shrink-0" />
+                          <span>{formatDate(meeting.startTime)}</span>
                         </div>
+                      </div>
 
-                        {/* Deal stage and progress */}
-                        <div className="space-y-1.5 px-1">
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-subtle flex items-center gap-1">
-                              <TrendingUp className="h-3 w-3" />
-                              {formatDealStage(meeting.dealStage)}
-                            </span>
-                            <span className="font-semibold text-brand dark:text-primary">
-                              {getDealProgressByStage(meeting.dealStage)}%
-                            </span>
-                          </div>
-                          <div className="w-full bg-[hsl(var(--border-default))] dark:bg-secondary rounded-full h-1.5 overflow-hidden">
+                      {/* Deal Risk Bar */}
+                      <div className="mx-5 py-3 border-t border-subtle dark:border-border">
+                        <div className="flex justify-between items-center mb-2.5">
+                          <span className="text-xs font-medium text-heading dark:text-foreground">Deal Risk</span>
+                          <span className="text-xs text-subtle">{Math.round((meeting.dealRisks?.totalDealRisk || 0) * 100) / 100}%</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className={`h-2 w-2 rounded-full flex-shrink-0 ${
+                            (meeting.dealRisks?.totalDealRisk || 0) >= 70
+                              ? 'bg-red-500'
+                              : (meeting.dealRisks?.totalDealRisk || 0) >= 40
+                                ? 'bg-amber-500'
+                                : (meeting.dealRisks?.totalDealRisk || 0) > 0
+                                  ? 'bg-red-400'
+                                  : 'bg-gray-300 dark:bg-gray-600'
+                          }`} />
+                          <div className="flex-1 bg-red-100/60 dark:bg-red-500/10 rounded-full h-[6px] overflow-hidden">
                             <div
-                              className="bg-brand h-1.5 rounded-full transition-all duration-500"
-                              style={{ width: `${getDealProgressByStage(meeting.dealStage)}%` }}
+                              className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-red-400 to-red-200 dark:from-red-500 dark:to-red-400/40"
+                              style={{ width: `${Math.max(meeting.dealRisks?.totalDealRisk || 0, 1)}%` }}
                             />
                           </div>
                         </div>
+                      </div>
 
+                      {/* Info Grid */}
+                      <div className="mx-5 py-3 border-t border-subtle dark:border-border grid grid-cols-2 gap-y-4 gap-x-4 flex-1">
+                        {/* Amount */}
+                        <div>
+                          <p className="text-[11px] text-subtle mb-0.5">Amount</p>
+                          <p className="text-sm font-semibold text-heading dark:text-foreground">
+                            ${formatDealAmount(meeting.dealAmount)}
+                          </p>
+                        </div>
+                        {/* Owner */}
+                        <div>
+                          <p className="text-[11px] text-subtle mb-1.5">Owner</p>
+                          {meeting.owner ? (
+                            <div className="flex items-center gap-2">
+                              <div className="h-7 w-7 rounded-full bg-pink-100 dark:bg-pink-500/20 flex items-center justify-center flex-shrink-0 ring-1 ring-pink-200/60 dark:ring-pink-500/30">
+                                <span className="text-[10px] font-bold text-pink-700 dark:text-pink-300 leading-none">
+                                  {meeting.owner.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                                </span>
+                              </div>
+                              <span className="text-sm font-medium text-heading dark:text-foreground truncate">{meeting.owner.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-subtle">—</span>
+                          )}
+                        </div>
+                        {/* Time Until */}
+                        <div>
+                          <p className="text-[11px] text-subtle mb-0.5">Time</p>
+                          <p className={`text-sm font-medium ${isMeetingPast(meeting.startTime) ? 'text-accent-red' : 'text-brand dark:text-primary'}`}>
+                            {getTimeUntilMeeting(meeting.startTime)}
+                          </p>
+                        </div>
+                        {/* Duration */}
+                        <div>
+                          <p className="text-[11px] text-subtle mb-0.5">Duration</p>
+                          <p className="text-sm font-medium text-accent-orange">
+                            {new Date(meeting.endTime).getTime() - new Date(meeting.startTime).getTime() > 0
+                              ? `${Math.round((new Date(meeting.endTime).getTime() - new Date(meeting.startTime).getTime()) / 60000)} min`
+                              : 'N/A'}
+                          </p>
+                        </div>
+                        {/* Deal */}
+                        <div>
+                          <p className="text-[11px] text-subtle mb-0.5">Deal</p>
+                          <p className="text-sm text-body dark:text-foreground truncate">{meeting.dealName}</p>
+                        </div>
                         {/* Participants */}
-                        {meeting.participants && meeting.participants.length > 0 && (
-                          <div className="flex items-center gap-2 pt-1 px-1">
-                            <Users className="h-3.5 w-3.5 text-subtle" />
-                            <span className="text-xs text-subtle">
-                              {meeting.participants.length} participant{meeting.participants.length > 1 ? 's' : ''}
-                            </span>
-                          </div>
-                        )}
+                        <div>
+                          <p className="text-[11px] text-subtle mb-0.5">Participants</p>
+                          <p className="text-sm text-body dark:text-foreground">
+                            {meeting.participants?.length || 0} {(meeting.participants?.length || 0) === 1 ? 'person' : 'people'}
+                          </p>
+                        </div>
+                      </div>
 
-                        {/* Risk indicator */}
-                        {meeting.dealRisks && getRiskLevel(meeting.dealRisks) && (
-                          <div className="flex items-center justify-between pt-1 px-1">
-                            <span className="text-xs text-subtle">Deal Risk</span>
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getRiskLevel(meeting.dealRisks)?.level === 'High'
-                                ? 'badge-error'
-                                : getRiskLevel(meeting.dealRisks)?.level === 'Medium'
-                                  ? 'badge-warning'
-                                  : 'badge-success'
-                              }`}>
-                              {getRiskLevel(meeting.dealRisks)?.level} ({meeting.dealRisks.totalDealRisk}%)
-                            </span>
-                          </div>
-                        )}
-                      </CardContent>
-
-                      <CardFooter className="flex gap-2 pt-4 border-t border-subtle dark:border-border bg-page dark:bg-muted/20">
+                      {/* Footer Actions */}
+                      <div className="mt-auto p-4 border-t border-subtle dark:border-border flex gap-2">
                         <Button
                           onClick={() => showConfirmation('pre', meeting)}
-                          className="flex-1 gap-2 bg-brand hover:bg-brand-hover text-white"
+                          className="flex-1 gap-1.5 bg-brand hover:bg-brand-hover text-white shadow-sm"
                           size="sm"
                         >
-                          <Phone className="h-4 w-4" />
+                          <Phone className="h-3.5 w-3.5" />
                           Pre-Call
                         </Button>
                         <Button
                           onClick={() => showConfirmation('post', meeting)}
-                          className="flex-1 gap-2 border-default dark:border-border hover:bg-page dark:hover:bg-muted"
+                          className="flex-1 gap-1.5 border-default dark:border-border hover:bg-page hover:text-heading dark:hover:bg-muted dark:hover:text-foreground text-body dark:text-foreground"
                           variant="outline"
                           size="sm"
                         >
-                          <Phone className="h-4 w-4" />
+                          <Phone className="h-3.5 w-3.5" />
                           Post-Call
                         </Button>
-                      </CardFooter>
+                      </div>
                     </Card>
                   ))}
                 </div>
@@ -783,28 +763,28 @@ const MeetingsPage: React.FC = () => {
           </AlertDialogHeader>
 
           {confirmModal.meeting && (
-            <Card className="bg-muted/50">
-              <CardContent className="pt-6 space-y-3">
+            <Card className="bg-muted/50 border border-border shadow-none">
+              <CardContent className="p-4 space-y-3">
                 <div>
-                  <p className="font-medium text-foreground">{confirmModal.meeting.title}</p>
-                  <p className="text-sm text-muted-foreground">Deal: {confirmModal.meeting.dealName}</p>
+                  <p className="font-medium text-foreground text-sm leading-snug">{confirmModal.meeting.title}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">Deal: {confirmModal.meeting.dealName}</p>
                 </div>
 
                 {confirmModal.meeting.owner && (
                   <>
-                    <div className="flex items-start gap-2 text-sm pt-2 border-t">
+                    <div className="flex items-start gap-2.5 text-sm pt-3 border-t border-border">
                       <Briefcase className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                       <div>
-                        <p className="text-muted-foreground">Owner</p>
-                        <p className="font-medium text-foreground">{confirmModal.meeting.owner.name}</p>
+                        <p className="text-xs text-muted-foreground">Owner</p>
+                        <p className="font-medium text-foreground text-sm">{confirmModal.meeting.owner.name}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2 text-sm">
+                    <div className="flex items-start gap-2.5 text-sm">
                       <Phone className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                       <div>
-                        <p className="text-muted-foreground">Calling</p>
-                        <p className="font-medium text-foreground">{confirmModal.meeting.owner.phone}</p>
+                        <p className="text-xs text-muted-foreground">Calling</p>
+                        <p className="font-medium text-foreground text-sm">{confirmModal.meeting.owner.phone}</p>
                       </div>
                     </div>
                   </>
