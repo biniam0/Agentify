@@ -286,7 +286,7 @@ const MeetingsPage: React.FC = () => {
     return (
       <div className={isInsideAdminLayout ? "min-h-screen bg-white dark:bg-background" : ""}>
         {/* No header skeleton needed - header is in UserLayout (for user pages) or AdminLayout (for admin pages) */}
-        <main className="page-container py-8">
+        <main className="py-8">
           <div className="space-y-8 content-container">
             {/* Page Header Skeleton */}
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
@@ -345,7 +345,7 @@ const MeetingsPage: React.FC = () => {
   }
 
   return (
-    <div className={isInsideAdminLayout ? "min-h-screen bg-page dark:bg-background" : ""}>
+    <div className={isInsideAdminLayout ? "min-h-screen dark:bg-background" : ""}>
       {/* Admin Tabs - Only show when admin mode is active AND not inside AdminLayout */}
       {isAdminMode && !isInsideAdminLayout && (
         <div className="bg-elevated dark:bg-card border-b border-subtle dark:border-border">
@@ -377,7 +377,7 @@ const MeetingsPage: React.FC = () => {
       )}
 
       {/* Main Content */}
-      <main className="page-container py-8">
+      <main>
         {/* Show Meetings Content when viewing meetings (both admin and regular users) */}
         {((!isAdminMode && userView === 'meetings') || (isAdminMode && adminTab === 'meetings')) && (
           <>
@@ -387,7 +387,7 @@ const MeetingsPage: React.FC = () => {
                 <div className="flex flex-col gap-2 pl-2">
                   <div className="flex items-center gap-3">
                     <h2 className="text-2xl font-bold tracking-tight text-heading dark:text-foreground">
-                      {isAdminMode ? 'Client Meetings' : 'My Meetings'}
+                      {isAdminMode ? 'Clients Meetings' : 'My Meetings'}
                     </h2>
                     {isAdminMode && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium bg-brand-light text-brand rounded-full border border-[hsl(var(--app-brand-muted))]">

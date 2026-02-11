@@ -94,7 +94,7 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
                 key={item.path}
                 onClick={() => navigate(item.path)}
                 className={`
-                  px-4 py-1.5 rounded-full text-sm font-medium transition-colors duration-150
+                  px-4 py-1.5 rounded-lg text-sm font-medium transition-colors duration-150
                   ${isActive
                     ? 'bg-brand-light text-heading dark:bg-primary/10 dark:text-foreground'
                     : 'text-subtle hover:text-heading hover:bg-[hsl(var(--page-bg))] dark:hover:bg-muted dark:hover:text-foreground'

@@ -174,10 +174,13 @@ export const MetricCard: React.FC<{
   return (
     <Card className={`bg-elevated dark:bg-card border border-subtle dark:border-border shadow-card rounded-lg overflow-hidden ${className}`}>
       <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-subtle dark:text-muted-foreground mb-1.5">{label}</p>
-            <div className="flex items-baseline gap-2">
+        <div className="flex items-start justify-between gap-4">
+          <div className={`h-10 w-10 rounded-xl ${accentColor} bg-opacity-50 dark:bg-opacity-20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 shadow-sm border border-white/20 dark:border-white/5`}>
+            <Icon className={`h-5 w-5 ${iconColor}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-medium text-subtle dark:text-muted-foreground mb-1 truncate">{label}</p>
+            <div className="flex items-baseline justify-between gap-2">
               <span className="text-2xl font-bold tracking-tight text-heading dark:text-foreground">{value}</span>
               {trend && (
                 <span className={`text-[11px] font-medium ${trend.positive ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
@@ -185,9 +188,6 @@ export const MetricCard: React.FC<{
                 </span>
               )}
             </div>
-          </div>
-          <div className={`h-9 w-9 rounded-lg ${accentColor} flex items-center justify-center flex-shrink-0`}>
-            <Icon className={`h-4.5 w-4.5 ${iconColor}`} />
           </div>
         </div>
       </CardContent>

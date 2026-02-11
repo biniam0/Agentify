@@ -42,7 +42,8 @@
     --deal-low: 211 100% 50%;
 
     /* Sidebar (shadcn) */
-    --sidebar-background: 0 0% 98%;
+    /* Keep sidebar background aligned with the app shell */
+    --sidebar-background: var(--background);
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
@@ -138,7 +139,8 @@
     --info: 211 100% 50%;
 
     /* Sidebar (shadcn) */
-    --sidebar-background: 240 5.9% 10%;
+    /* Keep sidebar background aligned with the app shell */
+    --sidebar-background: var(--background);
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;

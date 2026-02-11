@@ -117,7 +117,7 @@ export function AdminSidebar() {
   const isLogsActive = location.pathname.startsWith('/admin/logs');
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="border-r border-default">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

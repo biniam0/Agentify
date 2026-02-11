@@ -65,9 +65,9 @@ const AdminLayout: React.FC = () => {
   return (
     <SidebarProvider>
       <AdminSidebar />
-      <SidebarInset>
+      <SidebarInset className="bg-background">
         {/* Header - BarrierX Style */}
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border bg-elevated dark:bg-card transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border bg-elevated transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4 flex-1">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
@@ -174,7 +174,7 @@ const AdminLayout: React.FC = () => {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4">
           <Outlet />
         </main>
       </SidebarInset>
