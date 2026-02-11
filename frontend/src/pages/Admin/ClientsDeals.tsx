@@ -419,7 +419,7 @@ const ClientsDeals: React.FC = () => {
                           <DropdownMenuItem
                             key={type}
                             onClick={() => openConfirmDialog(deal, type)}
-                            className="flex items-start gap-3 p-3 cursor-pointer"
+                            className="flex items-start gap-3 p-3 cursor-pointer focus:bg-[hsl(var(--page-bg))] focus:text-heading dark:focus:bg-muted/30 dark:focus:text-foreground"
                           >
                             <div className={`p-2 rounded-lg ${config.bgColor}`}>{config.icon}</div>
                             <div className="flex-1">
