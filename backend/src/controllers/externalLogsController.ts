@@ -16,7 +16,7 @@ import { Response } from 'express';
 import { ServiceAuthRequest } from '../middlewares/serviceAuth';
 import * as loggingService from '../services/loggingService';
 import prisma from '../config/database';
-import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType } from '@prisma/client';
+import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType, SmsStatus } from '@prisma/client';
 
 /**
  * Helper to verify user exists
@@ -347,6 +347,51 @@ export const getUserErrorLogs = async (req: ServiceAuthRequest, res: Response): 
   } catch (error: any) {
     console.error('❌ getUserErrorLogs error:', error);
     res.status(500).json({ error: 'Failed to fetch error logs', details: error.message });
+  }
+};
+
+// ============================================
+// 7. SMS LOGS
+// ============================================
+
+export const getUserSmsLogs = async (req: ServiceAuthRequest, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const { status, meetingId, startDate, endDate, limit = 50, offset = 0 } = req.query;
+
+    const user = await verifyUser(userId);
+    if (!user) {
+      res.status(404).json({ error: 'User not found', userId });
+      return;
+    }
+
+    const result = await loggingService.getSmsLogs({
+      userEmail: user.email, // Use email for stable filtering
+      status: status as SmsStatus,
+      meetingId: meetingId as string,
+      startDate: startDate ? new Date(startDate as string) : undefined,
+      endDate: endDate ? new Date(endDate as string) : undefined,
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
+    });
+
+    res.json({
+      success: true,
+      logType: 'sms',
+      data: result.logs,
+      user: { id: user.id, name: user.name, email: user.email },
+      pagination: {
+        total: result.total,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+        hasMore: result.total > parseInt(offset as string) + result.logs.length,
+      },
+      requestedBy: req.service?.name,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error('❌ getUserSmsLogs error:', error);
+    res.status(500).json({ error: 'Failed to fetch SMS logs', details: error.message });
   }
 };
 

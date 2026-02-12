@@ -84,6 +84,14 @@ router.get(
   externalLogsController.getUserErrorLogs
 );
 
+// 7. SMS Logs
+router.get(
+  '/users/:userId/sms',
+  authenticateService,
+  requireScope('logs:read'),
+  externalLogsController.getUserSmsLogs
+);
+
 // ============================================
 // PHASE 3: BATCH ENDPOINT
 // ============================================
