@@ -16,7 +16,7 @@ import { Response } from 'express';
 import { ServiceAuthRequest } from '../middlewares/serviceAuth';
 import * as loggingService from '../services/loggingService';
 import prisma from '../config/database';
-import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType } from '@prisma/client';
+import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType, SmsStatus } from '@prisma/client';
 
 /**
  * Helper to verify user exists
@@ -351,6 +351,51 @@ export const getUserErrorLogs = async (req: ServiceAuthRequest, res: Response): 
 };
 
 // ============================================
+// 7. SMS LOGS
+// ============================================
+
+export const getUserSmsLogs = async (req: ServiceAuthRequest, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const { status, meetingId, startDate, endDate, limit = 50, offset = 0 } = req.query;
+
+    const user = await verifyUser(userId);
+    if (!user) {
+      res.status(404).json({ error: 'User not found', userId });
+      return;
+    }
+
+    const result = await loggingService.getSmsLogs({
+      userEmail: user.email, // Use email for stable filtering
+      status: status as SmsStatus,
+      meetingId: meetingId as string,
+      startDate: startDate ? new Date(startDate as string) : undefined,
+      endDate: endDate ? new Date(endDate as string) : undefined,
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
+    });
+
+    res.json({
+      success: true,
+      logType: 'sms',
+      data: result.logs,
+      user: { id: user.id, name: user.name, email: user.email },
+      pagination: {
+        total: result.total,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+        hasMore: result.total > parseInt(offset as string) + result.logs.length,
+      },
+      requestedBy: req.service?.name,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error('❌ getUserSmsLogs error:', error);
+    res.status(500).json({ error: 'Failed to fetch SMS logs', details: error.message });
+  }
+};
+
+// ============================================
 // PHASE 3: BATCH ENDPOINT - ALL LOGS
 // ============================================
 
@@ -445,6 +490,18 @@ const fetchUserErrorLogs = async (userEmail: string, startDate: Date, limit: num
 };
 
 /**
+ * Helper: Fetch SMS logs for a user within date range
+ * @param userEmail - User's email (stable field for filtering)
+ */
+const fetchUserSmsLogs = async (userEmail: string, startDate: Date, limit: number = 100) => {
+  return await loggingService.getSmsLogs({
+    userEmail,
+    startDate,
+    limit,
+  });
+};
+
+/**
  * Helper: Fetch scheduler logs within date range (system-wide)
  */
 const fetchSchedulerLogs = async (startDate: Date, limit: number = 50) => {
@@ -460,7 +517,7 @@ const fetchSchedulerLogs = async (startDate: Date, limit: number = 50) => {
  * GET /users/:userId/all?days=7
  * 
  * Note: :userId should be the barrierxUserId (BarrierX Platform user ID)
- * Returns all 6 log types in a single response
+ * Returns all 7 log types in a single response
  */
 export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Promise<void> => {
   try {
@@ -494,6 +551,7 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
       crmLogs,
       webhookLogs,
       errorLogs,
+      smsResult,
       schedulerResult,
     ] = await Promise.all([
       fetchUserActivityLogs(user.email, startDate), // Use email for stable filtering
@@ -501,6 +559,7 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
       fetchUserCrmLogs(user.hubspotOwnerId || user.barrierxUserId, startDate),
       fetchUserWebhookLogs(user.email, startDate), // Use email for stable filtering
       fetchUserErrorLogs(user.email, startDate), // Use email for stable filtering
+      fetchUserSmsLogs(user.email, startDate), // Use email for stable filtering
       fetchSchedulerLogs(startDate),
     ]);
 
@@ -519,6 +578,7 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
         crmActions: crmLogs,
         webhooks: webhookLogs,
         errors: errorLogs,
+        sms: smsResult.logs,
         scheduler: schedulerResult.logs,
       },
       summary: {
@@ -527,9 +587,10 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
         totalCrmActions: crmLogs.length,
         totalWebhooks: webhookLogs.length,
         totalErrors: errorLogs.length,
+        totalSms: smsResult.total,
         totalScheduler: schedulerResult.total,
         grandTotal: activityResult.total + callResult.total + crmLogs.length +
-          webhookLogs.length + errorLogs.length + schedulerResult.total,
+          webhookLogs.length + errorLogs.length + smsResult.total + schedulerResult.total,
       },
       filters: {
         days: daysNum,

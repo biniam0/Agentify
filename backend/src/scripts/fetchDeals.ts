@@ -1,0 +1,834 @@
+/**
+ * Fetch & Filter Deals from BarrierX Bulk API
+ *
+ * Fetches all deals from the BarrierX bulk endpoint and lets you
+ * filter results by owner, meeting date, deal updatedAt, stage,
+ * company, pipeline, amount, and more.
+ *
+ * Usage:
+ *   npx ts-node src/scripts/fetchDeals.ts [options]
+ *
+ * Options:
+ *   --owner <name>              Filter deals by owner name (case-insensitive, partial match)
+ *   --owner-email <email>       Filter deals by owner email (case-insensitive, partial match)
+ *   --stage <stage>             Filter deals by stage (case-insensitive, partial match)
+ *   --company <company>         Filter deals by company name (case-insensitive, partial match)
+ *   --pipeline <pipeline>       Filter deals by pipeline name (case-insensitive, partial match)
+ *   --min-amount <number>       Filter deals with amount >= value
+ *   --max-amount <number>       Filter deals with amount <= value
+ *   --updated-since <date>      Filter deals updated since date (ISO 8601 or YYYY-MM-DD)
+ *   --updated-before <date>     Filter deals updated before date (ISO 8601 or YYYY-MM-DD)
+ *   --meeting-since <date>      Filter deals with meetings starting since date
+ *   --meeting-before <date>     Filter deals with meetings starting before date
+ *   --close-since <date>        Filter deals with close date since date
+ *   --close-before <date>       Filter deals with close date before date
+ *   --today                     Only deals with meetings today
+ *   --tomorrow                  Only deals with meetings tomorrow
+ *   --after-tomorrow            Only deals with meetings the day after tomorrow
+ *   --this-week                 Only deals with meetings this week (Mon-Sun)
+ *   --next-days <n>             Only deals with meetings in the next N days
+ *   --future-meetings           Only deals with meetings in the future (from now)
+ *   --has-meetings              Only include deals that have at least one meeting
+ *   --has-contacts              Only include deals that have at least one contact
+ *   --tenant <slug>             Filter by tenant slug (case-insensitive, partial match)
+ *   --limit <number>            Limit the number of results printed (default: all)
+ *   --json                      Output raw JSON instead of formatted table
+ *   --verbose                   Show full deal details (contacts, meetings, etc.)
+ *   --summary                   Show only summary stats (no individual deals)
+ *   --help                      Show this help message
+ *
+ * Examples:
+ *   npx ts-node src/scripts/fetchDeals.ts
+ *   npx ts-node src/scripts/fetchDeals.ts --owner "John"
+ *   npx ts-node src/scripts/fetchDeals.ts --stage "Qualified" --min-amount 10000
+ *   npx ts-node src/scripts/fetchDeals.ts --owner "Andreja" --today
+ *   npx ts-node src/scripts/fetchDeals.ts --owner "Andreja" --tomorrow --verbose
+ *   npx ts-node src/scripts/fetchDeals.ts --owner "Andreja" --after-tomorrow
+ *   npx ts-node src/scripts/fetchDeals.ts --owner "Andreja" --this-week
+ *   npx ts-node src/scripts/fetchDeals.ts --owner "Andreja" --future-meetings
+ *   npx ts-node src/scripts/fetchDeals.ts --meeting-since 2025-10-01 --has-meetings
+ *   npx ts-node src/scripts/fetchDeals.ts --updated-since 2025-09-26 --json
+ *   npx ts-node src/scripts/fetchDeals.ts --summary
+ */
+
+import axios from 'axios';
+import { config } from '../config/env';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface RawDeal {
+  id: string;
+  dealName: string;
+  amount: number;
+  stage: string;
+  company: string;
+  pipeline?: string;
+  closeDate?: string;
+  updatedAt?: string;
+  createdAt?: string;
+  summary?: string;
+  owner?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+    hubspotId?: string;
+    timezone?: string;
+  };
+  contacts?: Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+  }>;
+  meetings?: Array<{
+    id: string;
+    title?: string;
+    name?: string;
+    startTime?: string;
+    start_time?: string;
+    endTime?: string;
+    end_time?: string;
+    status?: string;
+    body?: string;
+  }>;
+  userDealRiskScores?: any;
+  recommendations?: any[];
+  [key: string]: any;
+}
+
+interface RawTenant {
+  id: string;
+  slug: string;
+  name: string;
+  deals?: RawDeal[];
+  [key: string]: any;
+}
+
+interface BulkResponse {
+  ok: boolean;
+  tenants: RawTenant[];
+  total?: number;
+  count?: number;
+}
+
+interface FlatDeal extends RawDeal {
+  tenantSlug: string;
+  tenantName: string;
+}
+
+interface Filters {
+  owner?: string;
+  ownerEmail?: string;
+  stage?: string;
+  company?: string;
+  pipeline?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  updatedSince?: Date;
+  updatedBefore?: Date;
+  meetingSince?: Date;
+  meetingBefore?: Date;
+  closeSince?: Date;
+  closeBefore?: Date;
+  meetingToday?: boolean;
+  meetingTomorrow?: boolean;
+  meetingAfterTomorrow?: boolean;
+  meetingThisWeek?: boolean;
+  meetingNextDays?: number;
+  futureMeetings?: boolean;
+  hasMeetings?: boolean;
+  hasContacts?: boolean;
+  tenant?: string;
+  limit?: number;
+  json?: boolean;
+  verbose?: boolean;
+  summary?: boolean;
+}
+
+// ─── Date Helpers ────────────────────────────────────────────────────────────
+
+/** Get start of a day (00:00:00.000) in local time */
+function startOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/** Get end of a day (23:59:59.999) in local time */
+function endOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+/** Add N days to a date */
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+/** Get the Monday of the current week */
+function startOfWeek(date: Date): Date {
+  const d = startOfDay(date);
+  const day = d.getDay(); // 0=Sun, 1=Mon, ...
+  const diff = day === 0 ? 6 : day - 1; // adjust so Monday=0
+  d.setDate(d.getDate() - diff);
+  return d;
+}
+
+// ─── CLI Argument Parsing ────────────────────────────────────────────────────
+
+function parseArgs(args: string[]): Filters {
+  const filters: Filters = {};
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    const next = args[i + 1];
+
+    switch (arg) {
+      case '--help':
+        printHelp();
+        process.exit(0);
+      case '--owner':
+        filters.owner = next;
+        i++;
+        break;
+      case '--owner-email':
+        filters.ownerEmail = next;
+        i++;
+        break;
+      case '--stage':
+        filters.stage = next;
+        i++;
+        break;
+      case '--company':
+        filters.company = next;
+        i++;
+        break;
+      case '--pipeline':
+        filters.pipeline = next;
+        i++;
+        break;
+      case '--min-amount':
+        filters.minAmount = parseFloat(next);
+        i++;
+        break;
+      case '--max-amount':
+        filters.maxAmount = parseFloat(next);
+        i++;
+        break;
+      case '--updated-since':
+        filters.updatedSince = parseDate(next, '--updated-since');
+        i++;
+        break;
+      case '--updated-before':
+        filters.updatedBefore = parseDate(next, '--updated-before');
+        i++;
+        break;
+      case '--meeting-since':
+        filters.meetingSince = parseDate(next, '--meeting-since');
+        i++;
+        break;
+      case '--meeting-before':
+        filters.meetingBefore = parseDate(next, '--meeting-before');
+        i++;
+        break;
+      case '--close-since':
+        filters.closeSince = parseDate(next, '--close-since');
+        i++;
+        break;
+      case '--close-before':
+        filters.closeBefore = parseDate(next, '--close-before');
+        i++;
+        break;
+      case '--today':
+        filters.meetingToday = true;
+        break;
+      case '--tomorrow':
+        filters.meetingTomorrow = true;
+        break;
+      case '--after-tomorrow':
+        filters.meetingAfterTomorrow = true;
+        break;
+      case '--this-week':
+        filters.meetingThisWeek = true;
+        break;
+      case '--next-days':
+        filters.meetingNextDays = parseInt(next, 10);
+        i++;
+        break;
+      case '--future-meetings':
+        filters.futureMeetings = true;
+        break;
+      case '--has-meetings':
+        filters.hasMeetings = true;
+        break;
+      case '--has-contacts':
+        filters.hasContacts = true;
+        break;
+      case '--tenant':
+        filters.tenant = next;
+        i++;
+        break;
+      case '--limit':
+        filters.limit = parseInt(next, 10);
+        i++;
+        break;
+      case '--json':
+        filters.json = true;
+        break;
+      case '--verbose':
+        filters.verbose = true;
+        break;
+      case '--summary':
+        filters.summary = true;
+        break;
+      default:
+        if (arg.startsWith('--')) {
+          console.error(`Unknown option: ${arg}`);
+          console.error('Run with --help to see available options.');
+          process.exit(1);
+        }
+    }
+  }
+
+  return filters;
+}
+
+function parseDate(value: string, flag: string): Date {
+  const d = new Date(value);
+  if (isNaN(d.getTime())) {
+    console.error(`Invalid date for ${flag}: "${value}". Use ISO 8601 or YYYY-MM-DD format.`);
+    process.exit(1);
+  }
+  return d;
+}
+
+function printHelp() {
+  console.log(`
+Fetch & Filter Deals from BarrierX Bulk API
+
+Usage:
+  npx ts-node src/scripts/fetchDeals.ts [options]
+
+Filters:
+  --owner <name>              Filter by owner name (partial, case-insensitive)
+  --owner-email <email>       Filter by owner email (partial, case-insensitive)
+  --stage <stage>             Filter by deal stage (partial, case-insensitive)
+  --company <company>         Filter by company name (partial, case-insensitive)
+  --pipeline <pipeline>       Filter by pipeline name (partial, case-insensitive)
+  --min-amount <number>       Deals with amount >= value
+  --max-amount <number>       Deals with amount <= value
+  --updated-since <date>      Deals updated since date (ISO 8601 or YYYY-MM-DD)
+  --updated-before <date>     Deals updated before date
+  --meeting-since <date>      Deals with meetings starting since date
+  --meeting-before <date>     Deals with meetings starting before date
+  --close-since <date>        Deals with close date since date
+  --close-before <date>       Deals with close date before date
+
+Meeting shortcuts:
+  --today                     Only deals with meetings today
+  --tomorrow                  Only deals with meetings tomorrow
+  --after-tomorrow            Only deals with meetings the day after tomorrow
+  --this-week                 Only deals with meetings this week (Mon-Sun)
+  --next-days <n>             Only deals with meetings in the next N days
+  --future-meetings           Only deals with meetings from now onwards
+
+Presence:
+  --has-meetings              Only deals with at least one meeting
+  --has-contacts              Only deals with at least one contact
+  --tenant <slug>             Filter by tenant slug (partial, case-insensitive)
+
+Output:
+  --limit <number>            Limit number of results printed
+  --json                      Output raw JSON
+  --verbose                   Show full deal details
+  --summary                   Show only summary stats (no individual deals)
+  --help                      Show this help
+  `);
+}
+
+// ─── API Call ────────────────────────────────────────────────────────────────
+
+async function fetchDealsFromAPI(): Promise<BulkResponse> {
+  const baseUrl = config.barrierx.baseUrl;
+  const apiKey = config.barrierx.apiKey;
+
+  if (!apiKey) {
+    console.error('BARRIERX_API_KEY is not set. Check your .env file.');
+    process.exit(1);
+  }
+
+  const url = `${baseUrl}/api/external/tenants/bulk`;
+
+  const params = {
+    user_ids: '',                                      // empty = wildcard (all users)
+    include_deals: true,
+    include_members: false,
+    sync_engagements: true,
+    deal_updated_since: '2025-09-26T00:00:00Z',
+    deal_pipeline: '1. Sales Pipeline,Sales Pipeline',
+  };
+
+  console.log(`\nFetching deals from: ${url}`);
+  console.log(`Parameters:`, JSON.stringify(params, null, 2));
+  console.log('');
+
+  const startTime = Date.now();
+
+  const response = await axios.get<BulkResponse>(url, {
+    params,
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Accept': 'application/json',
+    },
+    timeout: 120000,
+  });
+
+  const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
+  console.log(`API responded in ${durationSec}s`);
+
+  if (!response.data.ok) {
+    console.error('API returned ok=false:', JSON.stringify(response.data, null, 2));
+    process.exit(1);
+  }
+
+  return response.data;
+}
+
+// ─── Flatten ─────────────────────────────────────────────────────────────────
+
+function flattenDeals(data: BulkResponse): FlatDeal[] {
+  const flat: FlatDeal[] = [];
+
+  for (const tenant of data.tenants || []) {
+    for (const deal of tenant.deals || []) {
+      flat.push({
+        ...deal,
+        tenantSlug: tenant.slug,
+        tenantName: tenant.name,
+      });
+    }
+  }
+
+  return flat;
+}
+
+// ─── Filters ─────────────────────────────────────────────────────────────────
+
+function applyFilters(deals: FlatDeal[], filters: Filters): FlatDeal[] {
+  let result = [...deals];
+
+  // Owner name
+  if (filters.owner) {
+    const search = filters.owner.toLowerCase();
+    result = result.filter(d => d.owner?.name?.toLowerCase().includes(search));
+  }
+
+  // Owner email
+  if (filters.ownerEmail) {
+    const search = filters.ownerEmail.toLowerCase();
+    result = result.filter(d => d.owner?.email?.toLowerCase().includes(search));
+  }
+
+  // Stage
+  if (filters.stage) {
+    const search = filters.stage.toLowerCase();
+    result = result.filter(d => d.stage?.toLowerCase().includes(search));
+  }
+
+  // Company
+  if (filters.company) {
+    const search = filters.company.toLowerCase();
+    result = result.filter(d => d.company?.toLowerCase().includes(search));
+  }
+
+  // Pipeline
+  if (filters.pipeline) {
+    const search = filters.pipeline.toLowerCase();
+    result = result.filter(d => d.pipeline?.toLowerCase().includes(search));
+  }
+
+  // Amount range
+  if (filters.minAmount !== undefined) {
+    result = result.filter(d => (d.amount || 0) >= filters.minAmount!);
+  }
+  if (filters.maxAmount !== undefined) {
+    result = result.filter(d => (d.amount || 0) <= filters.maxAmount!);
+  }
+
+  // Deal updatedAt
+  if (filters.updatedSince) {
+    result = result.filter(d => {
+      if (!d.updatedAt) return false;
+      return new Date(d.updatedAt) >= filters.updatedSince!;
+    });
+  }
+  if (filters.updatedBefore) {
+    result = result.filter(d => {
+      if (!d.updatedAt) return false;
+      return new Date(d.updatedAt) < filters.updatedBefore!;
+    });
+  }
+
+  // Close date
+  if (filters.closeSince) {
+    result = result.filter(d => {
+      if (!d.closeDate) return false;
+      return new Date(d.closeDate) >= filters.closeSince!;
+    });
+  }
+  if (filters.closeBefore) {
+    result = result.filter(d => {
+      if (!d.closeDate) return false;
+      return new Date(d.closeDate) < filters.closeBefore!;
+    });
+  }
+
+  // Meeting date filters (explicit date range)
+  if (filters.meetingSince || filters.meetingBefore) {
+    result = result.filter(d => {
+      if (!d.meetings || d.meetings.length === 0) return false;
+      return d.meetings.some(m => {
+        const start = new Date(m.startTime || m.start_time || '');
+        if (isNaN(start.getTime())) return false;
+        if (filters.meetingSince && start < filters.meetingSince) return false;
+        if (filters.meetingBefore && start >= filters.meetingBefore) return false;
+        return true;
+      });
+    });
+  }
+
+  // ── Meeting shortcut filters (today / tomorrow / after-tomorrow / this-week / next-days / future) ──
+  const hasMeetingInRange = (d: FlatDeal, rangeStart: Date, rangeEnd: Date): boolean => {
+    if (!d.meetings || d.meetings.length === 0) return false;
+    return d.meetings.some(m => {
+      const start = new Date(m.startTime || m.start_time || '');
+      if (isNaN(start.getTime())) return false;
+      return start >= rangeStart && start < rangeEnd;
+    });
+  };
+
+  const now = new Date();
+
+  if (filters.meetingToday) {
+    const dayStart = startOfDay(now);
+    const dayEnd = startOfDay(addDays(now, 1));
+    console.log(`  Filter: meetings today (${dayStart.toLocaleDateString()} 00:00 – 23:59)`);
+    result = result.filter(d => hasMeetingInRange(d, dayStart, dayEnd));
+  }
+
+  if (filters.meetingTomorrow) {
+    const dayStart = startOfDay(addDays(now, 1));
+    const dayEnd = startOfDay(addDays(now, 2));
+    console.log(`  Filter: meetings tomorrow (${dayStart.toLocaleDateString()})`);
+    result = result.filter(d => hasMeetingInRange(d, dayStart, dayEnd));
+  }
+
+  if (filters.meetingAfterTomorrow) {
+    const dayStart = startOfDay(addDays(now, 2));
+    const dayEnd = startOfDay(addDays(now, 3));
+    console.log(`  Filter: meetings day after tomorrow (${dayStart.toLocaleDateString()})`);
+    result = result.filter(d => hasMeetingInRange(d, dayStart, dayEnd));
+  }
+
+  if (filters.meetingThisWeek) {
+    const weekStart = startOfWeek(now);
+    const weekEnd = addDays(weekStart, 7);
+    console.log(`  Filter: meetings this week (${weekStart.toLocaleDateString()} – ${addDays(weekEnd, -1).toLocaleDateString()})`);
+    result = result.filter(d => hasMeetingInRange(d, weekStart, weekEnd));
+  }
+
+  if (filters.meetingNextDays !== undefined) {
+    const rangeStart = startOfDay(now);
+    const rangeEnd = startOfDay(addDays(now, filters.meetingNextDays + 1));
+    console.log(`  Filter: meetings in next ${filters.meetingNextDays} days (until ${addDays(rangeEnd, -1).toLocaleDateString()})`);
+    result = result.filter(d => hasMeetingInRange(d, rangeStart, rangeEnd));
+  }
+
+  if (filters.futureMeetings) {
+    console.log(`  Filter: future meetings only (from ${now.toISOString()})`);
+    result = result.filter(d => {
+      if (!d.meetings || d.meetings.length === 0) return false;
+      return d.meetings.some(m => {
+        const start = new Date(m.startTime || m.start_time || '');
+        return !isNaN(start.getTime()) && start >= now;
+      });
+    });
+  }
+
+  // Has meetings
+  if (filters.hasMeetings) {
+    result = result.filter(d => d.meetings && d.meetings.length > 0);
+  }
+
+  // Has contacts
+  if (filters.hasContacts) {
+    result = result.filter(d => d.contacts && d.contacts.length > 0);
+  }
+
+  // Tenant slug
+  if (filters.tenant) {
+    const search = filters.tenant.toLowerCase();
+    result = result.filter(d =>
+      d.tenantSlug?.toLowerCase().includes(search) ||
+      d.tenantName?.toLowerCase().includes(search)
+    );
+  }
+
+  return result;
+}
+
+// ─── Output ──────────────────────────────────────────────────────────────────
+
+function printSummary(allDeals: FlatDeal[], filtered: FlatDeal[], filters: Filters) {
+  console.log('\n' + '='.repeat(80));
+  console.log('  DEALS SUMMARY');
+  console.log('='.repeat(80));
+
+  console.log(`\n  Total deals fetched:    ${allDeals.length}`);
+  console.log(`  After filters:          ${filtered.length}`);
+
+  // Unique owners
+  const owners = new Map<string, number>();
+  filtered.forEach(d => {
+    const name = d.owner?.name || 'Unknown';
+    owners.set(name, (owners.get(name) || 0) + 1);
+  });
+  console.log(`  Unique owners:          ${owners.size}`);
+
+  // Stages breakdown
+  const stages = new Map<string, number>();
+  filtered.forEach(d => {
+    const stage = d.stage || 'Unknown';
+    stages.set(stage, (stages.get(stage) || 0) + 1);
+  });
+
+  console.log(`\n  --- Deals by Stage ---`);
+  const sortedStages = [...stages.entries()].sort((a, b) => b[1] - a[1]);
+  for (const [stage, count] of sortedStages) {
+    console.log(`    ${stage.padEnd(40)} ${count}`);
+  }
+
+  // Owners breakdown
+  console.log(`\n  --- Deals by Owner ---`);
+  const sortedOwners = [...owners.entries()].sort((a, b) => b[1] - a[1]);
+  for (const [owner, count] of sortedOwners) {
+    console.log(`    ${owner.padEnd(40)} ${count}`);
+  }
+
+  // Tenants breakdown
+  const tenants = new Map<string, number>();
+  filtered.forEach(d => {
+    const t = d.tenantName || d.tenantSlug || 'Unknown';
+    tenants.set(t, (tenants.get(t) || 0) + 1);
+  });
+  console.log(`\n  --- Deals by Tenant ---`);
+  const sortedTenants = [...tenants.entries()].sort((a, b) => b[1] - a[1]);
+  for (const [tenant, count] of sortedTenants) {
+    console.log(`    ${tenant.padEnd(40)} ${count}`);
+  }
+
+  // Meetings stats
+  const withMeetings = filtered.filter(d => d.meetings && d.meetings.length > 0).length;
+  const totalMeetings = filtered.reduce((sum, d) => sum + (d.meetings?.length || 0), 0);
+  console.log(`\n  --- Meetings ---`);
+  console.log(`    Deals with meetings:  ${withMeetings}`);
+  console.log(`    Total meetings:       ${totalMeetings}`);
+
+  // Amount stats
+  const amounts = filtered.map(d => d.amount || 0).filter(a => a > 0);
+  if (amounts.length > 0) {
+    const totalAmount = amounts.reduce((a, b) => a + b, 0);
+    const avgAmount = totalAmount / amounts.length;
+    console.log(`\n  --- Amount ---`);
+    console.log(`    Total value:          $${totalAmount.toLocaleString()}`);
+    console.log(`    Average deal:         $${Math.round(avgAmount).toLocaleString()}`);
+    console.log(`    Min:                  $${Math.min(...amounts).toLocaleString()}`);
+    console.log(`    Max:                  $${Math.max(...amounts).toLocaleString()}`);
+  }
+
+  // Active filters
+  const activeFilters = Object.entries(filters)
+    .filter(([_, v]) => v !== undefined && v !== false)
+    .map(([k, v]) => `${k}=${v instanceof Date ? v.toISOString().split('T')[0] : v}`);
+  if (activeFilters.length > 0) {
+    console.log(`\n  Active filters: ${activeFilters.join(', ')}`);
+  }
+
+  console.log('\n' + '='.repeat(80));
+}
+
+function printDealsTable(deals: FlatDeal[], filters: Filters) {
+  if (deals.length === 0) {
+    console.log('\n  No deals match the given filters.\n');
+    return;
+  }
+
+  const display = filters.limit ? deals.slice(0, filters.limit) : deals;
+
+  console.log('\n' + '-'.repeat(140));
+  console.log(
+    '#'.padEnd(5) +
+    'Deal Name'.padEnd(32) +
+    'Owner'.padEnd(22) +
+    'Stage'.padEnd(20) +
+    'Amount'.padStart(12) +
+    '  ' +
+    'Updated'.padEnd(12) +
+    'Mtgs'.padEnd(6) +
+    'Next Meeting'.padEnd(28)
+  );
+  console.log('-'.repeat(140));
+
+  display.forEach((d, i) => {
+    const name = (d.dealName || 'Unnamed').substring(0, 30);
+    const owner = (d.owner?.name || 'Unknown').substring(0, 20);
+    const stage = (d.stage || 'Unknown').substring(0, 18);
+    const amount = d.amount ? `$${d.amount.toLocaleString()}` : '$0';
+    const updated = d.updatedAt
+      ? new Date(d.updatedAt).toISOString().split('T')[0]
+      : 'N/A';
+    const meetingCount = d.meetings?.length || 0;
+
+    // Find next future meeting
+    const futureMeetings = (d.meetings || [])
+      .map(m => ({ ...m, _start: new Date(m.startTime || m.start_time || '') }))
+      .filter(m => !isNaN(m._start.getTime()) && m._start >= new Date())
+      .sort((a, b) => a._start.getTime() - b._start.getTime());
+
+    const nextMeeting = futureMeetings.length > 0
+      ? futureMeetings[0]._start.toLocaleString('en-US', {
+          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+        })
+      : 'None upcoming';
+
+    console.log(
+      `${(i + 1).toString().padEnd(5)}` +
+      `${name.padEnd(32)}` +
+      `${owner.padEnd(22)}` +
+      `${stage.padEnd(20)}` +
+      `${amount.padStart(12)}` +
+      '  ' +
+      `${updated.padEnd(12)}` +
+      `${meetingCount.toString().padEnd(6)}` +
+      `${nextMeeting.padEnd(28)}`
+    );
+  });
+
+  console.log('-'.repeat(120));
+
+  if (filters.limit && deals.length > filters.limit) {
+    console.log(`  Showing ${filters.limit} of ${deals.length} deals. Remove --limit to see all.`);
+  }
+}
+
+function printVerboseDeals(deals: FlatDeal[], filters: Filters) {
+  const display = filters.limit ? deals.slice(0, filters.limit) : deals;
+
+  for (const [i, d] of display.entries()) {
+    console.log('\n' + '='.repeat(80));
+    console.log(`  Deal #${i + 1}: ${d.dealName || 'Unnamed'}`);
+    console.log('='.repeat(80));
+    console.log(`  ID:           ${d.id}`);
+    console.log(`  Company:      ${d.company || 'N/A'}`);
+    console.log(`  Stage:        ${d.stage || 'N/A'}`);
+    console.log(`  Pipeline:     ${d.pipeline || 'N/A'}`);
+    console.log(`  Amount:       ${d.amount ? '$' + d.amount.toLocaleString() : 'N/A'}`);
+    console.log(`  Close Date:   ${d.closeDate || 'N/A'}`);
+    console.log(`  Updated At:   ${d.updatedAt || 'N/A'}`);
+    console.log(`  Created At:   ${d.createdAt || 'N/A'}`);
+    console.log(`  Tenant:       ${d.tenantName} (${d.tenantSlug})`);
+
+    if (d.owner) {
+      console.log(`\n  --- Owner ---`);
+      console.log(`    Name:       ${d.owner.name || 'N/A'}`);
+      console.log(`    Email:      ${d.owner.email || 'N/A'}`);
+      console.log(`    Phone:      ${d.owner.phone || 'N/A'}`);
+      console.log(`    HubSpot ID: ${d.owner.hubspotId || d.owner.id || 'N/A'}`);
+      console.log(`    Timezone:   ${d.owner.timezone || 'N/A'}`);
+    }
+
+    if (d.contacts && d.contacts.length > 0) {
+      console.log(`\n  --- Contacts (${d.contacts.length}) ---`);
+      d.contacts.forEach((c, ci) => {
+        console.log(`    [${ci + 1}] ${c.name} | ${c.email || 'no email'} | ${c.phone || 'no phone'}`);
+      });
+    }
+
+    if (d.meetings && d.meetings.length > 0) {
+      console.log(`\n  --- Meetings (${d.meetings.length}) ---`);
+      d.meetings.forEach((m, mi) => {
+        const start = m.startTime || m.start_time || 'N/A';
+        const end = m.endTime || m.end_time || 'N/A';
+        console.log(`    [${mi + 1}] ${m.title || m.name || 'Untitled'}`);
+        console.log(`        Start: ${start}`);
+        console.log(`        End:   ${end}`);
+        console.log(`        Status: ${m.status || 'N/A'}`);
+      });
+    }
+
+    if (d.summary) {
+      console.log(`\n  Summary: ${d.summary.substring(0, 200)}${d.summary.length > 200 ? '...' : ''}`);
+    }
+  }
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────────
+
+async function main() {
+  // Skip the first 2 args (node, script path)
+  const cliArgs = process.argv.slice(2);
+  const filters = parseArgs(cliArgs);
+
+  console.log('\n' + '='.repeat(80));
+  console.log('  BarrierX Deals Fetcher');
+  console.log('='.repeat(80));
+
+  try {
+    // 1. Fetch from API
+    const data = await fetchDealsFromAPI();
+
+    const tenantCount = data.tenants?.length || 0;
+    console.log(`\nReceived ${tenantCount} tenant(s)`);
+
+    // 2. Flatten
+    const allDeals = flattenDeals(data);
+    console.log(`Total deals across all tenants: ${allDeals.length}`);
+
+    // 3. Apply filters
+    const filtered = applyFilters(allDeals, filters);
+    console.log(`Deals after filtering: ${filtered.length}`);
+
+    // 4. Output
+    if (filters.json) {
+      // JSON output
+      console.log(JSON.stringify(filtered, null, 2));
+    } else if (filters.summary) {
+      // Summary only
+      printSummary(allDeals, filtered, filters);
+    } else if (filters.verbose) {
+      // Verbose per-deal output
+      printSummary(allDeals, filtered, filters);
+      printVerboseDeals(filtered, filters);
+    } else {
+      // Default: summary + table
+      printSummary(allDeals, filtered, filters);
+      printDealsTable(filtered, filters);
+    }
+
+  } catch (error: any) {
+    console.error('\nFailed to fetch deals:', error.response?.data || error.message);
+    if (error.response?.status) {
+      console.error(`HTTP Status: ${error.response.status}`);
+    }
+    process.exit(1);
+  }
+}
+
+main().catch(err => {
+  console.error('Unexpected error:', err);
+  process.exit(1);
+});

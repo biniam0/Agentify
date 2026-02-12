@@ -134,16 +134,16 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
         <div className="border-b border-subtle dark:border-border last:border-0">
             {/* Main Row */}
             <div
-                className="grid grid-cols-12 gap-4 py-4 px-6 items-center hover:bg-page dark:hover:bg-muted transition-colors cursor-pointer"
+                className="grid grid-cols-12 gap-4 py-3.5 px-6 items-center hover:bg-[hsl(var(--page-bg)/0.5)] dark:hover:bg-muted/50 transition-colors duration-150 cursor-pointer group"
                 onClick={() => onToggle(item.id)}
             >
                 <div className="col-span-2">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                         {getActivityBadge(item.activityType)}
                         {getDirectionBadge(item.callDirection)}
                         {item.wasVoicemail && (
-                            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800 px-2 py-0.5" title="Voicemail">
-                                <Voicemail className="h-3 w-3 mr-1" />
+                            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800 px-1.5 py-0.5 text-[10px]" title="Voicemail">
+                                <Voicemail className="h-2.5 w-2.5 mr-0.5" />
                                 VM
                             </Badge>
                         )}
@@ -156,40 +156,42 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                     <div className="text-sm text-body dark:text-muted-foreground truncate">{item.companyName}</div>
                 </div>
                 <div className="col-span-2 flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
+                    <Avatar className="h-6 w-6 ring-1 ring-[hsl(var(--border-subtle))] dark:ring-border">
                         <AvatarImage src={item.ownerAvatar} />
-                        <AvatarFallback className="text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                        <AvatarFallback className="text-[10px] font-semibold bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300">
                             {item.ownerName.charAt(0)}
                         </AvatarFallback>
                     </Avatar>
                     <span className="text-sm font-medium text-heading dark:text-foreground truncate">{item.ownerName}</span>
                 </div>
                 <div className="col-span-2">
-                    <div className="text-sm text-body dark:text-muted-foreground">
+                    <div className="text-xs text-body dark:text-muted-foreground">
                         {format(new Date(item.date), 'MMM d, yyyy')}
                     </div>
                 </div>
                 <div className="col-span-1 flex justify-end items-center gap-2">
                     {getStatusBadge(item.status)}
-                    {isExpanded ? <ChevronUp className="h-4 w-4 text-subtle" /> : <ChevronDown className="h-4 w-4 text-subtle" />}
+                    <div className="text-subtle group-hover:text-heading dark:group-hover:text-foreground transition-colors">
+                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
                 </div>
             </div>
 
             {/* Expanded Content */}
             {isExpanded && (
-                <div className="px-6 pb-6 pt-2 bg-page dark:bg-muted/30">
-                    <div className="bg-elevated dark:bg-card border border-subtle dark:border-border rounded-lg p-6 space-y-6">
+                <div className="px-6 pb-5 pt-1 bg-[hsl(var(--page-bg)/0.5)] dark:bg-muted/20">
+                    <div className="bg-elevated dark:bg-card border border-default dark:border-border rounded-lg p-5 space-y-5 shadow-sm">
 
                         {/* Top Action Bar */}
                         <div className="flex justify-between items-center pb-4 border-b border-subtle dark:border-border">
-                            <h3 className="text-base font-semibold text-heading dark:text-foreground">Call Details</h3>
+                            <h3 className="text-sm font-semibold text-heading dark:text-foreground">Call Details</h3>
                             <div className="flex gap-2">
-                                <Button className="bg-brand hover:bg-brand-hover text-white gap-2" size="sm">
-                                    <CheckCircle2 className="h-4 w-4" />
+                                <Button className="bg-brand hover:bg-brand-hover text-white gap-1.5 shadow-sm" size="sm">
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
                                     Complete
                                 </Button>
-                                <Button variant="outline" size="sm" className="gap-2">
-                                    <MessageSquare className="h-4 w-4" />
+                                <Button variant="outline" size="sm" className="gap-1.5 border-default dark:border-border hover:bg-page hover:text-heading dark:hover:bg-muted dark:hover:text-foreground">
+                                    <MessageSquare className="h-3.5 w-3.5" />
                                     Comment
                                 </Button>
                             </div>
@@ -207,27 +209,27 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                             </div>
 
                             {/* Right Column: Context & Info */}
-                            <div className="space-y-6">
+                            <div className="space-y-5">
                                 {/* Meeting & Deal Context */}
                                 <div>
-                                    <h4 className="text-sm font-semibold text-body dark:text-foreground mb-3 flex items-center gap-2">
-                                        <Briefcase className="h-4 w-4" />
+                                    <h4 className="text-xs font-semibold text-subtle dark:text-muted-foreground mb-2.5 flex items-center gap-1.5 uppercase tracking-wider">
+                                        <Briefcase className="h-3.5 w-3.5" />
                                         Business Context
                                     </h4>
-                                    <div className="space-y-3 bg-page dark:bg-muted/50 rounded-lg p-4 border border-subtle dark:border-border">
+                                    <div className="space-y-2.5 bg-page dark:bg-muted/50 rounded-lg p-4 border border-subtle dark:border-border">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs text-subtle">Deal</span>
+                                            <span className="text-[11px] text-subtle">Deal</span>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm font-medium text-heading dark:text-foreground">{item.dealName}</span>
-                                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-brand hover:text-[hsl(var(--app-brand-hover))] hover:bg-brand-light dark:hover:bg-primary/10">
+                                                <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-brand hover:text-[hsl(var(--app-brand-hover))] hover:bg-brand-light dark:hover:bg-primary/10">
                                                     <LinkIcon className="h-3 w-3 mr-1" />
                                                     View
                                                 </Button>
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs text-subtle">Meeting</span>
-                                            <div className="flex items-center gap-2">
+                                            <span className="text-[11px] text-subtle">Meeting</span>
+                                            <div className="flex items-center gap-1.5">
                                                 <Calendar className="h-3 w-3 text-subtle" />
                                                 <span className="text-sm font-medium text-heading dark:text-foreground truncate max-w-[200px]">{item.meetingTitle}</span>
                                             </div>
@@ -238,8 +240,8 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                                 {/* Retry Information */}
                                 {item.retryAttempt > 1 && (
                                     <div>
-                                        <h4 className="text-sm font-semibold text-body dark:text-foreground mb-3 flex items-center gap-2">
-                                            <RotateCcw className="h-4 w-4" />
+                                        <h4 className="text-xs font-semibold text-subtle dark:text-muted-foreground mb-2.5 flex items-center gap-1.5 uppercase tracking-wider">
+                                            <RotateCcw className="h-3.5 w-3.5" />
                                             Retry Information
                                         </h4>
                                         <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-4 border border-orange-100 dark:border-orange-900">
@@ -263,7 +265,7 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                                 {/* Description */}
                                 {item.description && (
                                     <div>
-                                        <h4 className="text-sm font-semibold text-body dark:text-foreground mb-2">Summary</h4>
+                                        <h4 className="text-xs font-semibold text-subtle dark:text-muted-foreground mb-2 uppercase tracking-wider">Summary</h4>
                                         <p className="text-sm text-body dark:text-muted-foreground leading-relaxed bg-page dark:bg-muted/50 rounded-lg p-4 border border-subtle dark:border-border">
                                             {item.description}
                                         </p>
@@ -275,7 +277,7 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                         {/* Failure Details (if any) */}
                         {item.details && item.details.length > 0 && (
                             <div className="pt-4 border-t border-subtle dark:border-border">
-                                <h4 className="text-sm font-semibold text-body dark:text-foreground mb-3">Issues Detected</h4>
+                                <h4 className="text-xs font-semibold text-subtle dark:text-muted-foreground mb-2.5 uppercase tracking-wider">Issues Detected</h4>
                                 <div className="space-y-3">
                                     {item.details.map((detail, idx) => (
                                         <div key={idx} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-100 dark:border-red-900">

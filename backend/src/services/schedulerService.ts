@@ -311,7 +311,7 @@ const runAutomationJob = async () => {
     }
 
     let dealsMap: Map<string, any[]>;
-    let usersToProcess: Array<{ id: string; name: string; email: string; barrierxUserId: string; tenantSlug: string }> = [];
+    let usersToProcess: Array<{ id: string; name: string; email: string; barrierxUserId: string; hubspotOwnerId?: string | null; tenantSlug: string }> = [];
 
     if (config.automation.mode === 'bulk') {
       // 🌟 NEW: Bulk mode - fetch ALL users and deals in ONE call (no user_ids = wildcard)
@@ -326,18 +326,49 @@ const runAutomationJob = async () => {
 
       console.log(`👥 Bulk mode: Processing ${dealsMap.size} users from external API`);
 
-      // In bulk mode, we don't have DB users, so create minimal user objects
-      // The actual user data will be in the deals (owner info from transformed deal)
-      dealsMap.forEach((deals, barrierxUserId) => {
+      // Look up real User records from DB so we can log correct userId/barrierxUserId
+      // The dealsMap key is deal.owner.hubspotId (HubSpot owner ID), NOT barrierxUserId
+      const hubspotOwnerIds = Array.from(dealsMap.keys());
+      const ownerEmails: string[] = [];
+      dealsMap.forEach((deals) => {
+        if (deals.length > 0 && deals[0].ownerEmail) {
+          ownerEmails.push(deals[0].ownerEmail);
+        }
+      });
+
+      const dbUsersForBulk = await prisma.user.findMany({
+        where: {
+          OR: [
+            { hubspotOwnerId: { in: hubspotOwnerIds } },
+            ...(ownerEmails.length > 0 ? [{ email: { in: ownerEmails } }] : []),
+          ],
+        },
+        select: { id: true, name: true, email: true, barrierxUserId: true, hubspotOwnerId: true, tenantSlug: true },
+      });
+
+      const userByHubspotId = new Map<string, (typeof dbUsersForBulk)[0]>();
+      const userByEmail = new Map<string, (typeof dbUsersForBulk)[0]>();
+      dbUsersForBulk.forEach(u => {
+        if (u.hubspotOwnerId) userByHubspotId.set(u.hubspotOwnerId, u);
+        if (u.email) userByEmail.set(u.email, u);
+      });
+
+      console.log(`🔍 Matched ${dbUsersForBulk.length} DB users for ${hubspotOwnerIds.length} HubSpot owners`);
+
+      dealsMap.forEach((deals, hubspotOwnerId) => {
         if (deals.length > 0) {
-          // Use deal owner info as user data (from transformed Deal properties)
           const firstDeal = deals[0];
+          // Match by hubspotOwnerId first, fallback to email
+          const matchedUser = userByHubspotId.get(hubspotOwnerId) ||
+                              (firstDeal.ownerEmail ? userByEmail.get(firstDeal.ownerEmail) : undefined);
+
           usersToProcess.push({
-            id: barrierxUserId, // Using barrierxUserId as ID
-            name: firstDeal.ownerName || 'Unknown User',
-            email: firstDeal.ownerEmail || 'unknown@example.com',
-            barrierxUserId: barrierxUserId,
-            tenantSlug: firstDeal.tenantSlug || 'unknown', // Get tenant from deal
+            id: matchedUser?.id || hubspotOwnerId,
+            name: matchedUser?.name || firstDeal.ownerName || 'Unknown User',
+            email: matchedUser?.email || firstDeal.ownerEmail || 'unknown@example.com',
+            barrierxUserId: matchedUser?.barrierxUserId || hubspotOwnerId,
+            hubspotOwnerId: hubspotOwnerId,
+            tenantSlug: matchedUser?.tenantSlug || firstDeal.tenantSlug || 'unknown',
           });
         }
       });
@@ -356,6 +387,7 @@ const runAutomationJob = async () => {
           name: true,
           email: true,
           barrierxUserId: true,
+          hubspotOwnerId: true,
           tenantSlug: true,
         },
       });
@@ -382,7 +414,9 @@ const runAutomationJob = async () => {
 
     // Process each user
     for (const dbUser of usersToProcess) {
-      const deals = dealsMap.get(dbUser.barrierxUserId);
+      // In bulk mode dealsMap is keyed by hubspotOwnerId; in auth mode by barrierxUserId
+      const deals = (dbUser.hubspotOwnerId ? dealsMap.get(dbUser.hubspotOwnerId) : undefined)
+                    || dealsMap.get(dbUser.barrierxUserId);
 
       if (!deals || deals.length === 0) {
         console.log(`⚠️  No deals found for user: ${dbUser.name} (barrierxUserId: ${dbUser.barrierxUserId})`);

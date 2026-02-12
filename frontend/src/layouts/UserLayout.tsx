@@ -12,13 +12,13 @@ const UserLayout: React.FC = () => {
   // Navigation items for the header - shared across all user pages
   const navigationItems = [
     { label: 'Meetings', path: '/meetings' },
-    { label: 'Logs', path: '/logs' },
+    // { label: 'Logs', path: '/logs' },
     { label: 'Calls', path: '/calls' },
     { label: 'Analytics', path: '/calls/analytics' },
   ];
 
   return (
-    <div className="min-h-screen bg-page dark:bg-background">
+    <div className="min-h-screen bg-background">
       {/* Shared Header - stays mounted across all child routes */}
       <BarrierXHeader items={navigationItems} />
       
