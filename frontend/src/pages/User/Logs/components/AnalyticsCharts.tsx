@@ -8,7 +8,10 @@ import {
   XAxis,
   YAxis,
   Area,
-  AreaChart
+  AreaChart,
+  Cell,
+  Pie,
+  PieChart
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,7 +21,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 interface ChartDataPoint {
   name: string;
   value: number;
-  secondaryValue?: number; // For stacked or comparison
+  secondaryValue?: number;
 }
 
 interface AnalyticsCardProps {
@@ -38,16 +41,16 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   className
 }) => {
   return (
-    <Card className={`bg-elevated dark:bg-card shadow-card border border-subtle dark:border-border ${className}`}>
-      <CardHeader className="flex flex-row items-center justify-between pb-4 space-y-0">
+    <Card className={`bg-elevated dark:bg-card shadow-card border border-subtle dark:border-border rounded-lg overflow-hidden ${className}`}>
+      <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
         <div>
-          <CardTitle className="text-base font-semibold text-heading dark:text-foreground">{title}</CardTitle>
-          {description && <CardDescription className="text-subtle dark:text-muted-foreground mt-1">{description}</CardDescription>}
+          <CardTitle className="text-sm font-semibold tracking-tight text-heading dark:text-foreground">{title}</CardTitle>
+          {description && <CardDescription className="text-xs text-subtle dark:text-muted-foreground mt-0.5">{description}</CardDescription>}
         </div>
         {dateSelect && (
           <Select defaultValue="this-month">
-            <SelectTrigger className="w-[140px] h-9 text-xs bg-elevated dark:bg-card border-default dark:border-border">
-              <CalendarIcon className="w-3.5 h-3.5 mr-2 text-subtle" />
+            <SelectTrigger className="w-[130px] h-8 text-[11px] bg-elevated dark:bg-card border-default dark:border-border rounded-lg">
+              <CalendarIcon className="w-3 h-3 mr-1.5 text-subtle" />
               <SelectValue placeholder="Select date" />
             </SelectTrigger>
             <SelectContent>
@@ -78,29 +81,27 @@ export const UsageBarChart: React.FC<BarChartProps> = ({
   return (
     <div style={{ width: '100%', height }}>
       <ResponsiveContainer>
-        <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barSize={32}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+        <BarChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }} barSize={28} barGap={4}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border-subtle))" />
           <XAxis 
             dataKey="name" 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: '#64748b', fontSize: 12 }} 
-            dy={10}
+            tick={{ fill: 'hsl(var(--text-muted))', fontSize: 11 }} 
+            dy={8}
           />
           <YAxis 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: '#64748b', fontSize: 12 }} 
+            tick={{ fill: 'hsl(var(--text-muted))', fontSize: 11 }} 
             tickFormatter={yAxisFormatter}
           />
           <Tooltip
-            cursor={{ fill: '#f8fafc' }}
-            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+            cursor={{ fill: 'hsl(var(--page-bg))', opacity: 0.5 }}
+            contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border-subtle))', boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.08)', fontSize: '12px' }}
           />
-          {/* Background Bar (Light) */}
-          <Bar dataKey="total" stackId="a" fill="#ecfdf5" radius={[4, 4, 0, 0]} />
-          {/* Foreground Bar (Dark) */}
-          <Bar dataKey="value" stackId="a" fill="#34d399" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="total" stackId="a" fill="hsl(var(--app-brand-light))" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="value" stackId="a" fill="hsl(var(--app-brand))" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -122,34 +123,34 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
   return (
     <div style={{ width: '100%', height }}>
       <ResponsiveContainer>
-        <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+              <stop offset="5%" stopColor="hsl(var(--app-brand))" stopOpacity={0.12}/>
+              <stop offset="95%" stopColor="hsl(var(--app-brand))" stopOpacity={0}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border-subtle))" />
           <XAxis 
             dataKey="name" 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: '#64748b', fontSize: 12 }} 
-            dy={10}
+            tick={{ fill: 'hsl(var(--text-muted))', fontSize: 11 }} 
+            dy={8}
           />
           <YAxis 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: '#64748b', fontSize: 12 }}
+            tick={{ fill: 'hsl(var(--text-muted))', fontSize: 11 }}
             tickFormatter={yAxisFormatter}
           />
           <Tooltip 
-            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+            contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border-subtle))', boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.08)', fontSize: '12px' }}
           />
           <Area 
             type="monotone" 
             dataKey="value" 
-            stroke="#10b981" 
+            stroke="hsl(var(--app-brand))" 
             strokeWidth={2}
             fillOpacity={1} 
             fill="url(#colorValue)" 
@@ -160,22 +161,77 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
   );
 };
 
-// --- Simple Metric Card ---
+// --- Enhanced Metric Card ---
 export const MetricCard: React.FC<{
   label: string;
   value: string;
   icon: React.ElementType;
+  trend?: { value: string; positive: boolean };
+  accentColor?: string;
+  iconColor?: string;
   className?: string;
-}> = ({ label, value, icon: Icon, className }) => {
+}> = ({ label, value, icon: Icon, trend, accentColor = 'bg-brand-light dark:bg-primary/10', iconColor = 'text-brand dark:text-primary', className }) => {
   return (
-    <div className={`p-6 bg-elevated dark:bg-card rounded-xl border border-subtle dark:border-border shadow-card flex items-start justify-between ${className}`}>
-      <div>
-        <div className="flex items-center gap-2 text-sm text-subtle dark:text-muted-foreground mb-2">
-          <Icon className="w-4 h-4" />
-          {label}
+    <Card className={`bg-elevated dark:bg-card border border-subtle dark:border-border shadow-card rounded-lg overflow-hidden ${className}`}>
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className={`h-10 w-10 rounded-xl ${accentColor} bg-opacity-50 dark:bg-opacity-20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 shadow-sm border border-white/20 dark:border-white/5`}>
+            <Icon className={`h-5 w-5 ${iconColor}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-medium text-subtle dark:text-muted-foreground mb-1 truncate">{label}</p>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-2xl font-bold tracking-tight text-heading dark:text-foreground">{value}</span>
+              {trend && (
+                <span className={`text-[11px] font-medium ${trend.positive ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                  {trend.positive ? '↗' : '↘'} {trend.value}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="text-2xl font-bold text-heading dark:text-foreground">{value}</div>
-      </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// --- Donut/Pie Chart Component ---
+interface DonutChartProps {
+  data: { name: string; value: number; color: string }[];
+  height?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+}
+
+export const DonutChart: React.FC<DonutChartProps> = ({
+  data,
+  height = 200,
+  innerRadius = 50,
+  outerRadius = 80
+}) => {
+  return (
+    <div style={{ width: '100%', height }}>
+      <ResponsiveContainer>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={innerRadius}
+            outerRadius={outerRadius}
+            paddingAngle={3}
+            dataKey="value"
+            strokeWidth={0}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
     </div>
   );
 };

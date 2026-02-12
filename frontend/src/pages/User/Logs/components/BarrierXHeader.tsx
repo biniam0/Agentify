@@ -94,10 +94,10 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
                 key={item.path}
                 onClick={() => navigate(item.path)}
                 className={`
-                  px-4 py-1.5 rounded-md text-sm font-medium transition-all
+                  px-4 py-1.5 rounded-lg text-sm font-medium transition-colors duration-150
                   ${isActive
-                    ? 'bg-brand-light text-heading dark:bg-primary/10'
-                    : 'text-subtle hover:text-heading hover:bg-[hsl(var(--page-bg))] dark:hover:bg-muted'
+                    ? 'bg-brand-light text-heading dark:bg-primary/10 dark:text-foreground'
+                    : 'text-subtle hover:text-heading hover:bg-[hsl(var(--page-bg))] dark:hover:bg-muted dark:hover:text-foreground'
                   }
                 `}
               >
@@ -109,24 +109,24 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 sm:gap-4">
-          <Button variant="ghost" size="icon" className="text-subtle hover:text-heading dark:hover:text-foreground">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-subtle hover:text-heading hover:bg-[hsl(var(--page-bg))] dark:hover:text-foreground dark:hover:bg-muted">
             <Search className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-subtle hover:text-heading dark:hover:text-foreground">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-subtle hover:text-heading hover:bg-[hsl(var(--page-bg))] dark:hover:text-foreground dark:hover:bg-muted">
             <HelpCircle className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-subtle hover:text-heading dark:hover:text-foreground">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-subtle hover:text-heading hover:bg-[hsl(var(--page-bg))] dark:hover:text-foreground dark:hover:bg-muted">
             <Settings className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-subtle hover:text-heading dark:hover:text-foreground relative">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-subtle hover:text-heading hover:bg-[hsl(var(--page-bg))] dark:hover:text-foreground dark:hover:bg-muted relative">
             <Bell className="h-4 w-4" />
-            <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-red-500 rounded-full border border-white dark:border-card"></span>
+            <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-card"></span>
           </Button>
 
-          <div className="pl-2 border-l border-default dark:border-border">
+          <div className="pl-3 ml-1 border-l border-subtle dark:border-border">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-[hsl(var(--border-default))] dark:hover:ring-border transition-all">
+                <Avatar className="h-8 w-8 cursor-pointer ring-1 ring-transparent hover:ring-[hsl(var(--border-default))] dark:hover:ring-border transition-[ring-color] duration-150">
                   <AvatarImage src={userAvatar || user?.avatar} />
                   <AvatarFallback className="bg-[hsl(var(--text-heading))] text-white dark:bg-foreground dark:text-background text-xs">
                     {userName?.charAt(0) || user?.name?.charAt(0) || 'U'}

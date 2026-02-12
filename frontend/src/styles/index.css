@@ -42,7 +42,8 @@
     --deal-low: 211 100% 50%;
 
     /* Sidebar (shadcn) */
-    --sidebar-background: 0 0% 98%;
+    /* Keep sidebar background aligned with the app shell */
+    --sidebar-background: var(--background);
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
@@ -101,8 +102,8 @@
     --icon-orange: 24.6 95% 53.1%;         /* = orange-500 */
     
     /* Card Styling */
-    --card-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --card-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --card-shadow: 0 2px 8px -3px rgb(0 0 0 / 0.06), 0 1px 3px -1px rgb(0 0 0 / 0.03);
+    --card-shadow-hover: 0 6px 16px -4px rgb(0 0 0 / 0.1), 0 2px 6px -2px rgb(0 0 0 / 0.05);
   }
 
   .dark {
@@ -138,7 +139,8 @@
     --info: 211 100% 50%;
 
     /* Sidebar (shadcn) */
-    --sidebar-background: 240 5.9% 10%;
+    /* Keep sidebar background aligned with the app shell */
+    --sidebar-background: var(--background);
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
@@ -185,8 +187,8 @@
     --icon-orange: 24.6 95% 60%;
     
     /* Card Styling */
-    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
-    --card-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.4);
+    --card-shadow: 0 6px 18px -4px rgb(0 0 0 / 0.3), 0 3px 6px -2px rgb(0 0 0 / 0.18);
+    --card-shadow-hover: 0 16px 36px -8px rgb(0 0 0 / 0.4), 0 6px 12px -4px rgb(0 0 0 / 0.22);
   }
 }
 
@@ -353,6 +355,33 @@
 
   .icon-orange {
     color: hsl(var(--icon-orange));
+  }
+
+  /* Accent Text Utilities */
+  .text-accent-red {
+    color: hsl(0 72% 51%);       /* red-600 */
+  }
+  .dark .text-accent-red {
+    color: hsl(0 72% 61%);       /* brighter for dark */
+  }
+
+  .text-accent-orange {
+    color: hsl(25 95% 53%);      /* orange-500 */
+  }
+  .dark .text-accent-orange {
+    color: hsl(25 95% 60%);      /* brighter for dark */
+  }
+
+  /* Glass Card Effect */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .dark .glass-card {
+    background: rgba(30, 41, 59, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 
   /* Card Shadow Utilities */
