@@ -490,6 +490,18 @@ const fetchUserErrorLogs = async (userEmail: string, startDate: Date, limit: num
 };
 
 /**
+ * Helper: Fetch SMS logs for a user within date range
+ * @param userEmail - User's email (stable field for filtering)
+ */
+const fetchUserSmsLogs = async (userEmail: string, startDate: Date, limit: number = 100) => {
+  return await loggingService.getSmsLogs({
+    userEmail,
+    startDate,
+    limit,
+  });
+};
+
+/**
  * Helper: Fetch scheduler logs within date range (system-wide)
  */
 const fetchSchedulerLogs = async (startDate: Date, limit: number = 50) => {
@@ -505,7 +517,7 @@ const fetchSchedulerLogs = async (startDate: Date, limit: number = 50) => {
  * GET /users/:userId/all?days=7
  * 
  * Note: :userId should be the barrierxUserId (BarrierX Platform user ID)
- * Returns all 6 log types in a single response
+ * Returns all 7 log types in a single response
  */
 export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Promise<void> => {
   try {
@@ -539,6 +551,7 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
       crmLogs,
       webhookLogs,
       errorLogs,
+      smsResult,
       schedulerResult,
     ] = await Promise.all([
       fetchUserActivityLogs(user.email, startDate), // Use email for stable filtering
@@ -546,6 +559,7 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
       fetchUserCrmLogs(user.hubspotOwnerId || user.barrierxUserId, startDate),
       fetchUserWebhookLogs(user.email, startDate), // Use email for stable filtering
       fetchUserErrorLogs(user.email, startDate), // Use email for stable filtering
+      fetchUserSmsLogs(user.email, startDate), // Use email for stable filtering
       fetchSchedulerLogs(startDate),
     ]);
 
@@ -564,6 +578,7 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
         crmActions: crmLogs,
         webhooks: webhookLogs,
         errors: errorLogs,
+        sms: smsResult.logs,
         scheduler: schedulerResult.logs,
       },
       summary: {
@@ -572,9 +587,10 @@ export const getAllUserLogs = async (req: ServiceAuthRequest, res: Response): Pr
         totalCrmActions: crmLogs.length,
         totalWebhooks: webhookLogs.length,
         totalErrors: errorLogs.length,
+        totalSms: smsResult.total,
         totalScheduler: schedulerResult.total,
         grandTotal: activityResult.total + callResult.total + crmLogs.length +
-          webhookLogs.length + errorLogs.length + schedulerResult.total,
+          webhookLogs.length + errorLogs.length + smsResult.total + schedulerResult.total,
       },
       filters: {
         days: daysNum,
