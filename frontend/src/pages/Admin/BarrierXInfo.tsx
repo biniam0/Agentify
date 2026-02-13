@@ -26,6 +26,12 @@ import {
   AlertCircle,
   Square,
   Zap,
+  ThumbsDown,
+  Swords,
+  Lightbulb,
+  Activity,
+  ShieldAlert,
+  ArrowRight,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -43,6 +49,7 @@ import { getAuthHeader } from '../../services/authService';
 
 interface BarrierXInfoRecord {
   id: string;
+  gatheringType: 'ZERO_SCORE' | 'LOST_DEAL' | 'INACTIVITY';
   dealId: string;
   dealName: string;
   tenantSlug: string;
@@ -55,9 +62,19 @@ interface BarrierXInfoRecord {
   conversationId: string | null;
   callSid: string | null;
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
+  // Zero-score fields
   quantifiedPainPoints: string | null;
   championInfo: string | null;
   economicBuyerInfo: string | null;
+  // Lost deal fields
+  lossReason: string | null;
+  competitorName: string | null;
+  lessonsLearned: string | null;
+  // Inactivity fields
+  inactivityStatus: string | null;
+  inactivityBlockers: string | null;
+  inactivityNextSteps: string | null;
+  // Call metadata
   callDuration: number | null;
   transcriptSummary: string | null;
   initiatedAt: string;
@@ -842,6 +859,15 @@ const BarrierXInfo: React.FC = () => {
                             {record.ownerName}
                           </span>
                           <span>{record.ownerPhone}</span>
+                          <Badge variant="outline" className={
+                            record.gatheringType === 'LOST_DEAL'
+                              ? 'text-red-600 border-red-300 dark:text-red-400 dark:border-red-700 text-[10px] px-1.5 py-0'
+                              : record.gatheringType === 'INACTIVITY'
+                                ? 'text-yellow-600 border-yellow-300 dark:text-yellow-400 dark:border-yellow-700 text-[10px] px-1.5 py-0'
+                                : 'text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700 text-[10px] px-1.5 py-0'
+                          }>
+                            {record.gatheringType === 'LOST_DEAL' ? 'Lost Deal' : record.gatheringType === 'INACTIVITY' ? 'Inactivity' : 'Zero Score'}
+                          </Badge>
                         </div>
                       </div>
 
@@ -879,40 +905,106 @@ const BarrierXInfo: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Gathered Information Section */}
+                        {/* Gathered Information Section — renders fields based on gathering type */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {/* Pain Points */}
-                          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                            <h4 className="font-medium text-sm text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-2">
-                              <Target className="w-4 h-4" />
-                              Quantified Pain Points
-                            </h4>
-                            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                              {record.quantifiedPainPoints || 'Not captured'}
-                            </p>
-                          </div>
+                          {/* ═══ ZERO SCORE fields ═══ */}
+                          {record.gatheringType === 'ZERO_SCORE' && (
+                            <>
+                              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <h4 className="font-medium text-sm text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-2">
+                                  <Target className="w-4 h-4" />
+                                  Quantified Pain Points
+                                </h4>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                  {record.quantifiedPainPoints || 'Not captured'}
+                                </p>
+                              </div>
+                              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                <h4 className="font-medium text-sm text-green-700 dark:text-green-300 mb-2 flex items-center gap-2">
+                                  <User className="w-4 h-4" />
+                                  Champion
+                                </h4>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                  {record.championInfo || 'Not captured'}
+                                </p>
+                              </div>
+                              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                                <h4 className="font-medium text-sm text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-2">
+                                  <Building className="w-4 h-4" />
+                                  Economic Buyer
+                                </h4>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                  {record.economicBuyerInfo || 'Not captured'}
+                                </p>
+                              </div>
+                            </>
+                          )}
 
-                          {/* Champion */}
-                          <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                            <h4 className="font-medium text-sm text-green-700 dark:text-green-300 mb-2 flex items-center gap-2">
-                              <User className="w-4 h-4" />
-                              Champion
-                            </h4>
-                            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                              {record.championInfo || 'Not captured'}
-                            </p>
-                          </div>
+                          {/* ═══ LOST DEAL fields ═══ */}
+                          {record.gatheringType === 'LOST_DEAL' && (
+                            <>
+                              <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                                <h4 className="font-medium text-sm text-red-700 dark:text-red-300 mb-2 flex items-center gap-2">
+                                  <ThumbsDown className="w-4 h-4" />
+                                  Loss Reason
+                                </h4>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                  {record.lossReason || 'Not captured'}
+                                </p>
+                              </div>
+                              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                                <h4 className="font-medium text-sm text-orange-700 dark:text-orange-300 mb-2 flex items-center gap-2">
+                                  <Swords className="w-4 h-4" />
+                                  Lost To (Competitor)
+                                </h4>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                  {record.competitorName || 'Not captured'}
+                                </p>
+                              </div>
+                              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                <h4 className="font-medium text-sm text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-2">
+                                  <Lightbulb className="w-4 h-4" />
+                                  Lessons Learned
+                                </h4>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                  {record.lessonsLearned || 'Not captured'}
+                                </p>
+                              </div>
+                            </>
+                          )}
 
-                          {/* Economic Buyer */}
-                          <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                            <h4 className="font-medium text-sm text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-2">
-                              <Building className="w-4 h-4" />
-                              Economic Buyer
-                            </h4>
-                            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                              {record.economicBuyerInfo || 'Not captured'}
-                            </p>
-                          </div>
+                          {/* ═══ INACTIVITY fields ═══ */}
+                          {record.gatheringType === 'INACTIVITY' && (
+                            <>
+                              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                                <h4 className="font-medium text-sm text-yellow-700 dark:text-yellow-300 mb-2 flex items-center gap-2">
+                                  <Activity className="w-4 h-4" />
+                                  Current Status
+                                </h4>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                  {record.inactivityStatus || 'Not captured'}
+                                </p>
+                              </div>
+                              <div className="p-3 bg-rose-50 dark:bg-rose-900/20 rounded-lg border border-rose-200 dark:border-rose-800">
+                                <h4 className="font-medium text-sm text-rose-700 dark:text-rose-300 mb-2 flex items-center gap-2">
+                                  <ShieldAlert className="w-4 h-4" />
+                                  Blockers
+                                </h4>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                  {record.inactivityBlockers || 'Not captured'}
+                                </p>
+                              </div>
+                              <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-800">
+                                <h4 className="font-medium text-sm text-teal-700 dark:text-teal-300 mb-2 flex items-center gap-2">
+                                  <ArrowRight className="w-4 h-4" />
+                                  Next Steps
+                                </h4>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                  {record.inactivityNextSteps || 'Not captured'}
+                                </p>
+                              </div>
+                            </>
+                          )}
                         </div>
 
                         {/* Call Summary */}
