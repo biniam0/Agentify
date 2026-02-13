@@ -1333,23 +1333,38 @@ async function handleBarrierXInfoGatheringWebhook(webhookData: any): Promise<voi
   console.log(`   ✅ Successful: ${callSuccessful}${!callSuccessful ? ` (${failureReason})` : ''}`);
 
   // Extract answers from data collection (if agent uses structured data collection)
+  // NOTE: ElevenLabs does NOT populate data_collection when using server tools.
+  // The actual answers are saved by the server tool callbacks (handleZeroScoreCallback,
+  // handleLostDealCallback, handleInactivityCallback) DURING the call.
+  // This post-call webhook should only fill in completion metadata (duration, transcript,
+  // status) and must NOT overwrite answers already saved by server tool callbacks.
   const dataCollection = analysis.data_collection || {};
 
-  // Try to extract answers from data collection fields
-  let quantifiedPainPoints = dataCollection.quantified_pain_points ||
+  // Try to extract answers from data collection fields (usually null with server tools)
+  const quantifiedPainPoints = dataCollection.quantified_pain_points ||
     dataCollection.pain_points ||
     null;
-  let championInfo = dataCollection.champion ||
+  const championInfo = dataCollection.champion ||
     dataCollection.champion_info ||
     null;
-  let economicBuyerInfo = dataCollection.economic_buyer ||
+  const economicBuyerInfo = dataCollection.economic_buyer ||
     dataCollection.economic_buyer_info ||
     null;
 
-  // If no structured data, try to extract from transcript summary
-  if (!quantifiedPainPoints && !championInfo && !economicBuyerInfo && transcriptSummary) {
-    console.log('   ℹ️  No structured data - using transcript summary');
-    // The AI agent should structure responses, but we log the full summary as fallback
+  // Lost deal fields from data collection (usually null with server tools)
+  const lossReason = dataCollection.loss_reason || null;
+  const competitorName = dataCollection.competitor_name || null;
+  const lessonsLearned = dataCollection.lessons_learned || null;
+
+  // Inactivity fields from data collection (usually null with server tools)
+  const inactivityStatus = dataCollection.current_status || null;
+  const inactivityBlockers = dataCollection.blockers || null;
+  const inactivityNextSteps = dataCollection.next_steps || null;
+
+  if (!quantifiedPainPoints && !championInfo && !economicBuyerInfo &&
+      !lossReason && !competitorName && !lessonsLearned &&
+      !inactivityStatus && !inactivityBlockers && !inactivityNextSteps) {
+    console.log('   ℹ️  No structured data from data_collection — answers were saved by server tool callbacks during the call');
   }
 
   // Update the record in database
@@ -1387,13 +1402,33 @@ async function handleBarrierXInfoGatheringWebhook(webhookData: any): Promise<voi
         data: {
           status: callSuccessful ? 'COMPLETED' : 'FAILED',
           conversationId, // Ensure conversation_id is set
-          quantifiedPainPoints: quantifiedPainPoints || transcriptSummary || null,
-          championInfo: championInfo || null,
-          economicBuyerInfo: economicBuyerInfo || null,
+
+          // ═══════════════════════════════════════════════════════════════
+          // IMPORTANT: Preserve answers already saved by server tool callbacks.
+          // Only overwrite if data_collection provided new values (rare).
+          // ═══════════════════════════════════════════════════════════════
+
+          // Zero-score fields — preserve server-tool-saved values
+          quantifiedPainPoints: quantifiedPainPoints || existingRecord.quantifiedPainPoints || null,
+          championInfo: championInfo || existingRecord.championInfo || null,
+          economicBuyerInfo: economicBuyerInfo || existingRecord.economicBuyerInfo || null,
+
+          // Lost deal fields — preserve server-tool-saved values
+          lossReason: lossReason || existingRecord.lossReason || null,
+          competitorName: competitorName || existingRecord.competitorName || null,
+          lessonsLearned: lessonsLearned || existingRecord.lessonsLearned || null,
+
+          // Inactivity fields — preserve server-tool-saved values
+          inactivityStatus: inactivityStatus || existingRecord.inactivityStatus || null,
+          inactivityBlockers: inactivityBlockers || existingRecord.inactivityBlockers || null,
+          inactivityNextSteps: inactivityNextSteps || existingRecord.inactivityNextSteps || null,
+
+          // Completion metadata (always set from post-call webhook)
           callDuration,
           transcriptSummary,
           rawTranscript: transcript,
           completedAt: new Date(),
+
           // Fill in owner/deal info if they were placeholders
           ...(existingRecord.dealName === 'Unknown (from server tool callback)' && dynamicVars.deal_name && {
             dealName: dynamicVars.deal_name,
@@ -1429,9 +1464,13 @@ async function handleBarrierXInfoGatheringWebhook(webhookData: any): Promise<voi
       const dynamicVars = data.conversation_initiation_client_data?.dynamic_variables || {};
 
       if (dynamicVars.deal_id) {
+        // Determine gathering type from dynamic variables
+        const gatheringType = dynamicVars.gathering_type || 'ZERO_SCORE';
+
         await prisma.barrierXInfoGathering.create({
           data: {
             conversationId,
+            gatheringType: gatheringType as any,
             dealId: dynamicVars.deal_id,
             dealName: dynamicVars.deal_name || 'Unknown',
             tenantSlug: dynamicVars.tenant_slug || 'unknown',
@@ -1442,9 +1481,23 @@ async function handleBarrierXInfoGatheringWebhook(webhookData: any): Promise<voi
             ownerPhone: metadata.phone_call?.external_number || '',
             hubspotOwnerId: dynamicVars.hubspot_owner_id || null,
             status: callSuccessful ? 'COMPLETED' : 'FAILED',
-            quantifiedPainPoints: quantifiedPainPoints || transcriptSummary || null,
+
+            // Zero-score fields
+            quantifiedPainPoints: quantifiedPainPoints || null,
             championInfo: championInfo || null,
             economicBuyerInfo: economicBuyerInfo || null,
+
+            // Lost deal fields
+            lossReason: lossReason || null,
+            competitorName: competitorName || null,
+            lessonsLearned: lessonsLearned || null,
+
+            // Inactivity fields
+            inactivityStatus: inactivityStatus || null,
+            inactivityBlockers: inactivityBlockers || null,
+            inactivityNextSteps: inactivityNextSteps || null,
+
+            // Completion metadata
             callDuration,
             transcriptSummary,
             rawTranscript: transcript,
