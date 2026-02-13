@@ -31,6 +31,9 @@
  *   --has-meetings              Only include deals that have at least one meeting
  *   --has-contacts              Only include deals that have at least one contact
  *   --tenant <slug>             Filter by tenant slug (case-insensitive, partial match)
+ *   --timeout-ms <n>            API timeout in milliseconds (default: 120000)
+ *   --suggest-gathering-type    Suggest info-gathering call type per deal (LOST_DEAL / INACTIVITY / ZERO_SCORE / NONE)
+ *   --user-deal-report          Output a per-deal report (suggested call type + key fields)
  *   --limit <number>            Limit the number of results printed (default: all)
  *   --json                      Output raw JSON instead of formatted table
  *   --verbose                   Show full deal details (contacts, meetings, etc.)
@@ -140,6 +143,9 @@ interface Filters {
   hasMeetings?: boolean;
   hasContacts?: boolean;
   tenant?: string;
+  timeoutMs?: number;
+  suggestGatheringType?: boolean;
+  userDealReport?: boolean;
   limit?: number;
   json?: boolean;
   verbose?: boolean;
@@ -272,6 +278,16 @@ function parseArgs(args: string[]): Filters {
         filters.tenant = next;
         i++;
         break;
+      case '--timeout-ms':
+        filters.timeoutMs = parseInt(next, 10);
+        i++;
+        break;
+      case '--suggest-gathering-type':
+        filters.suggestGatheringType = true;
+        break;
+      case '--user-deal-report':
+        filters.userDealReport = true;
+        break;
       case '--limit':
         filters.limit = parseInt(next, 10);
         i++;
@@ -340,6 +356,9 @@ Presence:
   --has-meetings              Only deals with at least one meeting
   --has-contacts              Only deals with at least one contact
   --tenant <slug>             Filter by tenant slug (partial, case-insensitive)
+  --timeout-ms <n>            API timeout in milliseconds (default: 120000)
+  --suggest-gathering-type    Suggest info-gathering call type per deal
+  --user-deal-report          Output a per-deal report (suggested call type + key fields)
 
 Output:
   --limit <number>            Limit number of results printed
@@ -352,7 +371,7 @@ Output:
 
 // ─── API Call ────────────────────────────────────────────────────────────────
 
-async function fetchDealsFromAPI(): Promise<BulkResponse> {
+async function fetchDealsFromAPI(timeoutMs = 120000): Promise<BulkResponse> {
   const baseUrl = config.barrierx.baseUrl;
   const apiKey = config.barrierx.apiKey;
 
@@ -384,7 +403,7 @@ async function fetchDealsFromAPI(): Promise<BulkResponse> {
       'Authorization': `Bearer ${apiKey}`,
       'Accept': 'application/json',
     },
-    timeout: 120000,
+    timeout: timeoutMs,
   });
 
   const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -396,6 +415,205 @@ async function fetchDealsFromAPI(): Promise<BulkResponse> {
   }
 
   return response.data;
+}
+
+// ─── Info-Gathering Suggestion ────────────────────────────────────────────────
+
+type SuggestedGatheringType = 'LOST_DEAL' | 'INACTIVITY' | 'ZERO_SCORE' | 'NONE';
+
+function approxZero(n: unknown): boolean {
+  return typeof n === 'number' && Math.abs(n) < 1e-12;
+}
+
+function hasNoBarrierXScore(riskScores: any): boolean {
+  // Mirrors backend `hasNoBarrierXScore`: if missing => treat as zero-score.
+  if (!riskScores) return true;
+
+  if (
+    !approxZero(riskScores.arenaRisk) ||
+    !approxZero(riskScores.controlRoomRisk) ||
+    !approxZero(riskScores.scoreCardRisk) ||
+    !approxZero(riskScores.totalDealRisk)
+  ) {
+    return false;
+  }
+
+  const subRisks: Record<string, unknown> = riskScores.subCategoryRisk || {};
+  for (const key of Object.keys(subRisks)) {
+    if (!approxZero(subRisks[key])) return false;
+  }
+
+  return true;
+}
+
+function isLostStage(stage: string | undefined | null): boolean {
+  const s = (stage || '').toLowerCase();
+  return s === 'lost';
+}
+
+function isInactiveDeal(deal: FlatDeal, inactivityDays = 14): { inactive: boolean; lastActivityAt?: Date } {
+  const lowerStage = (deal.stage || '').toLowerCase();
+  if (lowerStage.includes('closed')) return { inactive: false };
+
+  const lastActivityStr = deal.updatedAt || deal.createdAt;
+  if (!lastActivityStr) return { inactive: false };
+
+  const lastActivityAt = new Date(lastActivityStr);
+  if (isNaN(lastActivityAt.getTime())) return { inactive: false };
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - inactivityDays);
+  return { inactive: lastActivityAt < cutoff, lastActivityAt };
+}
+
+function suggestGatheringTypeForDeal(deal: FlatDeal): { suggested: SuggestedGatheringType; reason: string } {
+  if (isLostStage(deal.stage)) {
+    return { suggested: 'LOST_DEAL', reason: `Stage is "Lost"` };
+  }
+
+  const inactivity = isInactiveDeal(deal, 14);
+  if (inactivity.inactive) {
+    return {
+      suggested: 'INACTIVITY',
+      reason: `No recent activity in 14+ days (last activity: ${inactivity.lastActivityAt?.toISOString() || 'unknown'})`,
+    };
+  }
+
+  if (hasNoBarrierXScore((deal as any).userDealRiskScores)) {
+    return { suggested: 'ZERO_SCORE', reason: 'BarrierX risk scores appear to be all 0 (or missing)' };
+  }
+
+  return { suggested: 'NONE', reason: 'Does not match Lost / Inactivity / Zero Score criteria' };
+}
+
+function daysSince(date: Date | undefined): number | null {
+  if (!date) return null;
+  const ms = Date.now() - date.getTime();
+  if (isNaN(ms)) return null;
+  return Math.floor(ms / (1000 * 60 * 60 * 24));
+}
+
+type UserDealReportRow = {
+  dealId: string;
+  dealName: string;
+  tenantSlug: string;
+  stage: string;
+  amount: number;
+  updatedAt: string | null;
+  createdAt: string | null;
+  lastActivityAt: string | null;
+  daysSinceActivity: number | null;
+  meetingsCount: number;
+  nextMeeting: string | null;
+  suggestedGatheringType: SuggestedGatheringType;
+  suggestedReason: string;
+  totalDealRisk: number | null;
+  topRecommendationTitle: string | null;
+  topRecommendationSeverity: string | null;
+};
+
+function buildUserDealReportRows(deals: FlatDeal[]): UserDealReportRow[] {
+  return deals.map(d => {
+    const lastActivityStr = d.updatedAt || d.createdAt || null;
+    const lastActivityAt = lastActivityStr ? new Date(lastActivityStr) : undefined;
+    const days = lastActivityAt && !isNaN(lastActivityAt.getTime()) ? daysSince(lastActivityAt) : null;
+    const meetingsCount = d.meetings?.length || 0;
+    const nextMeeting = (d as any).nextMeeting || null;
+    const sugg = suggestGatheringTypeForDeal(d);
+    const totalDealRisk =
+      typeof (d as any).userDealRiskScores?.totalDealRisk === 'number'
+        ? (d as any).userDealRiskScores.totalDealRisk
+        : null;
+
+    // Prefer the most urgent recommendation if present (Critical > High > Mid > Low)
+    const recs: any[] = Array.isArray((d as any).recommendations) ? (d as any).recommendations : [];
+    const severityRank = (sev: string | undefined): number => {
+      switch ((sev || '').toLowerCase()) {
+        case 'critical': return 4;
+        case 'high': return 3;
+        case 'mid': return 2;
+        case 'medium': return 2;
+        case 'low': return 1;
+        default: return 0;
+      }
+    };
+    const topRec = recs
+      .slice()
+      .sort((a, b) => severityRank(b?.severity) - severityRank(a?.severity))[0];
+
+    return {
+      dealId: d.id,
+      dealName: d.dealName || 'Unnamed',
+      tenantSlug: d.tenantSlug,
+      stage: d.stage || 'Unknown',
+      amount: d.amount || 0,
+      updatedAt: d.updatedAt || null,
+      createdAt: d.createdAt || null,
+      lastActivityAt: lastActivityStr,
+      daysSinceActivity: days,
+      meetingsCount,
+      nextMeeting,
+      suggestedGatheringType: sugg.suggested,
+      suggestedReason: sugg.reason,
+      totalDealRisk,
+      topRecommendationTitle: topRec?.title || null,
+      topRecommendationSeverity: topRec?.severity || null,
+    };
+  });
+}
+
+function printUserDealReport(rows: UserDealReportRow[]) {
+  const counts = new Map<SuggestedGatheringType, number>();
+  rows.forEach(r => counts.set(r.suggestedGatheringType, (counts.get(r.suggestedGatheringType) || 0) + 1));
+
+  console.log('\n' + '='.repeat(90));
+  console.log('  USER DEAL REPORT');
+  console.log('='.repeat(90));
+  console.log(`  Deals: ${rows.length}`);
+  console.log(`  Suggested call types: ` +
+    `LOST_DEAL=${counts.get('LOST_DEAL') || 0}, ` +
+    `INACTIVITY=${counts.get('INACTIVITY') || 0}, ` +
+    `ZERO_SCORE=${counts.get('ZERO_SCORE') || 0}, ` +
+    `NONE=${counts.get('NONE') || 0}`
+  );
+
+  const sorted = rows
+    .slice()
+    .sort((a, b) => {
+      // Most actionable first: LOST_DEAL > INACTIVITY > ZERO_SCORE > NONE, then by days since activity desc.
+      const rank = (t: SuggestedGatheringType) =>
+        t === 'LOST_DEAL' ? 4 : t === 'INACTIVITY' ? 3 : t === 'ZERO_SCORE' ? 2 : 1;
+      const r = rank(b.suggestedGatheringType) - rank(a.suggestedGatheringType);
+      if (r !== 0) return r;
+      return (b.daysSinceActivity || 0) - (a.daysSinceActivity || 0);
+    });
+
+  console.log('\n' + '-'.repeat(170));
+  console.log(
+    'Deal Name'.padEnd(44) +
+    'Stage'.padEnd(22) +
+    'Suggested'.padEnd(12) +
+    'DaysSince'.padEnd(10) +
+    'Mtgs'.padEnd(6) +
+    'NextMeeting'.padEnd(22) +
+    'Risk'.padEnd(8) +
+    'Top Rec (Severity)'.padEnd(40)
+  );
+  console.log('-'.repeat(170));
+
+  for (const r of sorted) {
+    const dealName = r.dealName.substring(0, 42).padEnd(44);
+    const stage = r.stage.substring(0, 20).padEnd(22);
+    const sug = r.suggestedGatheringType.padEnd(12);
+    const days = (r.daysSinceActivity === null ? 'N/A' : String(r.daysSinceActivity)).padEnd(10);
+    const mtgs = String(r.meetingsCount).padEnd(6);
+    const next = (r.nextMeeting ? new Date(r.nextMeeting).toISOString().slice(0, 16).replace('T', ' ') : '—').padEnd(22);
+    const risk = (r.totalDealRisk === null ? '—' : r.totalDealRisk.toFixed(3)).padEnd(8);
+    const rec = `${(r.topRecommendationTitle || '—').substring(0, 28)}${r.topRecommendationTitle && r.topRecommendationTitle.length > 28 ? '…' : ''} (${r.topRecommendationSeverity || '—'})`.padEnd(40);
+    console.log(`${dealName}${stage}${sug}${days}${mtgs}${next}${risk}${rec}`);
+  }
+
+  console.log('-'.repeat(170));
 }
 
 // ─── Flatten ─────────────────────────────────────────────────────────────────
@@ -789,7 +1007,12 @@ async function main() {
 
   try {
     // 1. Fetch from API
-    const data = await fetchDealsFromAPI();
+    const timeoutMs = filters.timeoutMs ?? 120000;
+    if (isNaN(timeoutMs) || timeoutMs < 1000) {
+      console.error('--timeout-ms must be a number >= 1000');
+      process.exit(1);
+    }
+    const data = await fetchDealsFromAPI(timeoutMs);
 
     const tenantCount = data.tenants?.length || 0;
     console.log(`\nReceived ${tenantCount} tenant(s)`);
@@ -803,7 +1026,52 @@ async function main() {
     console.log(`Deals after filtering: ${filtered.length}`);
 
     // 4. Output
-    if (filters.json) {
+    if (filters.userDealReport) {
+      const rows = buildUserDealReportRows(filtered);
+      if (filters.json) {
+        console.log(JSON.stringify(rows, null, 2));
+      } else {
+        printUserDealReport(rows);
+      }
+    } else if (filters.suggestGatheringType) {
+      const suggestions = filtered.map(d => {
+        const s = suggestGatheringTypeForDeal(d);
+        return {
+          dealId: d.id,
+          dealName: d.dealName || 'Unnamed',
+          stage: d.stage || 'Unknown',
+          updatedAt: d.updatedAt || null,
+          createdAt: d.createdAt || null,
+          tenantSlug: d.tenantSlug,
+          ownerName: d.owner?.name || null,
+          ownerEmail: d.owner?.email || null,
+          suggestedGatheringType: s.suggested,
+          reason: s.reason,
+        };
+      });
+
+      if (filters.json) {
+        console.log(JSON.stringify(suggestions, null, 2));
+      } else {
+        console.log('\n' + '-'.repeat(140));
+        console.log(
+          'Deal Name'.padEnd(42) +
+          'Stage'.padEnd(22) +
+          'Suggested'.padEnd(14) +
+          'Updated'.padEnd(14) +
+          'Reason'
+        );
+        console.log('-'.repeat(140));
+        for (const row of suggestions) {
+          const dealName = row.dealName.substring(0, 40).padEnd(42);
+          const stage = (row.stage || 'Unknown').substring(0, 20).padEnd(22);
+          const suggested = row.suggestedGatheringType.padEnd(14);
+          const updated = (row.updatedAt ? new Date(row.updatedAt).toISOString().split('T')[0] : 'N/A').padEnd(14);
+          console.log(`${dealName}${stage}${suggested}${updated}${row.reason}`);
+        }
+        console.log('-'.repeat(140));
+      }
+    } else if (filters.json) {
       // JSON output
       console.log(JSON.stringify(filtered, null, 2));
     } else if (filters.summary) {
