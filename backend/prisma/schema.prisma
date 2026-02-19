@@ -324,7 +324,7 @@ model SmsLog {
   messageBody String?   @db.Text
 
   // User identifiers (standardized)
-  userId         String  // AgentX database user ID
+  userId         String // AgentX database user ID
   barrierxUserId String? // BarrierX user ID
   hubspotOwnerId String? // HubSpot owner ID
 
@@ -592,4 +592,266 @@ enum SmsStatus {
   SENT
   DELIVERED
   FAILED
+}
+
+// ============================================
+// TEXT-TO-WORKFLOW MODELS
+// ============================================
+
+// Workflow Definition - Created from natural language prompt
+model Workflow {
+  id String @id @default(uuid())
+
+  // Workflow metadata
+  name        String
+  description String? @db.Text
+
+  // Original natural language prompt
+  nlPrompt String @db.Text
+
+  // Parsed workflow configuration (JSON)
+  workflowConfig Json // { audienceQuery, scriptTemplate, successCriteria, writeBackActions }
+
+  // Creator
+  createdBy      String // User ID who created this workflow
+  createdByName  String
+  createdByEmail String
+
+  // Status
+  status WorkflowStatus @default(DRAFT)
+
+  // Workflow type
+  workflowType WorkflowType @default(CUSTOM) // CUSTOM or SUGGESTED
+
+  // Approval tracking
+  approvedAt DateTime?
+  approvedBy String?
+
+  // Execution settings
+  maxCalls        Int @default(50) // Max calls per execution
+  retryAttempts   Int @default(2)
+  concurrentCalls Int @default(3)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  executions WorkflowExecution[]
+
+  @@index([createdBy])
+  @@index([status])
+  @@index([workflowType])
+  @@index([createdAt])
+}
+
+// Workflow Execution - Each run of a workflow
+model WorkflowExecution {
+  id String @id @default(uuid())
+
+  // Workflow reference
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  // Execution metadata
+  status WorkflowExecutionStatus @default(PENDING)
+
+  // Audience resolution
+  totalTargets Int   @default(0) // Total contacts identified
+  targetList   Json? // Array of { name, phone, dealId, etc. }
+
+  // Execution progress
+  callsInitiated  Int @default(0)
+  callsCompleted  Int @default(0)
+  callsSuccessful Int @default(0)
+  callsFailed     Int @default(0)
+
+  // Executor
+  executedBy      String? // User ID who approved/triggered
+  executedByName  String?
+  executedByEmail String?
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  duration    Int? // milliseconds
+
+  // Error tracking
+  errorMessage String?
+  errorStack   String? @db.Text
+
+  // Relations
+  outcomes WorkflowCallOutcome[]
+
+  @@index([workflowId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([startedAt])
+}
+
+// Workflow Call Outcome - Result of each individual call in a workflow execution
+model WorkflowCallOutcome {
+  id String @id @default(uuid())
+
+  // Execution reference
+  executionId String
+  execution   WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  // Call target
+  targetName  String
+  targetPhone String
+  targetEmail String?
+  dealId      String?
+  dealName    String?
+  tenantSlug  String?
+
+  // Call tracking
+  conversationId String? @unique
+  callSid        String?
+  agentId        String?
+
+  // Call status
+  status  CallStatus       @default(INITIATED)
+  outcome WorkflowOutcome? // Classified outcome (ACCEPTED, DECLINED, VOICEMAIL, etc.)
+
+  // Call timing
+  initiatedAt DateTime  @default(now())
+  answeredAt  DateTime?
+  completedAt DateTime?
+  duration    Int?
+
+  // Call result
+  transcriptSummary String? @db.Text
+  extractedData     Json? // Data extracted from the call (e.g., SQL, next steps, etc.)
+
+  // Classification (LLM-based)
+  classification Json? // { outcome, confidence, reasoning, dataPoints }
+
+  // Retry tracking
+  retryAttempt Int     @default(1)
+  maxRetries   Int     @default(2)
+  parentCallId String?
+
+  // Error tracking
+  errorMessage String?
+
+  // Write-back status
+  writeBackStatus WriteBackStatus @default(PENDING)
+  writeBackError  String?
+  writeBackAt     DateTime?
+
+  @@index([executionId])
+  @@index([status])
+  @@index([outcome])
+  @@index([conversationId])
+  @@index([dealId])
+  @@index([initiatedAt])
+}
+
+// Suggested Task - Proactive workflow suggestions based on BarrierX data
+model SuggestedTask {
+  id String @id @default(uuid())
+
+  // Task metadata
+  taskType    SuggestedTaskType
+  title       String
+  description String            @db.Text
+
+  // Trigger condition (from BarrierX data)
+  triggerCondition String @db.Text
+
+  // Affected deals/users
+  affectedCount Int   @default(0)
+  affectedDeals Json? // Array of deal IDs
+
+  // Task configuration
+  workflowConfig Json // Pre-built workflow config ready to launch
+
+  // Priority
+  priority TaskPriority @default(MEDIUM)
+
+  // Status
+  status      SuggestedTaskStatus @default(ACTIVE)
+  launchedAt  DateTime?
+  launchedBy  String?
+  dismissedAt DateTime?
+  dismissedBy String?
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expiresAt DateTime? // Auto-dismiss after this date
+
+  @@index([taskType])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+// ============================================
+// WORKFLOW ENUMS
+// ============================================
+
+enum WorkflowStatus {
+  DRAFT // Created but not approved
+  PENDING_APPROVAL // Submitted for approval
+  APPROVED // Approved and ready to execute
+  ARCHIVED // Archived/deleted
+}
+
+enum WorkflowType {
+  CUSTOM // User-created from NL prompt
+  SUGGESTED // System-suggested task
+}
+
+enum WorkflowExecutionStatus {
+  PENDING // Created, audience resolved, waiting to start
+  RUNNING // Calls in progress
+  COMPLETED // All calls finished
+  FAILED // Execution failed
+  CANCELLED // Manually cancelled
+}
+
+enum WorkflowOutcome {
+  ACCEPTED // Rep agreed to the ask
+  DECLINED // Rep declined
+  DEFERRED // Rep asked to follow up later
+  VOICEMAIL // Went to voicemail
+  NO_ANSWER // No answer, no voicemail
+  BUSY // Line busy
+  FAILED // Call failed technically
+  PARTIAL // Partial completion (e.g., "I'll do 2 out of 3")
+}
+
+enum WriteBackStatus {
+  PENDING // Not yet written back
+  IN_PROGRESS // Write-back in progress
+  SUCCESS // Successfully written to BarrierX
+  FAILED // Write-back failed
+  SKIPPED // Skipped (e.g., no data to write)
+}
+
+enum SuggestedTaskType {
+  MISSING_SQL // Chase missing SQLs
+  POST_MEETING_NOTES // Collect post-meeting notes
+  MEDDIC_GAP // MEDDIC gap follow-up
+  STALE_DEAL // Stale deal check-in
+  NEXT_STEP // Next-step confirmation
+  FORECAST_NUDGE // Forecast accuracy nudge
+  CONTACT_HYGIENE // Contact data hygiene
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SuggestedTaskStatus {
+  ACTIVE // Currently suggested
+  LAUNCHED // User launched this task
+  DISMISSED // User dismissed
+  EXPIRED // Auto-expired
 }

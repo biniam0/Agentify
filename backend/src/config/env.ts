@@ -61,5 +61,12 @@ export const config = {
     // Minutes before meeting to send SMS notification (default: 30 minutes)
     notificationMinutesBefore: parseInt(process.env.SMS_NOTIFICATION_MINUTES_BEFORE || '30'),
   },
+  deepseek: {
+    apiKey: process.env.DEEPSEEK_API_KEY || '',
+  },
+  slack: {
+    webhookUrl: process.env.SLACK_WEBHOOK_URL || '',
+    enabled: process.env.SLACK_ENABLED === 'true',
+  },
 };
 
