@@ -55,6 +55,8 @@ import { toast } from 'sonner';
 import * as dealService from '../../services/dealService';
 import { Deal, GatheringType } from '../../services/dealService';
 import { MetricCard } from '../User/Logs/components/AnalyticsCharts';
+import { Card } from '../../components/ui/card';
+import { Skeleton } from '../../components/ui/skeleton';
 
 const gatheringTypeConfig: Record<GatheringType, {
   label: string;
@@ -285,10 +287,40 @@ const ClientsDeals: React.FC = () => {
         </div>
       )}
 
-      {/* Loading State */}
+      {/* Deal cards skeleton (loading) / Empty state / Deals Grid */}
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-7 h-7 animate-spin text-brand dark:text-primary" />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm overflow-hidden rounded-lg">
+              <div className="px-5 pt-5 flex items-center justify-between">
+                <Skeleton className="h-6 w-28 rounded-md" />
+                <Skeleton className="h-5 w-16 rounded-md" />
+              </div>
+              <div className="px-5 pt-3 pb-4 space-y-2">
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-3.5 w-3/5" />
+              </div>
+              <div className="mx-5 py-3 border-t border-subtle dark:border-border space-y-2">
+                <div className="flex justify-between">
+                  <Skeleton className="h-3.5 w-16" />
+                  <Skeleton className="h-3.5 w-8" />
+                </div>
+                <Skeleton className="h-[6px] w-full rounded-full" />
+              </div>
+              <div className="mx-5 py-3 border-t border-subtle dark:border-border grid grid-cols-2 gap-y-4 gap-x-4">
+                {[1, 2, 3, 4].map((j) => (
+                  <div key={j} className="space-y-1">
+                    <Skeleton className="h-3 w-12" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                ))}
+              </div>
+              <div className="p-4 border-t border-subtle dark:border-border flex gap-2">
+                <Skeleton className="flex-1 h-9 rounded-md" />
+                <Skeleton className="w-9 h-9 rounded-md" />
+              </div>
+            </Card>
+          ))}
         </div>
       ) : filteredDeals.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
