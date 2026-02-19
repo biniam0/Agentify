@@ -233,7 +233,7 @@ const ClientsDeals: React.FC = () => {
           size="sm"
           onClick={fetchDeals}
           disabled={loading}
-          className="border-default dark:border-border text-subtle dark:text-muted-foreground hover:text-heading dark:hover:text-foreground rounded-lg h-9 text-xs font-medium"
+          className="border-default dark:border-border text-subtle dark:text-muted-foreground hover:!bg-gray-100 hover:text-heading dark:hover:!bg-gray-700 dark:hover:text-foreground rounded-lg h-9 text-xs font-medium"
         >
           <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh

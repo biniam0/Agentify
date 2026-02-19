@@ -69,7 +69,7 @@ const AdminLayout: React.FC = () => {
         {/* Header - BarrierX Style */}
         <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border bg-elevated transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4 flex-1">
-            <SidebarTrigger className="-ml-1" />
+            <SidebarTrigger className="-ml-1 hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100" />
             <Separator orientation="vertical" className="mr-2 h-4" />
 
             {/* Logo - Agent X Dashboard */}
@@ -98,14 +98,14 @@ const AdminLayout: React.FC = () => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 sm:gap-4 px-4">
-            <Button variant="ghost" size="icon" className="text-subtle hover:text-heading dark:hover:text-foreground">
+            <Button variant="ghost" size="icon" className="text-subtle hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100">
               <Search className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              className="text-subtle hover:text-heading dark:hover:text-foreground"
+              className="text-subtle hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100"
             >
               {theme === 'light' ? (
                 <Moon className="h-4 w-4" />
@@ -147,11 +147,11 @@ const AdminLayout: React.FC = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="cursor-pointer">
+                  <DropdownMenuItem className="cursor-pointer focus:!bg-gray-100 focus:!text-gray-900 dark:focus:!bg-gray-700 dark:focus:!text-gray-100 hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+                  <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer focus:!bg-gray-100 focus:!text-gray-900 dark:focus:!bg-gray-700 dark:focus:!text-gray-100 hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100">
                     {theme === 'light' ? (
                       <Moon className="mr-2 h-4 w-4" />
                     ) : (
@@ -162,7 +162,7 @@ const AdminLayout: React.FC = () => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    className="text-destructive focus:text-destructive cursor-pointer"
+                    className="text-destructive focus:!bg-gray-100 focus:!text-destructive dark:focus:!bg-gray-700 hover:!bg-gray-100 hover:!text-destructive dark:hover:!bg-gray-700 cursor-pointer"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Logout</span>
