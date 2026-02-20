@@ -20,19 +20,28 @@ const router = express.Router();
  * Test endpoint to parse NL prompt → workflow JSON
  * Admin only
  */
-router.post('/parse-test', authenticateService, workflowController.testParsePrompt);
+router.post('/parse-test', authenticate, workflowController.testParsePrompt);
 
 // ============================================
-// PHASE 2-4: FULL WORKFLOW ENDPOINTS (Coming Soon)
+// PHASE 2: WORKFLOW EXECUTION
 // ============================================
 
-// POST /api/workflows - Create workflow from NL prompt
-// GET /api/workflows - List user's workflows
-// GET /api/workflows/:id - Get workflow details
-// POST /api/workflows/:id/approve - Approve workflow
-// POST /api/workflows/:id/execute - Execute approved workflow
-// GET /api/workflows/:id/executions - List workflow executions
-// GET /api/workflows/executions/:executionId - Get execution details
-// GET /api/workflows/suggested-tasks - List suggested tasks
+/**
+ * POST /api/workflows
+ * Create a new workflow
+ */
+router.post('/', authenticate, workflowController.createWorkflow);
+
+/**
+ * POST /api/workflows/:id/preview
+ * Preview audience for a workflow
+ */
+router.post('/:id/preview', authenticate, workflowController.previewWorkflow);
+
+/**
+ * POST /api/workflows/:id/execute
+ * Execute a workflow (start batch calls)
+ */
+router.post('/:id/execute', authenticate, workflowController.executeWorkflow);
 
 export default router;

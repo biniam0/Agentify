@@ -1362,8 +1362,8 @@ async function handleBarrierXInfoGatheringWebhook(webhookData: any): Promise<voi
   const inactivityNextSteps = dataCollection.next_steps || null;
 
   if (!quantifiedPainPoints && !championInfo && !economicBuyerInfo &&
-      !lossReason && !competitorName && !lessonsLearned &&
-      !inactivityStatus && !inactivityBlockers && !inactivityNextSteps) {
+    !lossReason && !competitorName && !lessonsLearned &&
+    !inactivityStatus && !inactivityBlockers && !inactivityNextSteps) {
     console.log('   ℹ️  No structured data from data_collection — answers were saved by server tool callbacks during the call');
   }
 
