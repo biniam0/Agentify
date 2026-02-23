@@ -34,6 +34,7 @@
  *   --timeout-ms <n>            API timeout in milliseconds (default: 120000)
  *   --suggest-gathering-type    Suggest info-gathering call type per deal (LOST_DEAL / INACTIVITY / ZERO_SCORE / NONE)
  *   --user-deal-report          Output a per-deal report (suggested call type + key fields)
+ *   --report                    Categorized report (Lost / Inactive / Zero Score / Healthy) with emoji bullets
  *   --limit <number>            Limit the number of results printed (default: all)
  *   --json                      Output raw JSON instead of formatted table
  *   --verbose                   Show full deal details (contacts, meetings, etc.)
@@ -49,6 +50,7 @@
  *   npx ts-node src/scripts/fetchDeals.ts --owner "Andreja" --after-tomorrow
  *   npx ts-node src/scripts/fetchDeals.ts --owner "Andreja" --this-week
  *   npx ts-node src/scripts/fetchDeals.ts --owner "Andreja" --future-meetings
+ *   npx ts-node src/scripts/fetchDeals.ts --owner "Andreja Andrejevic" --report
  *   npx ts-node src/scripts/fetchDeals.ts --meeting-since 2025-10-01 --has-meetings
  *   npx ts-node src/scripts/fetchDeals.ts --updated-since 2025-09-26 --json
  *   npx ts-node src/scripts/fetchDeals.ts --summary
@@ -146,6 +148,7 @@ interface Filters {
   timeoutMs?: number;
   suggestGatheringType?: boolean;
   userDealReport?: boolean;
+  report?: boolean;
   limit?: number;
   json?: boolean;
   verbose?: boolean;
@@ -288,6 +291,9 @@ function parseArgs(args: string[]): Filters {
       case '--user-deal-report':
         filters.userDealReport = true;
         break;
+      case '--report':
+        filters.report = true;
+        break;
       case '--limit':
         filters.limit = parseInt(next, 10);
         i++;
@@ -359,6 +365,7 @@ Presence:
   --timeout-ms <n>            API timeout in milliseconds (default: 120000)
   --suggest-gathering-type    Suggest info-gathering call type per deal
   --user-deal-report          Output a per-deal report (suggested call type + key fields)
+  --report                    Categorized report with emoji bullets (Lost/Inactive/Healthy)
 
 Output:
   --limit <number>            Limit number of results printed
@@ -994,6 +1001,107 @@ function printVerboseDeals(deals: FlatDeal[], filters: Filters) {
   }
 }
 
+// ─── Categorized Report ──────────────────────────────────────────────────────
+
+interface ReportDeal {
+  deal: FlatDeal;
+  suggested: SuggestedGatheringType;
+  reason: string;
+  daysSinceActivity: number | null;
+}
+
+function buildReportBullet(rd: ReportDeal): string {
+  const ownerName = rd.deal.owner?.name || 'Unknown Owner';
+  const dealName = rd.deal.dealName || 'Unnamed Deal';
+  const company = rd.deal.company && rd.deal.company !== 'Unknown Company'
+    ? rd.deal.company
+    : '';
+
+  // Format: "Owner Name – Deal Name (Company)" or "Owner Name – Deal Name"
+  const companyPart = company ? ` (${company})` : '';
+  return `${ownerName} – ${dealName}${companyPart}`;
+}
+
+function printReport(deals: FlatDeal[]) {
+  const classified: ReportDeal[] = deals.map(d => {
+    const { suggested, reason } = suggestGatheringTypeForDeal(d);
+    const lastStr = d.updatedAt || d.createdAt;
+    const lastDate = lastStr ? new Date(lastStr) : undefined;
+    const days = lastDate && !isNaN(lastDate.getTime()) ? daysSince(lastDate) : null;
+    return { deal: d, suggested, reason, daysSinceActivity: days };
+  });
+
+  const lost = classified.filter(r => r.suggested === 'LOST_DEAL');
+  const inactive = classified.filter(r => r.suggested === 'INACTIVITY');
+  const zeroScore = classified.filter(r => r.suggested === 'ZERO_SCORE');
+  const healthy = classified.filter(r => r.suggested === 'NONE');
+
+  const ownerName = deals.length > 0 ? (deals[0].owner?.name || 'Unknown') : 'Unknown';
+
+  console.log('');
+  console.log('='.repeat(70));
+  console.log(`  DEAL STATUS REPORT — ${ownerName}`);
+  console.log(`  Generated: ${new Date().toLocaleString()}`);
+  console.log(`  Total deals: ${deals.length}`);
+  console.log('='.repeat(70));
+
+  // ── Lost deals
+  if (lost.length > 0) {
+    console.log('');
+    console.log(`📉 ${lost.length} LOST deal${lost.length > 1 ? 's' : ''} – need Lost Deal Questionnaire call:`);
+    for (const r of lost) {
+      console.log(`    • ${buildReportBullet(r)}`);
+    }
+  }
+
+  // ── Inactive deals – group by stage for clarity
+  if (inactive.length > 0) {
+    const stageGroups = new Map<string, ReportDeal[]>();
+    for (const r of inactive) {
+      const stage = r.deal.stage || 'Unknown';
+      if (!stageGroups.has(stage)) stageGroups.set(stage, []);
+      stageGroups.get(stage)!.push(r);
+    }
+
+    console.log('');
+    const stageLabel = [...stageGroups.keys()].join(', ');
+    console.log(`⏳ ${inactive.length} INACTIVE deal${inactive.length > 1 ? 's' : ''} (14+ days, ${stageLabel}):`);
+    for (const r of inactive) {
+      const days = r.daysSinceActivity !== null ? ` [${r.daysSinceActivity}d inactive]` : '';
+      console.log(`    • ${buildReportBullet(r)}${days}`);
+    }
+  }
+
+  // ── Zero score deals
+  if (zeroScore.length > 0) {
+    console.log('');
+    console.log(`⚠️  ${zeroScore.length} ZERO SCORE deal${zeroScore.length > 1 ? 's' : ''} – missing BarrierX risk assessment:`);
+    for (const r of zeroScore) {
+      console.log(`    • ${buildReportBullet(r)}`);
+    }
+  }
+
+  // ── Healthy deals
+  if (healthy.length > 0) {
+    console.log('');
+    console.log(`✅ ${healthy.length} Healthy deal${healthy.length > 1 ? 's' : ''} – no call needed:`);
+    for (const r of healthy) {
+      console.log(`    • ${buildReportBullet(r)}`);
+    }
+  }
+
+  // ── Quick totals
+  const totalAmount = deals.reduce((sum, d) => sum + (d.amount || 0), 0);
+  const withMeetings = deals.filter(d => d.meetings && d.meetings.length > 0).length;
+
+  console.log('');
+  console.log('-'.repeat(70));
+  console.log(`  Pipeline value:  $${totalAmount.toLocaleString()}`);
+  console.log(`  Deals w/ meetings: ${withMeetings} of ${deals.length}`);
+  console.log(`  Action needed:     ${lost.length + inactive.length + zeroScore.length} deal${(lost.length + inactive.length + zeroScore.length) !== 1 ? 's' : ''}`);
+  console.log('-'.repeat(70));
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -1026,7 +1134,9 @@ async function main() {
     console.log(`Deals after filtering: ${filtered.length}`);
 
     // 4. Output
-    if (filters.userDealReport) {
+    if (filters.report) {
+      printReport(filtered);
+    } else if (filters.userDealReport) {
       const rows = buildUserDealReportRows(filtered);
       if (filters.json) {
         console.log(JSON.stringify(rows, null, 2));

@@ -284,9 +284,9 @@ const MeetingsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className={isInsideAdminLayout ? "min-h-screen bg-white dark:bg-background" : ""}>
+      <div className={isInsideAdminLayout ? "min-h-screen bg-white dark:bg-background" : "page-container py-8"}>
         {/* No header skeleton needed - header is in UserLayout (for user pages) or AdminLayout (for admin pages) */}
-        <main className="py-8">
+        <main className={isInsideAdminLayout ? "py-8" : ""}>
           <div className="space-y-8 content-container">
             {/* Page Header Skeleton */}
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
@@ -345,11 +345,11 @@ const MeetingsPage: React.FC = () => {
   }
 
   return (
-    <div className={isInsideAdminLayout ? "min-h-screen dark:bg-background" : ""}>
+    <div className={isInsideAdminLayout ? "min-h-screen dark:bg-background" : "page-container py-8"}>
       {/* Admin Tabs - Only show when admin mode is active AND not inside AdminLayout */}
       {isAdminMode && !isInsideAdminLayout && (
         <div className="bg-elevated dark:bg-card border-b border-subtle dark:border-border">
-          <div className="page-container">
+          <div className="content-container">
             <div className="flex gap-0">
               <button
                 onClick={() => setAdminTab('meetings')}
