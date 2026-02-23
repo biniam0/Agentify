@@ -511,6 +511,7 @@ enum ActivityType {
   WEBHOOK_RECEIVED
   SCHEDULER_RUN
   DATA_FETCH
+  WORKFLOW_EXECUTION
 }
 
 enum Status {
@@ -680,6 +681,13 @@ model WorkflowExecution {
   // Error tracking
   errorMessage String?
   errorStack   String? @db.Text
+
+  // Success metrics
+  successRate   Float @default(0) // 0-1 success rate
+  outcomeStats  Json? // Breakdown of call outcomes
+
+  // Additional metadata
+  metadata Json? // Store batchId and other execution metadata
 
   // Relations
   outcomes WorkflowCallOutcome[]

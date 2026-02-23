@@ -4,9 +4,17 @@
  */
 
 import { Request, Response } from 'express';
-import { parseWorkflowPrompt, validateWorkflowConfig, generateWorkflowSummary } from '../services/llm/promptParserService';
+import { 
+  parseWorkflowPrompt, 
+  validateWorkflowConfig, 
+  generateWorkflowSummary,
+  parseIntent,
+  validateIntent,
+  generateIntentSummary 
+} from '../services/llm/promptParserService';
 import * as loggingService from '../services/loggingService';
 import * as workflowService from '../services/workflowService';
+import { previewTargets } from '../services/targetFinderService';
 import { AuthRequest } from '../middlewares/auth';
 import { getCachedUser } from '../utils/userCache';
 import prisma from '../config/database';
@@ -305,5 +313,201 @@ export const executeWorkflow = async (req: AuthenticatedRequest, res: Response) 
   } catch (error: any) {
     console.error('❌ Execute workflow error:', error.message);
     return res.status(500).json({ error: 'Failed to execute workflow' });
+  }
+};
+
+// ============================================
+// SIMPLIFIED MVP ENDPOINTS
+// ============================================
+
+/**
+ * Parse natural language prompt into simple intent
+ * POST /api/workflows/parse-intent
+ */
+export const parseIntentEndpoint = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { prompt } = req.body;
+
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'Prompt is required and must be a string' });
+    }
+
+    console.log(`🤖 Parsing intent for prompt: "${prompt.substring(0, 100)}..."`);
+
+    // Parse intent using LLM
+    const intent = await parseIntent(prompt);
+
+    // Validate intent
+    const validation = validateIntent(intent);
+    if (!validation.valid) {
+      return res.status(400).json({ 
+        error: 'Invalid intent parsed',
+        details: validation.errors 
+      });
+    }
+
+    // Generate summary
+    const summary = generateIntentSummary(intent);
+
+    return res.json({
+      ok: true,
+      intent,
+      summary,
+      message: 'Intent parsed successfully',
+    });
+
+  } catch (error: any) {
+    console.error('❌ Parse intent error:', error.message);
+    return res.status(500).json({ error: 'Failed to parse intent' });
+  }
+};
+
+/**
+ * Find targets based on intent criteria
+ * POST /api/workflows/find-targets
+ */
+export const findTargetsEndpoint = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { intent } = req.body;
+
+    if (!intent) {
+      return res.status(400).json({ error: 'Intent is required' });
+    }
+
+    console.log(`🎯 Finding targets for intent: ${intent.action}`);
+
+    // Get target preview
+    const preview = await previewTargets(intent);
+
+    return res.json({
+      ok: true,
+      targets: {
+        count: preview.count,
+        sample: preview.sample,
+        summary: preview.summary,
+      },
+      message: `Found ${preview.count} target${preview.count === 1 ? '' : 's'}`,
+    });
+
+  } catch (error: any) {
+    console.error('❌ Find targets error:', error.message);
+    return res.status(500).json({ error: 'Failed to find targets' });
+  }
+};
+
+/**
+ * Execute simple workflow directly from intent
+ * POST /api/workflows/execute-simple
+ */
+export const executeSimpleWorkflow = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { intent, workflowName } = req.body;
+
+    if (!intent) {
+      return res.status(400).json({ error: 'Intent is required' });
+    }
+
+    // Get user ID
+    let userId = req.user?.userId;
+    if (!userId && req.service) {
+      userId = 'service-account';
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    console.log(`🚀 Executing simple workflow: ${intent.action}`);
+
+    // Execute workflow
+    const result = await workflowService.executeSimpleWorkflow(intent, userId, workflowName);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    return res.json({
+      ok: true,
+      executionId: result.executionId,
+      batchId: result.batchId,
+      message: 'Simple workflow execution started successfully',
+    });
+
+  } catch (error: any) {
+    console.error('❌ Execute simple workflow error:', error.message);
+    return res.status(500).json({ error: 'Failed to execute simple workflow' });
+  }
+};
+
+/**
+ * Complete workflow flow: parse → find → execute
+ * POST /api/workflows/run-simple
+ */
+export const runSimpleWorkflow = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { prompt, workflowName } = req.body;
+
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'Prompt is required and must be a string' });
+    }
+
+    // Get user ID
+    let userId = req.user?.userId;
+    if (!userId && req.service) {
+      userId = 'service-account';
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    console.log(`🔄 Running complete simple workflow for: "${prompt.substring(0, 100)}..."`);
+
+    // Step 1: Parse intent
+    const intent = await parseIntent(prompt);
+    const validation = validateIntent(intent);
+    if (!validation.valid) {
+      return res.status(400).json({ 
+        error: 'Invalid intent parsed',
+        details: validation.errors 
+      });
+    }
+
+    // Step 2: Find targets
+    const preview = await previewTargets(intent);
+    if (preview.count === 0) {
+      return res.status(400).json({ 
+        error: 'No targets found matching the criteria',
+        intent,
+        summary: generateIntentSummary(intent),
+      });
+    }
+
+    // Step 3: Execute workflow
+    const result = await workflowService.executeSimpleWorkflow(intent, userId, workflowName);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    return res.json({
+      ok: true,
+      intent,
+      intentSummary: generateIntentSummary(intent),
+      targets: {
+        count: preview.count,
+        sample: preview.sample,
+        summary: preview.summary,
+      },
+      execution: {
+        id: result.executionId,
+        batchId: result.batchId,
+      },
+      message: `Simple workflow started successfully for ${preview.count} target${preview.count === 1 ? '' : 's'}`,
+    });
+
+  } catch (error: any) {
+    console.error('❌ Run simple workflow error:', error.message);
+    return res.status(500).json({ error: 'Failed to run simple workflow' });
   }
 };

@@ -44,4 +44,32 @@ router.post('/:id/preview', authenticate, workflowController.previewWorkflow);
  */
 router.post('/:id/execute', authenticate, workflowController.executeWorkflow);
 
+// ============================================
+// SIMPLIFIED MVP ENDPOINTS
+// ============================================
+
+/**
+ * POST /api/workflows/parse-intent
+ * Parse natural language prompt into simple intent
+ */
+router.post('/parse-intent', authenticate, workflowController.parseIntentEndpoint);
+
+/**
+ * POST /api/workflows/find-targets
+ * Find targets based on intent criteria
+ */
+router.post('/find-targets', authenticate, workflowController.findTargetsEndpoint);
+
+/**
+ * POST /api/workflows/execute-simple
+ * Execute simple workflow directly from intent
+ */
+router.post('/execute-simple', authenticate, workflowController.executeSimpleWorkflow);
+
+/**
+ * POST /api/workflows/run-simple
+ * Complete workflow flow: parse → find → execute
+ */
+router.post('/run-simple', authenticate, workflowController.runSimpleWorkflow);
+
 export default router;
