@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
-import { AlertCircle, Eye, EyeOff, Shield, Lock } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Shield } from 'lucide-react';
 
 /* ─── Inline SVG Components ─── */
 
@@ -103,12 +103,6 @@ const LoginPage: React.FC = () => {
           <CardContent className="px-8 pt-8 pb-8">
             {/* Header */}
             <div className="text-center mb-7">
-              <div
-                className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4"
-                style={{ backgroundColor: 'hsl(var(--app-brand) / 0.1)' }}
-              >
-                <Lock className="h-5 w-5" style={{ color: 'hsl(var(--app-brand))' }} />
-              </div>
               <h2 className="text-2xl font-bold text-heading dark:text-foreground mb-1.5">
                 Welcome back
               </h2>
