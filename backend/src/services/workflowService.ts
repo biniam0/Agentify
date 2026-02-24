@@ -45,13 +45,13 @@ export const executeSimpleWorkflow = async (
         name: workflowName || intent.action,
         description: `Simple workflow: ${intent.goal}`,
         nlPrompt: `${intent.action} - ${intent.script.main_ask}`,
-        workflowConfig: {
+        workflowConfig: JSON.parse(JSON.stringify({
           simplified: true,
           intent,
           targetCriteria: intent.target_criteria,
           script: intent.script,
           goal: intent.goal,
-        },
+        })),
         createdBy: userId,
         createdByName: 'Simple Workflow User',
         createdByEmail: 'simple@workflow.local',
@@ -66,13 +66,13 @@ export const executeSimpleWorkflow = async (
         workflowId: workflow.id, // Reference the created workflow
         status: 'PENDING',
         totalTargets: targets.length,
-        targetList: targets,
+        targetList: JSON.parse(JSON.stringify(targets)),
         executedBy: userId,
-        metadata: {
+        metadata: JSON.parse(JSON.stringify({
           intent,
           workflowName: workflowName || intent.action,
           simplified: true,
-        },
+        })),
       },
     });
 
@@ -133,10 +133,10 @@ export const executeSimpleWorkflow = async (
       data: {
         status: 'RUNNING',
         startedAt: new Date(),
-        metadata: {
+        metadata: JSON.parse(JSON.stringify({
           ...execution.metadata as any,
           batchId,
-        },
+        })),
       },
     });
 
@@ -162,12 +162,12 @@ export const executeSimpleWorkflow = async (
       activityType: 'WORKFLOW_EXECUTION', // Now this should work with the updated enum
       status: 'SUCCESS',
       userId,
-      metadata: {
+      metadata: JSON.parse(JSON.stringify({
         intent: intent.action,
         executionId: execution.id,
         batchId,
         targetCount: targets.length,
-      },
+      })),
     });
 
     return { 

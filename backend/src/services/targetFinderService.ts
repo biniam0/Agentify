@@ -55,7 +55,7 @@ export const findTargets = async (intent: SimpleIntent): Promise<Target[]> => {
   const targets = filteredDeals
     .map(deal => ({
       name: deal.ownerName,
-      phone: deal.ownerPhone,
+      phone: deal.ownerPhone || '', // Ensure phone is always a string
       email: deal.ownerEmail,
       dealId: deal.id,
       dealName: deal.name,
@@ -122,7 +122,7 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
 
     // Filter by keywords (search in deal name and description)
     if (target_criteria.keywords && target_criteria.keywords.length > 0) {
-      const searchText = `${deal.name} ${deal.description || ''}`.toLowerCase();
+      const searchText = `${deal.name} ${deal.summary || ''}`.toLowerCase();
       const hasKeyword = target_criteria.keywords.some(keyword => 
         searchText.includes(keyword.toLowerCase())
       );

@@ -5,9 +5,6 @@
 
 import { Request, Response } from 'express';
 import { 
-  parseWorkflowPrompt, 
-  validateWorkflowConfig, 
-  generateWorkflowSummary,
   parseIntent,
   validateIntent,
   generateIntentSummary 
@@ -81,20 +78,20 @@ export const testParsePrompt = async (req: AuthenticatedRequest, res: Response) 
 
     const startTime = Date.now();
 
-    // Step 1: Parse prompt
-    const workflowConfig = await parseWorkflowPrompt(prompt);
+    // Step 1: Parse prompt using new simplified system
+    const intent = await parseIntent(prompt);
 
-    // Step 2: Validate config
-    const validation = validateWorkflowConfig(workflowConfig);
+    // Step 2: Validate intent
+    const validation = validateIntent(intent);
 
     // Step 3: Generate summary
-    const summary = generateWorkflowSummary(workflowConfig);
+    const summary = generateIntentSummary(intent);
 
     const duration = Date.now() - startTime;
 
     console.log(`✅ TEST: Parsing complete in ${duration}ms`);
     console.log(`   Valid: ${validation.valid}`);
-    console.log(`   Warnings: ${validation.warnings.length}`);
+    console.log(`   Errors: ${validation.errors.length}`);
     console.log(`   Summary: ${summary}`);
 
     // Log activity
@@ -107,14 +104,14 @@ export const testParsePrompt = async (req: AuthenticatedRequest, res: Response) 
       metadata: {
         testType: 'workflow_parse',
         promptLength: prompt.length,
-        audienceType: workflowConfig.audienceQuery.type,
+        intentAction: intent.action,
         duration,
       },
     });
 
     return res.json({
       ok: true,
-      workflowConfig,
+      intent,
       validation,
       summary,
       meta: {
@@ -259,7 +256,8 @@ export const previewWorkflow = async (req: AuthenticatedRequest, res: Response) 
     // actually resolveAudience fetches ALL deals (wildcard) then filters. 
     // It doesn't strictly filter by userId unless we tell it to.
     
-    const targets = await workflowService.resolveAudience(config.audienceQuery, userId);
+    // TODO: Implement preview for old workflow system if needed
+    const targets: any[] = [];
 
     return res.json({
       ok: true,
@@ -295,7 +293,8 @@ export const executeWorkflow = async (req: AuthenticatedRequest, res: Response) 
 
     console.log(`🚀 Executing workflow ${id} for user ${userId}`);
 
-    const result = await workflowService.executeWorkflow(id, userId);
+    // TODO: Implement execution for old workflow system if needed
+    const result = { success: false, error: 'Old workflow system not implemented' };
 
     if (!result.success) {
       return res.status(500).json({
@@ -306,8 +305,7 @@ export const executeWorkflow = async (req: AuthenticatedRequest, res: Response) 
 
     return res.json({
       ok: true,
-      batchId: result.batchId,
-      message: 'Workflow execution started successfully',
+      message: 'Old workflow system not implemented',
     });
 
   } catch (error: any) {
