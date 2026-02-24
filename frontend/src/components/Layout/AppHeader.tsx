@@ -12,6 +12,7 @@ import {
   LogOut,
   Settings,
   Search,
+  Shield,
   LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -234,6 +235,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {additionalDropdownItems}
+                {/* Admin Dashboard - Only show for admin users */}
+                {authService.isAdmin() && (
+                  <DropdownMenuItem
+                    onClick={() => navigate('/admin')}
+                    className="cursor-pointer"
+                  >
+                    <Shield className="mr-2 h-4 w-4" />
+                    <span>Admin Dashboard</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => toast.info('Settings coming soon')}
                   className="cursor-pointer"

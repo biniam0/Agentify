@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, HelpCircle, Settings, Bell, LogOut, Moon, Sun } from 'lucide-react';
+import { Search, HelpCircle, Settings, Bell, LogOut, Moon, Sun, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -156,6 +156,16 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {/* Admin Dashboard - Only show for admin users */}
+                {authService.isAdmin() && (
+                  <DropdownMenuItem
+                    onClick={() => navigate('/admin')}
+                    className="cursor-pointer"
+                  >
+                    <Shield className="mr-2 h-4 w-4" />
+                    <span>Admin Dashboard</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>

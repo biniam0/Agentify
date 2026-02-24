@@ -189,71 +189,6 @@ export default function SimpleWorkflow() {
     }
   };
 
-  // Step 3: Execute Workflow
-  const executeWorkflow = async () => {
-    if (!intent) return;
-    
-    setLoading(prev => ({ ...prev, executing: true }));
-    setProgress(prev => ({
-      ...prev,
-      step: 'executing',
-      percentage: 80,
-      message: 'Preparing workflow execution...',
-      substeps: {
-        ...prev.substeps,
-        executing: { status: 'running', message: 'Creating workflow records...' }
-      }
-    }));
-
-    try {
-      const response = await api.post('/workflows/execute-simple', { 
-        intent,
-        workflowName: intent.action 
-      });
-      
-      setProgress(prev => ({
-        ...prev,
-        step: 'submitting',
-        percentage: 90,
-        message: 'Submitting calls to ElevenLabs...',
-        substeps: {
-          ...prev.substeps,
-          executing: { status: 'running', message: 'Initiating batch calls...' }
-        }
-      }));
-
-      setExecution({
-        id: response.data.executionId,
-        batchId: response.data.batchId,
-      });
-
-      setProgress(prev => ({
-        ...prev,
-        step: 'complete',
-        percentage: 100,
-        message: 'Workflow started successfully!',
-        substeps: {
-          ...prev.substeps,
-          executing: { status: 'complete', message: 'Calls are being made!' }
-        }
-      }));
-    } catch (error: any) {
-      console.error('Failed to execute workflow:', error);
-      setProgress(prev => ({
-        ...prev,
-        step: 'idle',
-        percentage: 0,
-        message: 'Execution failed',
-        substeps: {
-          ...prev.substeps,
-          executing: { status: 'error', message: 'Failed to start workflow' }
-        }
-      }));
-      showUserFriendlyError('execute workflow', error);
-    } finally {
-      setLoading(prev => ({ ...prev, executing: false }));
-    }
-  };
 
   // All-in-one: Run Complete Workflow
   const runCompleteWorkflow = async () => {
@@ -483,9 +418,9 @@ export default function SimpleWorkflow() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Simple Workflow MVP</h1>
+          <h1 className="text-3xl font-bold">Workflow</h1>
           <p className="text-muted-foreground">
-            Natural language → Intent → Targets → Execution
+            Natural language to Workflow Execution
           </p>
         </div>
         {(intent || targets || execution) && (
@@ -558,14 +493,14 @@ export default function SimpleWorkflow() {
             <Button
               onClick={parseIntent}
               disabled={!prompt.trim() || loading.parsing}
-              variant="outline"
+              className="bg-[hsl(var(--icon-orange))] hover:bg-[hsl(var(--icon-orange))]/90 text-white"
             >
               {loading.parsing ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : (
                 <Search className="w-4 h-4 mr-2" />
               )}
-              1. Parse Intent
+              Parse Intent
             </Button>
             <Button
               onClick={runCompleteWorkflow}
@@ -588,7 +523,6 @@ export default function SimpleWorkflow() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Badge variant="secondary">Step 1</Badge>
               Parsed Intent
             </CardTitle>
             <CardDescription>{intentSummary}</CardDescription>
@@ -638,14 +572,14 @@ export default function SimpleWorkflow() {
             <Button
               onClick={findTargets}
               disabled={loading.finding}
-              variant="outline"
+              className="bg-[hsl(var(--icon-orange))] hover:bg-[hsl(var(--icon-orange))]/90 text-white"
             >
               {loading.finding ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : (
                 <Users className="w-4 h-4 mr-2" />
               )}
-              2. Find Targets
+              Find Targets
             </Button>
           </CardContent>
         </Card>
@@ -656,7 +590,6 @@ export default function SimpleWorkflow() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Badge variant="secondary">Step 2</Badge>
               Found Targets
             </CardTitle>
             <CardDescription>{targets.summary}</CardDescription>
@@ -690,19 +623,6 @@ export default function SimpleWorkflow() {
               </div>
             )}
 
-            {targets.count > 0 && (
-              <Button
-                onClick={executeWorkflow}
-                disabled={loading.executing}
-              >
-                {loading.executing ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <Play className="w-4 h-4 mr-2" />
-                )}
-                3. Execute Workflow
-              </Button>
-            )}
           </CardContent>
         </Card>
       )}
@@ -832,7 +752,6 @@ export default function SimpleWorkflow() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Badge variant="secondary">Step 3</Badge>
               Workflow Executing
             </CardTitle>
             <CardDescription>
