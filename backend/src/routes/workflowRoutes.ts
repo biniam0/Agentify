@@ -68,8 +68,14 @@ router.post('/execute-simple', authenticate, workflowController.executeSimpleWor
 
 /**
  * POST /api/workflows/run-simple
- * Complete workflow flow: parse → find → execute
+ * Complete workflow flow: parse → find → preview (NO AUTO-EXECUTION)
  */
 router.post('/run-simple', authenticate, workflowController.runSimpleWorkflow);
+
+/**
+ * POST /api/workflows/approve-and-execute
+ * Execute workflow after explicit user approval
+ */
+router.post('/approve-and-execute', authenticate, workflowController.approveAndExecuteWorkflow);
 
 export default router;

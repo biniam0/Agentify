@@ -483,13 +483,7 @@ export const runSimpleWorkflow = async (req: AuthenticatedRequest, res: Response
       });
     }
 
-    // Step 3: Execute workflow
-    const result = await workflowService.executeSimpleWorkflow(intent, userId, workflowName);
-
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-
+    // Step 3: Return preview for approval (DO NOT AUTO-EXECUTE)
     return res.json({
       ok: true,
       intent,
@@ -499,15 +493,116 @@ export const runSimpleWorkflow = async (req: AuthenticatedRequest, res: Response
         sample: preview.sample,
         summary: preview.summary,
       },
-      execution: {
-        id: result.executionId,
-        batchId: result.batchId,
-      },
-      message: `Simple workflow started successfully for ${preview.count} target${preview.count === 1 ? '' : 's'}`,
+      requiresApproval: true,
+      estimatedCost: calculateEstimatedCost(preview.count),
+      message: `Found ${preview.count} target${preview.count === 1 ? '' : 's'} - approval required before execution`,
     });
 
   } catch (error: any) {
     console.error('❌ Run simple workflow error:', error.message);
     return res.status(500).json({ error: 'Failed to run simple workflow' });
   }
+};
+
+/**
+ * Execute workflow after explicit approval
+ * POST /api/workflows/approve-and-execute
+ */
+export const approveAndExecuteWorkflow = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { intent, workflowName, userConfirmation, estimatedCost } = req.body;
+
+    if (!intent) {
+      return res.status(400).json({ error: 'Intent is required' });
+    }
+
+    if (!userConfirmation) {
+      return res.status(400).json({ error: 'User confirmation is required for execution' });
+    }
+
+    // Get user ID
+    let userId = req.user?.userId;
+    if (!userId && req.service) {
+      userId = 'service-account';
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    console.log(`🔒 Executing approved workflow: ${intent.action} (User: ${userId})`);
+
+    // Safety checks before execution
+    const preview = await previewTargets(intent);
+    
+    // Check target limits (safety threshold)
+    if (preview.count > 50) {
+      return res.status(400).json({ 
+        error: 'Target count exceeds safety limit (50). Please contact admin for large batch approvals.',
+        targetCount: preview.count,
+        limit: 50
+      });
+    }
+
+    if (preview.count === 0) {
+      return res.status(400).json({ 
+        error: 'No targets found. Please review your criteria.',
+      });
+    }
+
+    // Execute the workflow
+    const result = await workflowService.executeSimpleWorkflow(intent, userId, workflowName);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    // Log the approval and execution for audit
+    console.log(`✅ Workflow approved and executed:`, {
+      userId,
+      intent: intent.action,
+      targetCount: preview.count,
+      executionId: result.executionId,
+      batchId: result.batchId,
+      estimatedCost,
+      timestamp: new Date().toISOString()
+    });
+
+    return res.json({
+      ok: true,
+      execution: {
+        id: result.executionId,
+        batchId: result.batchId,
+      },
+      targets: {
+        count: preview.count,
+        summary: preview.summary,
+      },
+      message: `Workflow approved and executed successfully for ${preview.count} target${preview.count === 1 ? '' : 's'}`,
+    });
+
+  } catch (error: any) {
+    console.error('❌ Approve and execute workflow error:', error.message);
+    return res.status(500).json({ error: 'Failed to execute approved workflow' });
+  }
+};
+
+/**
+ * Calculate estimated cost for workflow execution
+ */
+const calculateEstimatedCost = (targetCount: number): { 
+  estimatedCalls: number; 
+  estimatedCostUSD: number; 
+  estimatedDuration: number; 
+} => {
+  // ElevenLabs pricing: approximately $0.30 per minute of conversation
+  // Average call duration: 2-3 minutes
+  const avgCallDurationMinutes = 2.5;
+  const costPerMinute = 0.30;
+  
+  return {
+    estimatedCalls: targetCount,
+    estimatedCostUSD: Math.round(targetCount * avgCallDurationMinutes * costPerMinute * 100) / 100,
+    estimatedDuration: Math.round(targetCount * avgCallDurationMinutes), // Total minutes
+  };
 };

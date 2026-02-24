@@ -122,7 +122,7 @@ Return a simple intent structure with clear targeting criteria and script.`;
       prompt: nlPrompt,
       systemPrompt,
       schema: SimpleIntentSchema,
-      temperature: 0.3,
+      temperature: 0.1, // Lower temperature for more consistent, precise intent parsing
       modelType: 'chat',
     });
 
