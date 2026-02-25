@@ -15,7 +15,6 @@ const UserLayout: React.FC = () => {
     // { label: 'Logs', path: '/logs' },
     { label: 'Calls', path: '/calls' },
     { label: 'Analytics', path: '/calls/analytics' },
-    { label: 'Workflows', path: '/workflows' },
   ];
 
   return (

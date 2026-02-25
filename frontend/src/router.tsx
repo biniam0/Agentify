@@ -85,15 +85,6 @@ const router = createBrowserRouter([
           },
         ],
       },
-      {
-        path: '/workflows',
-        children: [
-          {
-            index: true,
-            element: <SimpleWorkflow />,
-          },
-        ],
-      },
     ],
   },
   // Admin Routes
@@ -120,6 +111,10 @@ const router = createBrowserRouter([
       {
         path: 'barrierx-info',
         element: <BarrierXInfo />,
+      },
+      {
+        path: 'workflows',
+        element: <SimpleWorkflow />,
       },
       {
         path: 'logs',
