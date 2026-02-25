@@ -397,7 +397,7 @@ export const getAdminMeetings = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    // Get user from database to verify admin access
+    // Get user from database for logging purposes
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true, barrierxUserId: true, name: true },
@@ -408,11 +408,7 @@ export const getAdminMeetings = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    // Check if user is admin
-    if (dbUser.email !== 'tamiratkebede120@gmail.com') {
-      res.status(403).json({ error: 'Access denied. Admin only.' });
-      return;
-    }
+    // Admin access is verified by requireAdmin middleware
 
     // ✅ ADMIN FETCH LOGGING START
     console.log('\n👑 =============================================');
@@ -488,14 +484,15 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
       return;
     }
 
-    // Verify admin access
+    // Admin access is verified by requireAdmin middleware
+    // Get user info for logging purposes
     const adminUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, email: true, name: true },
     });
 
-    if (!adminUser || adminUser.email !== 'tamiratkebede120@gmail.com') {
-      res.status(403).json({ error: 'Access denied. Admin only.' });
+    if (!adminUser) {
+      res.status(404).json({ error: 'User not found' });
       return;
     }
 
@@ -606,14 +603,15 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
       return;
     }
 
-    // Verify admin access
+    // Admin access is verified by requireAdmin middleware
+    // Get user info for logging purposes
     const adminUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, email: true, name: true },
     });
 
-    if (!adminUser || adminUser.email !== 'tamiratkebede120@gmail.com') {
-      res.status(403).json({ error: 'Access denied. Admin only.' });
+    if (!adminUser) {
+      res.status(404).json({ error: 'User not found' });
       return;
     }
 

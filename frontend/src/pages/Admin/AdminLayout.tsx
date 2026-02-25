@@ -27,8 +27,8 @@ const AdminLayout: React.FC = () => {
   const user = authService.getUser();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
-  // Check if user is admin
-  const isAdmin = user?.email === 'tamiratkebede120@gmail.com';
+  // Check if user is admin using role-based authentication
+  const isAdmin = authService.isAdmin();
 
   useEffect(() => {
     // Load saved theme

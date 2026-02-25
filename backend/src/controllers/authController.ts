@@ -94,6 +94,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const token = generateToken({
       userId: user.id,
       email: user.email,
+      role: user.role,
     });
 
     res.json({
@@ -152,6 +153,7 @@ export const refreshToken = async (req: AuthRequest, res: Response): Promise<voi
     const token = generateToken({
       userId: user.id,
       email: user.email,
+      role: user.role,
     });
 
     res.json({
