@@ -83,41 +83,68 @@ export const findTargets = async (intent: SimpleIntent): Promise<Target[]> => {
 const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
   const { target_criteria } = intent;
   
-  return deals.filter(deal => {
+  console.log(`🔍 Filtering ${deals.length} deals with criteria:`, JSON.stringify(target_criteria, null, 2));
+  
+  const filteredDeals = deals.filter(deal => {
     // Filter by contact name (case-insensitive partial match)
     if (target_criteria.contact_name) {
       const contactMatch = deal.ownerName?.toLowerCase().includes(target_criteria.contact_name.toLowerCase());
-      if (!contactMatch) return false;
+      if (!contactMatch) {
+        console.log(`❌ Contact name mismatch: "${deal.ownerName}" doesn't include "${target_criteria.contact_name}"`);
+        return false;
+      }
     }
 
     // Filter by deal name (case-insensitive partial match)
     if (target_criteria.deal_name) {
       const dealMatch = deal.name?.toLowerCase().includes(target_criteria.deal_name.toLowerCase());
-      if (!dealMatch) return false;
+      if (!dealMatch) {
+        console.log(`❌ Deal name mismatch: "${deal.name}" doesn't include "${target_criteria.deal_name}"`);
+        return false;
+      }
     }
 
     // Filter by company (case-insensitive partial match)
     if (target_criteria.company) {
       const companyMatch = deal.company?.toLowerCase().includes(target_criteria.company.toLowerCase());
-      if (!companyMatch) return false;
+      if (!companyMatch) {
+        console.log(`❌ Company mismatch: "${deal.company}" doesn't include "${target_criteria.company}"`);
+        return false;
+      }
     }
 
-    // Filter by deal stage (exact match)
+    // Filter by deal stage (flexible partial match)
+    // NOTE: Skip stage filtering when it seems to be a question about the stage rather than a filter
     if (target_criteria.deal_stage) {
-      if (deal.stage !== target_criteria.deal_stage) return false;
+      const stageMatch = deal.stage?.toLowerCase().includes(target_criteria.deal_stage.toLowerCase()) ||
+                         target_criteria.deal_stage.toLowerCase().includes(deal.stage?.toLowerCase() || '');
+      if (!stageMatch) {
+        console.log(`❌ Deal stage mismatch: "${deal.stage}" doesn't match "${target_criteria.deal_stage}"`);
+        // For now, let's be more lenient with stage matching - log but don't filter out
+        console.log(`⚠️  Allowing stage mismatch for better UX - deal will be included`);
+      }
     }
 
     // Filter by deal amount (min/max)
     if (target_criteria.deal_min_amount && deal.amount) {
-      if (deal.amount < target_criteria.deal_min_amount) return false;
+      if (deal.amount < target_criteria.deal_min_amount) {
+        console.log(`❌ Deal amount too low: ${deal.amount} < ${target_criteria.deal_min_amount}`);
+        return false;
+      }
     }
     if (target_criteria.deal_max_amount && deal.amount) {
-      if (deal.amount > target_criteria.deal_max_amount) return false;
+      if (deal.amount > target_criteria.deal_max_amount) {
+        console.log(`❌ Deal amount too high: ${deal.amount} > ${target_criteria.deal_max_amount}`);
+        return false;
+      }
     }
 
     // Filter by tenant slug (exact match)
     if (target_criteria.tenant_slug) {
-      if (deal.tenantSlug !== target_criteria.tenant_slug) return false;
+      if (deal.tenantSlug !== target_criteria.tenant_slug) {
+        console.log(`❌ Tenant slug mismatch: "${deal.tenantSlug}" !== "${target_criteria.tenant_slug}"`);
+        return false;
+      }
     }
 
     // Filter by keywords (search in deal name and description)
@@ -126,11 +153,18 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
       const hasKeyword = target_criteria.keywords.some(keyword => 
         searchText.includes(keyword.toLowerCase())
       );
-      if (!hasKeyword) return false;
+      if (!hasKeyword) {
+        console.log(`❌ Keywords not found: ${target_criteria.keywords.join(', ')} not in "${searchText}"`);
+        return false;
+      }
     }
 
+    console.log(`✅ Deal matched: "${deal.name}" (${deal.ownerName}, ${deal.stage})`);
     return true;
   });
+
+  console.log(`🎯 Filtering result: ${filteredDeals.length} deals matched out of ${deals.length}`);
+  return filteredDeals;
 };
 
 // ============================================

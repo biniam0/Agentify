@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Play, Search, Users, CheckCircle, Circle, AlertCircle } from 'lucide-react';
+import { Loader2, Play, Search, Users, CheckCircle, Circle, AlertCircle, AlertTriangle, RotateCcw, ChevronDown } from 'lucide-react';
 import api from '@/services/api';
 import { Textarea } from '@/components/ui/textarea';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface SimpleIntent {
   action: string;
@@ -45,6 +46,7 @@ export default function SimpleWorkflow() {
     count: number;
     sample: Target[];
     summary: string;
+    suggestions?: string[];
   } | null>(null);
   const [execution, setExecution] = useState<{
     id: string;
@@ -71,8 +73,8 @@ export default function SimpleWorkflow() {
     message: '',
     substeps: {
       parsing: { status: 'pending' as 'pending' | 'running' | 'complete' | 'error', message: 'Analyzing your request...' },
-      finding: { status: 'pending' as 'pending' | 'running' | 'complete' | 'error', message: 'Searching for targets...' },
-      executing: { status: 'pending' as 'pending' | 'running' | 'complete' | 'error', message: 'Starting workflow...' }
+      finding: { status: 'pending' as 'pending' | 'running' | 'complete' | 'error' | 'warning', message: 'Searching for targets...' },
+      executing: { status: 'pending' as 'pending' | 'running' | 'complete' | 'error' | 'cancelled', message: 'Starting workflow...' }
     }
   });
 
@@ -152,6 +154,28 @@ export default function SimpleWorkflow() {
     try {
       const response = await api.post('/workflows/find-targets', { intent });
       
+      // Handle no targets found case
+      if (response.data.noTargetsFound) {
+        setProgress(prev => ({
+          ...prev,
+          step: 'idle',
+          percentage: 100,
+          message: 'No targets found',
+          substeps: {
+            ...prev.substeps,
+            finding: { status: 'warning', message: 'No targets match your criteria' }
+          }
+        }));
+
+        setTargets({
+          count: 0,
+          sample: [],
+          summary: response.data.targets.summary,
+          suggestions: response.data.suggestions
+        });
+        return;
+      }
+      
       setProgress(prev => ({
         ...prev,
         step: 'filtering',
@@ -215,6 +239,22 @@ export default function SimpleWorkflow() {
       setIntent(response.data.intent);
       setIntentSummary(response.data.intentSummary);
       setTargets(response.data.targets);
+      
+      // Handle no targets found case
+      if (response.data.noTargetsFound) {
+        setProgress(prev => ({
+          ...prev,
+          step: 'idle',
+          percentage: 100,
+          message: 'No targets found',
+          substeps: {
+            parsing: { status: 'complete', message: 'Intent parsed successfully!' },
+            finding: { status: 'warning', message: 'No targets match your criteria' },
+            executing: { status: 'cancelled', message: 'Cannot execute without targets' }
+          }
+        }));
+        return;
+      }
       
       // Set approval data (NO AUTO-EXECUTION)
       if (response.data.requiresApproval) {
@@ -587,44 +627,110 @@ export default function SimpleWorkflow() {
 
       {/* Step 2: Targets Results */}
       {targets && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Found Targets
-            </CardTitle>
-            <CardDescription>{targets.summary}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{targets.count} targets</div>
-              <Badge variant={targets.count > 0 ? "default" : "destructive"}>
-                {targets.count > 0 ? "Ready" : "No targets"}
-              </Badge>
-            </div>
-
-            {targets.sample.length > 0 && (
-              <div>
-                <h4 className="font-semibold mb-2">Sample Targets</h4>
-                <div className="space-y-2">
-                  {targets.sample.map((target, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 border rounded">
-                      <div>
-                        <div className="font-medium">{target.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {target.dealName} • {target.company}
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {target.phone}
-                      </div>
-                    </div>
-                  ))}
+        <>
+          {targets.count === 0 ? (
+            // No Targets Found - Enhanced UX
+            <Card className="border-amber-200 bg-amber-50">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  <CardTitle className="text-amber-800">No Targets Found</CardTitle>
                 </div>
-              </div>
-            )}
+                <CardDescription className="text-amber-700">
+                  {targets.summary}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {targets.suggestions && targets.suggestions.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-amber-700 font-medium">
+                      Try these suggestions to find targets:
+                    </p>
+                    <ul className="text-sm text-amber-700 space-y-2 ml-4">
+                      {targets.suggestions.map((suggestion, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-amber-500 mt-0.5">•</span>
+                          <span>{suggestion}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setPrompt('');
+                      setTargets(null);
+                      setIntent(null);
+                    }}
+                    className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Try Different Criteria
+                  </Button>
+                  
+                  <Collapsible>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="text-amber-700 hover:bg-amber-100">
+                        <ChevronDown className="h-4 w-4 mr-2" />
+                        Show Search Details
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="mt-3 p-3 bg-amber-100 rounded text-xs">
+                        <strong className="text-amber-800">Searched for:</strong>
+                        <pre className="mt-1 text-amber-700 whitespace-pre-wrap">
+                          {intent ? JSON.stringify(intent.target_criteria, null, 2) : 'No search criteria'}
+                        </pre>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            // Targets Found - Existing UI
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  Found Targets
+                </CardTitle>
+                <CardDescription>{targets.summary}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-2xl font-bold">{targets.count} targets</div>
+                  <Badge variant="default">Ready</Badge>
+                </div>
 
-          </CardContent>
-        </Card>
+                {targets.sample.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Sample Targets</h4>
+                    <div className="space-y-2">
+                      {targets.sample.map((target, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 border rounded">
+                          <div>
+                            <div className="font-medium">{target.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {target.dealName} • {target.company}
+                            </div>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {target.phone}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {/* Approval Gate */}

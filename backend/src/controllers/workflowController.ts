@@ -16,6 +16,52 @@ import { AuthRequest } from '../middlewares/auth';
 import { getCachedUser } from '../utils/userCache';
 import prisma from '../config/database';
 import { WorkflowConfig } from '../types/workflow';
+import { SimpleIntent } from '../services/llm/promptParserService';
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Generate smart suggestions based on search criteria that found no targets
+ */
+const generateSmartSuggestions = (intent: SimpleIntent): string[] => {
+  const suggestions: string[] = [];
+  const { target_criteria } = intent;
+  
+  // Suggestions based on what was searched for
+  if (target_criteria.deal_name) {
+    const dealName = target_criteria.deal_name;
+    if (dealName.includes(',')) {
+      suggestions.push(`Try searching without the comma: "${dealName.split(',')[0].trim()}"`);
+    }
+    if (dealName.split(' ').length > 2) {
+      suggestions.push(`Try a shorter deal name: "${dealName.split(' ').slice(0, 2).join(' ')}"`);
+    }
+    suggestions.push('Check if the deal name is spelled correctly');
+  }
+  
+  if (target_criteria.contact_name) {
+    suggestions.push(`Verify that "${target_criteria.contact_name}" exists in the system`);
+    suggestions.push('Try searching by first name only');
+  }
+  
+  if (target_criteria.deal_stage) {
+    suggestions.push(`Try removing the "${target_criteria.deal_stage}" stage filter`);
+    suggestions.push('Check if the deal is in a different stage than expected');
+  }
+  
+  if (target_criteria.company) {
+    suggestions.push(`Try a shorter company name: "${target_criteria.company.split(' ')[0]}"`);
+  }
+  
+  // General suggestions
+  suggestions.push('Check if the deal exists in a different tenant');
+  suggestions.push('Verify the deal hasn\'t been archived or deleted');
+  suggestions.push('Try broadening your search criteria');
+  
+  return suggestions.slice(0, 5); // Limit to 5 suggestions
+};
 
 // Define a custom request interface that supports both User (JWT) and Service (API Key) auth
 interface AuthenticatedRequest extends Request {
@@ -474,10 +520,18 @@ export const runSimpleWorkflow = async (req: AuthenticatedRequest, res: Response
     // Step 2: Find targets
     const preview = await previewTargets(intent);
     if (preview.count === 0) {
-      return res.status(400).json({ 
-        error: 'No targets found matching the criteria',
+      return res.json({
+        ok: true,
         intent,
-        summary: generateIntentSummary(intent),
+        intentSummary: generateIntentSummary(intent),
+        targets: {
+          count: 0,
+          sample: [],
+          summary: preview.summary,
+        },
+        noTargetsFound: true,
+        suggestions: generateSmartSuggestions(intent),
+        requiresApproval: false, // No approval needed when no targets
       });
     }
 
@@ -543,8 +597,18 @@ export const approveAndExecuteWorkflow = async (req: AuthenticatedRequest, res: 
     }
 
     if (preview.count === 0) {
-      return res.status(400).json({ 
-        error: 'No targets found. Please review your criteria.',
+      return res.json({
+        ok: true,
+        intent,
+        intentSummary: generateIntentSummary(intent),
+        targets: {
+          count: 0,
+          sample: [],
+          summary: preview.summary,
+        },
+        noTargetsFound: true,
+        suggestions: generateSmartSuggestions(intent),
+        message: 'No targets found matching your criteria',
       });
     }
 

@@ -9,15 +9,20 @@ import axios from 'axios';
 import * as loggingService from './loggingService';
 import { SimpleIntent } from './llm/promptParserService';
 import { Target, findTargets } from './targetFinderService';
+import { NL_WORKFLOW_SYSTEM_PROMPT, NL_WORKFLOW_FIRST_MESSAGE } from './prompts/nlWorkflowPrompts';
 
 // ============================================
 // SIMPLIFIED EXECUTION ENGINE
 // ============================================
 
-// Helper to replace variables in a string
+// Helper to replace variables in a string (supports both {{variable}} and {variable} formats)
 const replaceVariables = (template: string, variables: Record<string, string | undefined>) => {
   if (!template) return '';
-  return template.replace(/\{(\w+)\}/g, (_, key) => variables[key] || `{${key}}`);
+  // Replace double curly braces first: {{variable}}
+  let result = template.replace(/\{\{(\w+)\}\}/g, (_, key) => variables[key] || `{{${key}}}`);
+  // Then replace single curly braces: {variable}
+  result = result.replace(/\{(\w+)\}/g, (_, key) => variables[key] || `{${key}}`);
+  return result;
 };
 
 /**
@@ -76,21 +81,52 @@ export const executeSimpleWorkflow = async (
       },
     });
 
-    // 3. Prepare ElevenLabs Batch Payload
+    // 3. Get user info for requester context
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true }
+    });
+
+    // 4. Prepare ElevenLabs Batch Payload with NL Workflow Agent
     const batchPayload = {
-      call_name: `AgentX: ${workflowName || intent.action} (${new Date().toISOString()})`,
-      agent_id: config.elevenlabs.infoGatheringAgentId,
+      call_name: `AgentX NL Workflow: ${workflowName || intent.action} (${new Date().toISOString()})`,
+      agent_id: config.elevenlabs.nlWorkflowAgentId,
       agent_phone_number_id: config.elevenlabs.phoneNumberId,
       recipients: targets.map(target => {
-        // Build dynamic variables from target data
+        // Build enhanced dynamic variables for NL Workflow agent
+        const currentDate = new Date();
         const variables = {
-          rep_name: target.name,
+          // Sales rep info (the person being called)
+          owner_name: target.name,
+          
+          // Deal information
+          deal_id: target.dealId,
           deal_name: target.dealName,
           company: target.company,
-          deal_amount: target.dealAmount?.toString(),
-          deal_stage: target.dealStage,
-          workflowExecutionId: execution.id, // For webhook tracking
-          targetPhone: target.phone, // For webhook tracking
+          deal_amount: target.dealAmount?.toString() || '',
+          deal_stage: target.dealStage || '',
+          
+          // Workflow context
+          workflow_name: workflowName || intent.action,
+          original_prompt: intent.action, // The manager's original request
+          
+          // Requester info (manager/admin who created the workflow)
+          requester_name: user?.name || 'Manager',
+          
+          // Execution tracking
+          batch_id: '', // Will be filled after batch creation
+          execution_id: execution.id,
+          
+          // Time context (TODO: Add proper timezone support)
+          current_timezone: 'UTC',
+          current_timezone_offset: '+00:00',
+          current_date_local: currentDate.toISOString().split('T')[0],
+          current_time_local: currentDate.toTimeString().split(' ')[0],
+          current_day_of_week: currentDate.toLocaleDateString('en-US', { weekday: 'long' }),
+          
+          // Legacy fields for webhook tracking
+          workflowExecutionId: execution.id,
+          targetPhone: target.phone,
         };
 
         return {
@@ -99,9 +135,9 @@ export const executeSimpleWorkflow = async (
             dynamic_variables: variables,
             conversation_config_override: {
               agent: {
-                first_message: replaceVariables(intent.script.opening, variables),
+                first_message: replaceVariables(NL_WORKFLOW_FIRST_MESSAGE, variables),
                 prompt: {
-                  prompt: replaceVariables(formatSimpleSystemPrompt(intent), variables),
+                  prompt: replaceVariables(NL_WORKFLOW_SYSTEM_PROMPT, variables),
                 },
               },
             },
@@ -110,7 +146,7 @@ export const executeSimpleWorkflow = async (
       }),
     };
 
-    console.log(`📞 Submitting batch call to ElevenLabs for ${targets.length} recipients...`);
+    console.log(`📞 Submitting NL Workflow batch call to ElevenLabs for ${targets.length} recipients...`);
 
     // 4. Submit to ElevenLabs API
     const response = await axios.post(
@@ -193,27 +229,4 @@ export const executeSimpleWorkflow = async (
   }
 };
 
-/**
- * Format system prompt for simple intent-based workflow
- */
-const formatSimpleSystemPrompt = (intent: SimpleIntent): string => {
-  return `
-You are AgentX, an AI RevOps assistant.
-
-Your goal: ${intent.script.main_ask}
-
-Context: ${intent.script.context || 'No additional context provided.'}
-
-Instructions:
-- Be professional and conversational
-- Focus on the main ask: ${intent.script.main_ask}
-- If they agree, guide them through next steps
-- If they decline, politely acknowledge and end
-- If they have questions, address them professionally
-- If voicemail, leave a brief, clear message
-
-Success criteria: ${intent.goal}
-
-Keep the conversation focused and helpful.
-`;
-};
+// Note: formatSimpleSystemPrompt removed - now using NL_WORKFLOW_SYSTEM_PROMPT from prompts file

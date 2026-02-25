@@ -29,6 +29,9 @@ export const config = {
 
     // Info Gathering Agent (single unified agent with 3 server tools)
     infoGatheringAgentId: process.env.ELEVENLABS_INFO_GATHERING_AGENT_ID || '',
+    
+    // NL to Workflow Agent (calls sales reps on behalf of managers)
+    nlWorkflowAgentId: process.env.ELEVENLABS_NL_WORKFLOW_AGENT_ID || '',
   },
   callRetry: {
     enabled: process.env.ENABLE_CALL_RETRY === 'true',
