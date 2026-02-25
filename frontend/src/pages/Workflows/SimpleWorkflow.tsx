@@ -533,7 +533,7 @@ export default function SimpleWorkflow() {
             <Button
               onClick={parseIntent}
               disabled={!prompt.trim() || loading.parsing}
-              className="bg-[hsl(var(--icon-orange))] hover:bg-[hsl(var(--icon-orange))]/90 text-white"
+              className="bg-[#ff9447] hover:bg-[#ff9447]/90 text-white"
             >
               {loading.parsing ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -612,7 +612,7 @@ export default function SimpleWorkflow() {
             <Button
               onClick={findTargets}
               disabled={loading.finding}
-              className="bg-[hsl(var(--icon-orange))] hover:bg-[hsl(var(--icon-orange))]/90 text-white"
+              className="bg-[#ff9447] hover:bg-[#ff9447]/90 text-white"
             >
               {loading.finding ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -833,7 +833,7 @@ export default function SimpleWorkflow() {
               <Button
                 onClick={executeApprovedWorkflow}
                 disabled={loading.executing}
-                className="flex-1 bg-orange-600 hover:bg-orange-700"
+                className="flex-1 bg-[#ff9447] hover:bg-[#ff9447]/90"
               >
                 {loading.executing ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />

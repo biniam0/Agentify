@@ -31,18 +31,29 @@ const generateSmartSuggestions = (intent: SimpleIntent): string[] => {
   
   // Suggestions based on what was searched for
   if (target_criteria.deal_name) {
-    const dealName = target_criteria.deal_name;
-    if (dealName.includes(',')) {
-      suggestions.push(`Try searching without the comma: "${dealName.split(',')[0].trim()}"`);
-    }
-    if (dealName.split(' ').length > 2) {
-      suggestions.push(`Try a shorter deal name: "${dealName.split(' ').slice(0, 2).join(' ')}"`);
-    }
-    suggestions.push('Check if the deal name is spelled correctly');
+    const dealNames = Array.isArray(target_criteria.deal_name) 
+      ? target_criteria.deal_name 
+      : [target_criteria.deal_name];
+    
+    dealNames.forEach(dealName => {
+      if (dealName.includes(',')) {
+        suggestions.push(`Try searching without the comma: "${dealName.split(',')[0].trim()}"`);
+      }
+      if (dealName.split(' ').length > 2) {
+        suggestions.push(`Try a shorter deal name: "${dealName.split(' ').slice(0, 2).join(' ')}"`);
+      }
+    });
+    suggestions.push('Check if the deal names are spelled correctly');
   }
   
   if (target_criteria.contact_name) {
-    suggestions.push(`Verify that "${target_criteria.contact_name}" exists in the system`);
+    const contactNames = Array.isArray(target_criteria.contact_name) 
+      ? target_criteria.contact_name 
+      : [target_criteria.contact_name];
+    
+    contactNames.forEach(contactName => {
+      suggestions.push(`Verify that "${contactName}" exists in the system`);
+    });
     suggestions.push('Try searching by first name only');
   }
   
@@ -52,7 +63,13 @@ const generateSmartSuggestions = (intent: SimpleIntent): string[] => {
   }
   
   if (target_criteria.company) {
-    suggestions.push(`Try a shorter company name: "${target_criteria.company.split(' ')[0]}"`);
+    const companies = Array.isArray(target_criteria.company) 
+      ? target_criteria.company 
+      : [target_criteria.company];
+    
+    companies.forEach(company => {
+      suggestions.push(`Try a shorter company name: "${company.split(' ')[0]}"`);
+    });
   }
   
   // General suggestions

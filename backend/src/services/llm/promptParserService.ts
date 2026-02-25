@@ -17,9 +17,9 @@ const SimpleIntentSchema = z.object({
   
   // Who to target (simple criteria)
   target_criteria: z.object({
-    contact_name: z.string().optional().describe("Specific contact name to target"),
-    deal_name: z.string().optional().describe("Specific deal name to target"),
-    company: z.string().optional().describe("Company name to target"),
+    contact_name: z.union([z.string(), z.array(z.string())]).optional().describe("Specific contact name(s) to target - can be single name or array of names"),
+    deal_name: z.union([z.string(), z.array(z.string())]).optional().describe("Specific deal name(s) to target - can be single deal or array of deals"),
+    company: z.union([z.string(), z.array(z.string())]).optional().describe("Company name(s) to target - can be single company or array of companies"),
     deal_stage: z.string().optional().describe("Deal stage to filter by"),
     deal_min_amount: z.number().optional().describe("Minimum deal amount"),
     deal_max_amount: z.number().optional().describe("Maximum deal amount"),
@@ -41,9 +41,9 @@ const SimpleIntentSchema = z.object({
 export interface SimpleIntent {
   action: string;
   target_criteria: {
-    contact_name?: string;
-    deal_name?: string;
-    company?: string;
+    contact_name?: string | string[];
+    deal_name?: string | string[];
+    company?: string | string[];
     deal_stage?: string;
     deal_min_amount?: number;
     deal_max_amount?: number;
@@ -124,6 +124,15 @@ IMPORTANT - Deal Stage Filtering Rules:
   * "Check on deals stuck in Demo" → include deal_stage: "Demo"
   * "Find out why deal moved to Closed Lost" → do NOT include deal_stage (it's a question)
 
+IMPORTANT - Multiple Values Support:
+- When multiple deal names, contact names, or companies are mentioned, use arrays
+- Examples:
+  * "Call about Microsoft and Oracle deals" → deal_name: ["Microsoft", "Oracle"]
+  * "Contact John and Sarah about their deals" → contact_name: ["John", "Sarah"]
+  * "Call reps at Google and Apple" → company: ["Google", "Apple"]
+- For single values, you can use either string or single-item array
+- Always extract ALL mentioned deals, contacts, or companies from the prompt
+
 Script Template Rules:
 - Opening: "Hi {{owner_name}}, this is {{requester_name}}. I wanted to check in about [specific deal/topic]."
 - Main ask: Be direct about what information is needed
@@ -139,6 +148,10 @@ Examples:
   
 - "Give Tamirat a call about the Wesgroup deal and ask why it's in Negotiation" →
   Opening: "Hi {{owner_name}}, this is {{requester_name}}. I wanted to check in about the Wesgroup deal and understand why it's currently in the Negotiation stage."
+
+- "Give Tamirat calls on 'Wesgroup Deal' and 'BarrierX Test Deal' and ask about their status" →
+  contact_name: "Tamirat", deal_name: ["Wesgroup Deal", "BarrierX Test Deal"]
+  Opening: "Hi {{owner_name}}, this is {{requester_name}}. I wanted to get updates on the Wesgroup Deal and BarrierX Test Deal."
 
 Return a simple intent structure with clear targeting criteria and professional scripts using the {{variable}} format.`;
 

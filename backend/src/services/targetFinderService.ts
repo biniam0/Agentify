@@ -86,29 +86,47 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
   console.log(`🔍 Filtering ${deals.length} deals with criteria:`, JSON.stringify(target_criteria, null, 2));
   
   const filteredDeals = deals.filter(deal => {
-    // Filter by contact name (case-insensitive partial match)
+    // Filter by contact name (case-insensitive partial match) - supports arrays
     if (target_criteria.contact_name) {
-      const contactMatch = deal.ownerName?.toLowerCase().includes(target_criteria.contact_name.toLowerCase());
+      const contactNames = Array.isArray(target_criteria.contact_name) 
+        ? target_criteria.contact_name 
+        : [target_criteria.contact_name];
+      
+      const contactMatch = contactNames.some(name => 
+        deal.ownerName?.toLowerCase().includes(name.toLowerCase())
+      );
       if (!contactMatch) {
-        console.log(`❌ Contact name mismatch: "${deal.ownerName}" doesn't include "${target_criteria.contact_name}"`);
+        console.log(`❌ Contact name mismatch: "${deal.ownerName}" doesn't include any of [${contactNames.join(', ')}]`);
         return false;
       }
     }
 
-    // Filter by deal name (case-insensitive partial match)
+    // Filter by deal name (case-insensitive partial match) - supports arrays
     if (target_criteria.deal_name) {
-      const dealMatch = deal.name?.toLowerCase().includes(target_criteria.deal_name.toLowerCase());
+      const dealNames = Array.isArray(target_criteria.deal_name) 
+        ? target_criteria.deal_name 
+        : [target_criteria.deal_name];
+      
+      const dealMatch = dealNames.some(name => 
+        deal.name?.toLowerCase().includes(name.toLowerCase())
+      );
       if (!dealMatch) {
-        console.log(`❌ Deal name mismatch: "${deal.name}" doesn't include "${target_criteria.deal_name}"`);
+        console.log(`❌ Deal name mismatch: "${deal.name}" doesn't include any of [${dealNames.join(', ')}]`);
         return false;
       }
     }
 
-    // Filter by company (case-insensitive partial match)
+    // Filter by company (case-insensitive partial match) - supports arrays
     if (target_criteria.company) {
-      const companyMatch = deal.company?.toLowerCase().includes(target_criteria.company.toLowerCase());
+      const companies = Array.isArray(target_criteria.company) 
+        ? target_criteria.company 
+        : [target_criteria.company];
+      
+      const companyMatch = companies.some(company => 
+        deal.company?.toLowerCase().includes(company.toLowerCase())
+      );
       if (!companyMatch) {
-        console.log(`❌ Company mismatch: "${deal.company}" doesn't include "${target_criteria.company}"`);
+        console.log(`❌ Company mismatch: "${deal.company}" doesn't include any of [${companies.join(', ')}]`);
         return false;
       }
     }
