@@ -82,51 +82,60 @@ export const findTargets = async (intent: SimpleIntent): Promise<Target[]> => {
  */
 const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
   const { target_criteria } = intent;
-
-  console.log(`🔍 Filtering ${deals.length} deals with criteria:`, JSON.stringify(target_criteria, null, 2));
-
+  
+  console.log(`🔍 Workflow Filtering ${deals.length} deals with criteria:`, JSON.stringify(target_criteria, null, 2));
+  
+  // Track filtering statistics
+  let contactFiltered = 0;
+  let dealNameFiltered = 0;
+  let companyFiltered = 0;
+  let stageFiltered = 0;
+  let amountFiltered = 0;
+  let tenantFiltered = 0;
+  let keywordFiltered = 0;
+  
   const filteredDeals = deals.filter(deal => {
     // Filter by contact name (case-insensitive partial match) - supports arrays
     if (target_criteria.contact_name) {
-      const contactNames = Array.isArray(target_criteria.contact_name)
-        ? target_criteria.contact_name
+      const contactNames = Array.isArray(target_criteria.contact_name) 
+        ? target_criteria.contact_name 
         : [target_criteria.contact_name];
-
-      const contactMatch = contactNames.some(name =>
+      
+      const contactMatch = contactNames.some(name => 
         deal.ownerName?.toLowerCase().includes(name.toLowerCase())
       );
       if (!contactMatch) {
-        console.log(`❌ Contact name mismatch: "${deal.ownerName}" doesn't include any of [${contactNames.join(', ')}]`);
+        contactFiltered++;
         return false;
       }
     }
 
     // Filter by deal name (case-insensitive partial match) - supports arrays
     if (target_criteria.deal_name) {
-      const dealNames = Array.isArray(target_criteria.deal_name)
-        ? target_criteria.deal_name
+      const dealNames = Array.isArray(target_criteria.deal_name) 
+        ? target_criteria.deal_name 
         : [target_criteria.deal_name];
-
-      const dealMatch = dealNames.some(name =>
+      
+      const dealMatch = dealNames.some(name => 
         deal.name?.toLowerCase().includes(name.toLowerCase())
       );
       if (!dealMatch) {
-        console.log(`❌ Deal name mismatch: "${deal.name}" doesn't include any of [${dealNames.join(', ')}]`);
+        dealNameFiltered++;
         return false;
       }
     }
 
     // Filter by company (case-insensitive partial match) - supports arrays
     if (target_criteria.company) {
-      const companies = Array.isArray(target_criteria.company)
-        ? target_criteria.company
+      const companies = Array.isArray(target_criteria.company) 
+        ? target_criteria.company 
         : [target_criteria.company];
-
-      const companyMatch = companies.some(company =>
+      
+      const companyMatch = companies.some(company => 
         deal.company?.toLowerCase().includes(company.toLowerCase())
       );
       if (!companyMatch) {
-        console.log(`❌ Company mismatch: "${deal.company}" doesn't include any of [${companies.join(', ')}]`);
+        companyFiltered++;
         return false;
       }
     }
@@ -134,7 +143,7 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
     // Filter by deal stage (exact match)
     if (target_criteria.deal_stage) {
       if (deal.stage !== target_criteria.deal_stage) {
-        console.log(`❌ Deal stage mismatch: "${deal.stage}" doesn't match "${target_criteria.deal_stage}"`);
+        stageFiltered++;
         return false;
       }
     }
@@ -142,13 +151,13 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
     // Filter by deal amount (min/max)
     if (target_criteria.deal_min_amount && deal.amount) {
       if (deal.amount < target_criteria.deal_min_amount) {
-        console.log(`❌ Deal amount too low: ${deal.amount} < ${target_criteria.deal_min_amount}`);
+        amountFiltered++;
         return false;
       }
     }
     if (target_criteria.deal_max_amount && deal.amount) {
       if (deal.amount > target_criteria.deal_max_amount) {
-        console.log(`❌ Deal amount too high: ${deal.amount} > ${target_criteria.deal_max_amount}`);
+        amountFiltered++;
         return false;
       }
     }
@@ -156,7 +165,7 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
     // Filter by tenant slug (exact match)
     if (target_criteria.tenant_slug) {
       if (deal.tenantSlug !== target_criteria.tenant_slug) {
-        console.log(`❌ Tenant slug mismatch: "${deal.tenantSlug}" !== "${target_criteria.tenant_slug}"`);
+        tenantFiltered++;
         return false;
       }
     }
@@ -168,16 +177,30 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
         searchText.includes(keyword.toLowerCase())
       );
       if (!hasKeyword) {
-        console.log(`❌ Keywords not found: ${target_criteria.keywords.join(', ')} not in "${searchText}"`);
+        keywordFiltered++;
         return false;
       }
     }
 
+    // Log successful matches only
     console.log(`✅ Deal matched: "${deal.name}" (${deal.ownerName}, ${deal.stage})`);
     return true;
   });
 
-  console.log(`🎯 Filtering result: ${filteredDeals.length} deals matched out of ${deals.length}`);
+  // Professional summary logging
+  console.log(`🎯 Filtering complete: ${filteredDeals.length} matches out of ${deals.length} total deals`);
+  
+  if (filteredDeals.length === 0 && deals.length > 0) {
+    console.log(`📊 Filter breakdown:`);
+    if (contactFiltered > 0) console.log(`   👤 ${contactFiltered} deals filtered by contact name`);
+    if (dealNameFiltered > 0) console.log(`   📋 ${dealNameFiltered} deals filtered by deal name`);
+    if (companyFiltered > 0) console.log(`   🏢 ${companyFiltered} deals filtered by company`);
+    if (stageFiltered > 0) console.log(`   📊 ${stageFiltered} deals filtered by stage`);
+    if (amountFiltered > 0) console.log(`   💰 ${amountFiltered} deals filtered by amount`);
+    if (tenantFiltered > 0) console.log(`   🏠 ${tenantFiltered} deals filtered by tenant`);
+    if (keywordFiltered > 0) console.log(`   🔍 ${keywordFiltered} deals filtered by keywords`);
+  }
+  
   return filteredDeals;
 };
 
