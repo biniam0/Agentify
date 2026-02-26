@@ -131,15 +131,11 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
       }
     }
 
-    // Filter by deal stage (flexible partial match)
-    // NOTE: Skip stage filtering when it seems to be a question about the stage rather than a filter
+    // Filter by deal stage (exact match)
     if (target_criteria.deal_stage) {
-      const stageMatch = deal.stage?.toLowerCase().includes(target_criteria.deal_stage.toLowerCase()) ||
-                         target_criteria.deal_stage.toLowerCase().includes(deal.stage?.toLowerCase() || '');
-      if (!stageMatch) {
+      if (deal.stage !== target_criteria.deal_stage) {
         console.log(`❌ Deal stage mismatch: "${deal.stage}" doesn't match "${target_criteria.deal_stage}"`);
-        // For now, let's be more lenient with stage matching - log but don't filter out
-        console.log(`⚠️  Allowing stage mismatch for better UX - deal will be included`);
+        return false;
       }
     }
 

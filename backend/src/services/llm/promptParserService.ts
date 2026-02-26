@@ -118,11 +118,40 @@ Guidelines:
 IMPORTANT - Deal Stage Filtering Rules:
 - Only include "deal_stage" in target_criteria when filtering FOR deals IN that stage
 - Do NOT include "deal_stage" when asking ABOUT or QUESTIONING a deal's stage
+- Use EXACT stage names from the CRM system (complete list):
+  * Prospect deals → deal_stage: "Prospect"
+  * Outreach deals → deal_stage: "Outreach"
+  * Appointment deals → deal_stage: "Appointment Scheduled"
+  * Qualified deals → deal_stage: "Qualified To Buy"
+  * Presentation deals → deal_stage: "Presentation Scheduled"
+  * Demo deals → deal_stage: "Demo meeting scheduled"
+  * Proposal deals → deal_stage: "Proposal made"
+  * Decision Maker deals → deal_stage: "Decision Maker Bought-In"
+  * Budgetary deals → deal_stage: "Budgetary letter signed"
+  * Negotiation deals → deal_stage: "Negotiation"
+  * Contract deals → deal_stage: "Contract Sent"
+  * Won deals → deal_stage: "Closed Won"
+  * Lost deals → deal_stage: "Lost"
+  * Closed Lost deals → deal_stage: "Closed Lost"
 - Examples:
   * "Call reps with deals in Negotiation" → include deal_stage: "Negotiation"
   * "Ask why the deal is in Negotiation" → do NOT include deal_stage (it's a question)
-  * "Check on deals stuck in Demo" → include deal_stage: "Demo"
-  * "Find out why deal moved to Closed Lost" → do NOT include deal_stage (it's a question)
+  * "Check on deals stuck in Demo" → include deal_stage: "Demo meeting scheduled"
+  * "Call owners of Lost deals" → include deal_stage: "Lost"
+  * "Call owners of Closed Lost deals" → include deal_stage: "Closed Lost"
+  * "Contact reps with Won deals" → include deal_stage: "Closed Won"
+  * "Call about Prospect deals" → include deal_stage: "Prospect"
+  * "Contact owners with Contract Sent deals" → include deal_stage: "Contract Sent"
+  * "Find out why deal moved to Lost" → do NOT include deal_stage (it's a question)
+
+CRITICAL - Stage Name Disambiguation:
+- "Lost" and "Closed Lost" are DIFFERENT stages - do NOT normalize or convert between them
+- Always use the EXACT stage terminology from the user's prompt
+- Examples:
+  * "Lost deals" = stage "Lost" (NOT "Closed Lost")
+  * "Closed Lost deals" = stage "Closed Lost" (NOT "Lost")
+  * "Won deals" = stage "Closed Won"
+- Never assume or substitute stage names - use exactly what the user says
 
 IMPORTANT - Multiple Values Support:
 - When multiple deal names, contact names, or companies are mentioned, use arrays
@@ -152,6 +181,14 @@ Examples:
 - "Give Tamirat calls on 'Wesgroup Deal' and 'BarrierX Test Deal' and ask about their status" →
   contact_name: "Tamirat", deal_name: ["Wesgroup Deal", "BarrierX Test Deal"]
   Opening: "Hi {{owner_name}}, this is {{requester_name}}. I wanted to get updates on the Wesgroup Deal and BarrierX Test Deal."
+
+- "Call all the owner of the deals with Lost deals" →
+  deal_stage: "Lost"
+  Opening: "Hi {{owner_name}}, this is {{requester_name}}. I wanted to check in about your Lost deal and understand what happened."
+
+- "Call all the owner of the deals with Closed Lost deals" →
+  deal_stage: "Closed Lost"
+  Opening: "Hi {{owner_name}}, this is {{requester_name}}. I wanted to follow up on your Closed Lost deal and gather insights for future opportunities."
 
 Return a simple intent structure with clear targeting criteria and professional scripts using the {{variable}} format.`;
 
