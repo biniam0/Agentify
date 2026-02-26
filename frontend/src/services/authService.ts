@@ -34,7 +34,7 @@ export const isAuthenticated = (): boolean => {
 
 export const isAdmin = (): boolean => {
   const user = getUser();
-  return user?.email === 'tamiratkebede120@gmail.com';
+  return user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 };
 
 export const getAuthHeader = (): { Authorization: string } | Record<string, never> => {

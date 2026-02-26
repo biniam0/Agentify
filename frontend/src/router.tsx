@@ -12,6 +12,9 @@ import UserActivityLog from './pages/User/Logs/UserActivityLog';
 import UserCrmActionsLog from './pages/User/Logs/UserCrmActionsLog';
 import UserCallAnalytics from './pages/User/Logs/UserCallAnalytics';
 
+// Workflow imports
+import SimpleWorkflow from './pages/Workflows/SimpleWorkflow';
+
 // Admin imports
 import AdminLayout from './pages/Admin/AdminLayout';
 import LogsLayout from './pages/Admin/Logs/LogsLayout';
@@ -108,6 +111,10 @@ const router = createBrowserRouter([
       {
         path: 'barrierx-info',
         element: <BarrierXInfo />,
+      },
+      {
+        path: 'workflows',
+        element: <SimpleWorkflow />,
       },
       {
         path: 'logs',

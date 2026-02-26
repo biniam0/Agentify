@@ -18,6 +18,7 @@ import {
   Target,
   Timer,
   Webhook,
+  Zap,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -58,6 +59,11 @@ const mainNavItems = [
     title: 'BarrierX Info',
     url: '/admin/barrierx-info',
     icon: Target,
+  },
+  {
+    title: 'Workflows',
+    url: '/admin/workflows',
+    icon: Zap,
   },
 ];
 
