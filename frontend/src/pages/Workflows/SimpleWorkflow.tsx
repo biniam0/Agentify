@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Play, Search, Users, CheckCircle, Circle, AlertCircle, AlertTriangle, RotateCcw, ChevronDown } from 'lucide-react';
+import { Loader2, Play, Search, Users, CheckCircle, Circle, AlertCircle, AlertTriangle, RotateCcw, ChevronDown, Info } from 'lucide-react';
 import api from '@/services/api';
 import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -470,6 +470,46 @@ export default function SimpleWorkflow() {
         )}
       </div>
 
+      {/* Supported Prompts Guide */}
+      <Card className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2 text-blue-800 dark:text-blue-300">
+            <Info className="w-4 h-4" />
+            Supported Prompt Examples
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="space-y-2">
+              <h4 className="font-medium text-blue-900 dark:text-blue-200">🎯 Call Specific People or Deals</h4>
+              <ul className="space-y-1 text-blue-700 dark:text-blue-400 list-disc pl-4">
+                <li>"Call <strong>Andreja</strong> about the <strong>Bosa Properties</strong> deal"</li>
+                <li>"Call <strong>Tamirat</strong> and ask about the <strong>BarrierX</strong> deal"</li>
+                <li>"Call the owner of the <strong>Wesgroup</strong> deal"</li>
+              </ul>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-blue-900 dark:text-blue-200">📊 Filter by Deal Stage</h4>
+              <ul className="space-y-1 text-blue-700 dark:text-blue-400 list-disc pl-4">
+                <li>"Call all owners of <strong>Lost</strong> deals"</li>
+                <li>"Call everyone with deals in <strong>Negotiation</strong>"</li>
+                <li>"Call owners of <strong>Closed Lost</strong> deals to ask why"</li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-4 relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-blue-200 dark:border-blue-800"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-blue-50 dark:bg-blue-950/20 px-3 text-xs text-blue-600 dark:text-blue-400">
+                💡 More prompt patterns will be supported soon
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Progress Indicator */}
       {(loading.parsing || loading.finding || loading.executing || loading.running) && (
         <Card>
@@ -500,9 +540,9 @@ export default function SimpleWorkflow() {
                   {info.status === 'error' && <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 dark:text-red-400" />}
                   {info.status === 'pending' && <Circle className="w-5 h-5 text-gray-300 flex-shrink-0 dark:text-gray-600" />}
                   <span className={`text-sm ${info.status === 'complete' ? 'text-green-700 font-medium dark:text-green-400' :
-                      info.status === 'error' ? 'text-red-700 dark:text-red-400' :
-                        info.status === 'running' ? 'text-blue-700 font-medium dark:text-blue-400' :
-                          'text-gray-500 dark:text-gray-500'
+                    info.status === 'error' ? 'text-red-700 dark:text-red-400' :
+                      info.status === 'running' ? 'text-blue-700 font-medium dark:text-blue-400' :
+                        'text-gray-500 dark:text-gray-500'
                     }`}>
                     {info.message}
                   </span>
@@ -845,7 +885,7 @@ export default function SimpleWorkflow() {
 
             {/* Disclaimer */}
             <div className="text-xs text-subtle text-center pt-2 border-t dark:border-zinc-800">
-              By clicking "Approve & Execute", you confirm that you have reviewed the targets and script, 
+              By clicking "Approve & Execute", you confirm that you have reviewed the targets and script,
               and authorize the system to make calls to the specified contacts.
             </div>
           </CardContent>
