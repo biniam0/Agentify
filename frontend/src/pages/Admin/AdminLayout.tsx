@@ -3,7 +3,7 @@
  * Only accessible by tamiratkebede120@gmail.com
  */
 
-import { LogOut, Moon, Sun, Search, Settings } from 'lucide-react';
+import { LogOut, Moon, Sun, Search, Settings, Calendar } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import * as authService from '../../services/authService';
@@ -147,6 +147,13 @@ const AdminLayout: React.FC = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => navigate('/app/meetings')}
+                    className="cursor-pointer focus:!bg-gray-100 focus:!text-gray-900 dark:focus:!bg-gray-700 dark:focus:!text-gray-100 hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    <span>Clients Page</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem className="cursor-pointer focus:!bg-gray-100 focus:!text-gray-900 dark:focus:!bg-gray-700 dark:focus:!text-gray-100 hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
