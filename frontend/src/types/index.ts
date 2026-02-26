@@ -2,6 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
   avatar?: string;
   isAuth: boolean;
   isEnabled: boolean;

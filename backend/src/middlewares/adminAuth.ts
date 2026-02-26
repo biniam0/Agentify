@@ -1,8 +1,8 @@
 /**
  * Admin Authentication Middleware
  * 
- * Ensures only admin users can access protected logging routes.
- * Currently restricted to: tamiratkebede120@gmail.com
+ * Ensures only users with admin roles can access protected admin routes.
+ * Authorized roles: ADMIN, SUPER_ADMIN
  */
 
 import { Response, NextFunction } from 'express';
@@ -10,8 +10,8 @@ import { AuthRequest } from './auth';
 import * as loggingService from '../services/loggingService';
 import { config } from '../config/env';
 
-// Admin email(s) - currently only Tamirat
-const ADMIN_EMAILS = ['tamiratkebede120@gmail.com'];
+// Admin roles - using database role system
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
 
 /**
  * Middleware to require admin access
@@ -36,22 +36,25 @@ export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFu
     }
 
     const userEmail = req.user.email;
+    const userRole = req.user.role;
 
-    // Check if user is in admin list
-    if (!ADMIN_EMAILS.includes(userEmail)) {
-      console.log(`⚠️  Unauthorized admin access attempt by: ${userEmail}`);
+    // Check if user has admin role
+    if (!ADMIN_ROLES.includes(userRole)) {
+      console.log(`⚠️  Unauthorized admin access attempt by: ${userEmail} (role: ${userRole})`);
 
       // Log the unauthorized access attempt
       await loggingService.logError({
         errorType: 'AUTHORIZATION_ERROR',
         severity: 'MEDIUM',
         source: 'adminAuth',
-        message: `Unauthorized admin access attempt`,
+        message: `Unauthorized admin access attempt - insufficient role`,
         userId: req.user.userId,
         endpoint: req.path,
         method: req.method,
         requestData: {
           userEmail,
+          userRole,
+          requiredRoles: ADMIN_ROLES,
           ip: req.ip,
           userAgent: req.get('user-agent'),
         },
@@ -59,7 +62,7 @@ export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFu
 
       res.status(403).json({
         error: 'Forbidden',
-        message: 'Admin access required'
+        message: 'Admin role required'
       });
       return;
     }
@@ -76,9 +79,9 @@ export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFu
 };
 
 /**
- * Check if a user email is an admin (helper function)
+ * Check if a user role is an admin (helper function)
  */
-export const isAdmin = (email: string): boolean => {
-  return ADMIN_EMAILS.includes(email);
+export const isAdmin = (role: string): boolean => {
+  return ADMIN_ROLES.includes(role);
 };
 

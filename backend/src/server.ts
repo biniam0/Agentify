@@ -17,10 +17,10 @@ const startServer = async () => {
       const redisClient = await getRedisClient();
       if (redisClient) {
         console.log('✅ Redis cache initialized');
-        
+
         // Restore call retry state from Redis
         await restoreRetryStateFromRedis();
-        
+
         // Restore called meetings tracking from Redis
         await restoreCalledMeetingsFromRedis();
       } else {
@@ -62,4 +62,5 @@ process.on('SIGINT', async () => {
 });
 
 startServer();
+
 

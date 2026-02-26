@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as meetingController from '../controllers/meetingController';
 import { authenticate } from '../middlewares/auth';
+import { requireAdmin } from '../middlewares/adminAuth';
 
 const router = Router();
 
@@ -8,13 +9,13 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', meetingController.getMeetings);
-router.get('/admin', meetingController.getAdminMeetings);
 router.post('/trigger/pre-call', meetingController.triggerPreMeetingCall);
 router.post('/trigger/post-call', meetingController.triggerPostMeetingCall);
 
-// Admin-only trigger endpoints
-router.post('/admin/trigger/pre-call', meetingController.adminTriggerPreMeetingCall);
-router.post('/admin/trigger/post-call', meetingController.adminTriggerPostMeetingCall);
+// Admin-only endpoints (require admin role)
+router.get('/admin', requireAdmin, meetingController.getAdminMeetings);
+router.post('/admin/trigger/pre-call', requireAdmin, meetingController.adminTriggerPreMeetingCall);
+router.post('/admin/trigger/post-call', requireAdmin, meetingController.adminTriggerPostMeetingCall);
 
 export default router;
 

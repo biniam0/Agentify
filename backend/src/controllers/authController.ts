@@ -94,6 +94,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const token = generateToken({
       userId: user.id,
       email: user.email,
+      role: user.role,
     });
 
     res.json({
@@ -103,6 +104,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
         isAuth: user.isAuth,
         isEnabled: user.isEnabled,
       },
@@ -151,6 +153,7 @@ export const refreshToken = async (req: AuthRequest, res: Response): Promise<voi
     const token = generateToken({
       userId: user.id,
       email: user.email,
+      role: user.role,
     });
 
     res.json({
@@ -160,6 +163,7 @@ export const refreshToken = async (req: AuthRequest, res: Response): Promise<voi
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
         isAuth: user.isAuth,
         isEnabled: user.isEnabled,
       },
