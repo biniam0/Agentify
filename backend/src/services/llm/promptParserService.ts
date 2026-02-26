@@ -14,7 +14,7 @@ import { generateStructuredOutput } from './deepseekService';
 const SimpleIntentSchema = z.object({
   // What the user wants to do
   action: z.string().describe("The main action to perform (e.g., 'call about missing SQL', 'follow up on deal')"),
-  
+
   // Who to target (simple criteria)
   target_criteria: z.object({
     contact_name: z.union([z.string(), z.array(z.string())]).optional().describe("Specific contact name(s) to target - can be single name or array of names"),
@@ -26,14 +26,14 @@ const SimpleIntentSchema = z.object({
     tenant_slug: z.string().optional().describe("Specific tenant/organization"),
     keywords: z.array(z.string()).optional().describe("Keywords to search for in deal names or descriptions"),
   }),
-  
+
   // What to say (simple script)
   script: z.object({
     opening: z.string().describe("Opening message for the call"),
     main_ask: z.string().describe("Main request or question"),
     context: z.string().optional().describe("Additional context or background"),
   }),
-  
+
   // Expected outcome
   goal: z.string().describe("What success looks like for this workflow"),
 });
@@ -71,7 +71,7 @@ export const detectPromptInjection = (prompt: string): { isSafe: boolean; saniti
   ];
 
   const isSafe = !injectionPatterns.some(pattern => pattern.test(prompt));
-  
+
   return {
     isSafe,
     sanitizedPrompt: isSafe ? prompt : prompt.replace(/[<>[\]|]/g, ''),
@@ -89,7 +89,7 @@ export const parseIntent = async (nlPrompt: string): Promise<SimpleIntent> => {
   // Step 1: Basic security check
   console.log('🔒 Checking for prompt injection...');
   const injectionCheck = detectPromptInjection(nlPrompt);
-  
+
   if (!injectionCheck.isSafe) {
     throw new Error('Prompt failed security validation');
   }
@@ -255,11 +255,11 @@ export const validateIntent = (intent: SimpleIntent): { valid: boolean; errors: 
 export const generateIntentSummary = (intent: SimpleIntent): string => {
   const criteria = intent.target_criteria;
   let targetDesc = 'contacts';
-  
+
   if (criteria.contact_name) targetDesc = `${criteria.contact_name}`;
   else if (criteria.deal_name) targetDesc = `contacts with "${criteria.deal_name}" deal`;
   else if (criteria.company) targetDesc = `contacts from ${criteria.company}`;
   else if (criteria.deal_stage) targetDesc = `contacts with ${criteria.deal_stage} deals`;
-  
+
   return `${intent.action}: Call ${targetDesc} to ${intent.script.main_ask.toLowerCase()}`;
 };

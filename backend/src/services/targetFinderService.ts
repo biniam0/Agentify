@@ -34,10 +34,10 @@ export interface Target {
  */
 export const findTargets = async (intent: SimpleIntent): Promise<Target[]> => {
   console.log(`🎯 Finding targets for intent: ${intent.action}`);
-  
+
   // Step 1: Fetch bulk data from BarrierX (cached by Redis)
   const allDealsMap = await barrierxService.getAllDealsWildcard();
-  
+
   // Flatten into single array
   let allDeals: Deal[] = [];
   allDealsMap.forEach((deals) => {
@@ -68,7 +68,7 @@ export const findTargets = async (intent: SimpleIntent): Promise<Target[]> => {
     .filter(target => target.phone && target.name); // Only include targets with phone and name
 
   console.log(`📞 Targets with phone numbers: ${targets.length}`);
-  
+
   return targets;
 };
 
@@ -82,17 +82,17 @@ export const findTargets = async (intent: SimpleIntent): Promise<Target[]> => {
  */
 const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
   const { target_criteria } = intent;
-  
+
   console.log(`🔍 Filtering ${deals.length} deals with criteria:`, JSON.stringify(target_criteria, null, 2));
-  
+
   const filteredDeals = deals.filter(deal => {
     // Filter by contact name (case-insensitive partial match) - supports arrays
     if (target_criteria.contact_name) {
-      const contactNames = Array.isArray(target_criteria.contact_name) 
-        ? target_criteria.contact_name 
+      const contactNames = Array.isArray(target_criteria.contact_name)
+        ? target_criteria.contact_name
         : [target_criteria.contact_name];
-      
-      const contactMatch = contactNames.some(name => 
+
+      const contactMatch = contactNames.some(name =>
         deal.ownerName?.toLowerCase().includes(name.toLowerCase())
       );
       if (!contactMatch) {
@@ -103,11 +103,11 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
 
     // Filter by deal name (case-insensitive partial match) - supports arrays
     if (target_criteria.deal_name) {
-      const dealNames = Array.isArray(target_criteria.deal_name) 
-        ? target_criteria.deal_name 
+      const dealNames = Array.isArray(target_criteria.deal_name)
+        ? target_criteria.deal_name
         : [target_criteria.deal_name];
-      
-      const dealMatch = dealNames.some(name => 
+
+      const dealMatch = dealNames.some(name =>
         deal.name?.toLowerCase().includes(name.toLowerCase())
       );
       if (!dealMatch) {
@@ -118,11 +118,11 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
 
     // Filter by company (case-insensitive partial match) - supports arrays
     if (target_criteria.company) {
-      const companies = Array.isArray(target_criteria.company) 
-        ? target_criteria.company 
+      const companies = Array.isArray(target_criteria.company)
+        ? target_criteria.company
         : [target_criteria.company];
-      
-      const companyMatch = companies.some(company => 
+
+      const companyMatch = companies.some(company =>
         deal.company?.toLowerCase().includes(company.toLowerCase())
       );
       if (!companyMatch) {
@@ -164,7 +164,7 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
     // Filter by keywords (search in deal name and description)
     if (target_criteria.keywords && target_criteria.keywords.length > 0) {
       const searchText = `${deal.name} ${deal.summary || ''}`.toLowerCase();
-      const hasKeyword = target_criteria.keywords.some(keyword => 
+      const hasKeyword = target_criteria.keywords.some(keyword =>
         searchText.includes(keyword.toLowerCase())
       );
       if (!hasKeyword) {
@@ -194,7 +194,7 @@ export const previewTargets = async (intent: SimpleIntent): Promise<{
   summary: string;
 }> => {
   const targets = await findTargets(intent);
-  
+
   return {
     count: targets.length,
     sample: targets.slice(0, 5), // First 5 targets as preview
@@ -212,16 +212,16 @@ const generateTargetSummary = (targets: Target[], intent: SimpleIntent): string 
 
   const companies = [...new Set(targets.map(t => t.company).filter(Boolean))];
   const stages = [...new Set(targets.map(t => t.dealStage).filter(Boolean))];
-  
+
   let summary = `Found ${targets.length} target${targets.length === 1 ? '' : 's'}`;
-  
+
   if (companies.length > 0) {
     summary += ` across ${companies.length} compan${companies.length === 1 ? 'y' : 'ies'}`;
   }
-  
+
   if (stages.length > 0) {
     summary += ` in ${stages.length} deal stage${stages.length === 1 ? '' : 's'}`;
   }
-  
+
   return summary + '.';
 };

@@ -81,7 +81,7 @@ export default function SimpleWorkflow() {
   // Step 1: Parse Intent
   const parseIntent = async () => {
     if (!prompt.trim()) return;
-    
+
     setLoading(prev => ({ ...prev, parsing: true }));
     setProgress(prev => ({
       ...prev,
@@ -96,7 +96,7 @@ export default function SimpleWorkflow() {
 
     try {
       const response = await api.post('/workflows/parse-intent', { prompt });
-      
+
       setProgress(prev => ({
         ...prev,
         step: 'validating',
@@ -110,7 +110,7 @@ export default function SimpleWorkflow() {
 
       setIntent(response.data.intent);
       setIntentSummary(response.data.summary);
-      
+
       setProgress(prev => ({
         ...prev,
         step: 'idle',
@@ -138,7 +138,7 @@ export default function SimpleWorkflow() {
   // Step 2: Find Targets
   const findTargets = async () => {
     if (!intent) return;
-    
+
     setLoading(prev => ({ ...prev, finding: true }));
     setProgress(prev => ({
       ...prev,
@@ -153,7 +153,7 @@ export default function SimpleWorkflow() {
 
     try {
       const response = await api.post('/workflows/find-targets', { intent });
-      
+
       // Handle no targets found case
       if (response.data.noTargetsFound) {
         setProgress(prev => ({
@@ -175,7 +175,7 @@ export default function SimpleWorkflow() {
         });
         return;
       }
-      
+
       setProgress(prev => ({
         ...prev,
         step: 'filtering',
@@ -188,7 +188,7 @@ export default function SimpleWorkflow() {
       }));
 
       setTargets(response.data.targets);
-      
+
       setProgress(prev => ({
         ...prev,
         step: 'idle',
@@ -239,7 +239,7 @@ export default function SimpleWorkflow() {
       setIntent(response.data.intent);
       setIntentSummary(response.data.intentSummary);
       setTargets(response.data.targets);
-      
+
       // Handle no targets found case
       if (response.data.noTargetsFound) {
         setProgress(prev => ({
@@ -255,7 +255,7 @@ export default function SimpleWorkflow() {
         }));
         return;
       }
-      
+
       // Set approval data (NO AUTO-EXECUTION)
       if (response.data.requiresApproval) {
         setApprovalData({
@@ -264,7 +264,7 @@ export default function SimpleWorkflow() {
           estimatedCost: response.data.estimatedCost,
           requiresApproval: true,
         });
-        
+
         setProgress(prev => ({
           ...prev,
           step: 'idle',
@@ -298,7 +298,7 @@ export default function SimpleWorkflow() {
   // Execute after approval
   const executeApprovedWorkflow = async () => {
     if (!approvalData) return;
-    
+
     setLoading(prev => ({ ...prev, executing: true }));
     setProgress(prev => ({
       ...prev,
@@ -358,10 +358,10 @@ export default function SimpleWorkflow() {
   // User-friendly error handler
   const showUserFriendlyError = (operation: string, error: any) => {
     const errorMessage = error.response?.data?.error || error.message;
-    
+
     let userMessage = '';
     let suggestion = '';
-    
+
     switch (operation) {
       case 'parse intent':
         if (errorMessage.includes('security') || errorMessage.includes('injection')) {
@@ -375,7 +375,7 @@ export default function SimpleWorkflow() {
           suggestion = 'Try being more specific about who to call and why.';
         }
         break;
-      
+
       case 'find targets':
         if (errorMessage.includes('No targets found')) {
           userMessage = 'No matching contacts were found.';
@@ -385,7 +385,7 @@ export default function SimpleWorkflow() {
           suggestion = 'Please try again in a moment.';
         }
         break;
-      
+
       case 'execute workflow':
         if (errorMessage.includes('authentication') || errorMessage.includes('token')) {
           userMessage = 'Your session has expired.';
@@ -398,12 +398,12 @@ export default function SimpleWorkflow() {
           suggestion = 'Please try again or contact support if the issue persists.';
         }
         break;
-      
+
       default:
         userMessage = 'Something went wrong.';
         suggestion = 'Please try again or contact support if the issue continues.';
     }
-    
+
     // Create a more user-friendly error display
     const errorDiv = document.createElement('div');
     errorDiv.className = 'fixed top-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 max-w-md z-50';
@@ -425,9 +425,9 @@ export default function SimpleWorkflow() {
         </button>
       </div>
     `;
-    
+
     document.body.appendChild(errorDiv);
-    
+
     // Auto-remove after 8 seconds
     setTimeout(() => {
       if (errorDiv.parentElement) {
@@ -481,30 +481,29 @@ export default function SimpleWorkflow() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Progress bar */}
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div 
-                className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
+            <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
+              <div
+                className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out dark:bg-blue-500"
                 style={{ width: `${progress.percentage}%` }}
               />
             </div>
-            
+
             {/* Current step message */}
-            <p className="text-sm text-gray-600 font-medium">{progress.message}</p>
-            
+            <p className="text-sm text-gray-600 font-medium dark:text-gray-300">{progress.message}</p>
+
             {/* Step-by-step progress */}
             <div className="space-y-3">
               {Object.entries(progress.substeps).map(([step, info]) => (
                 <div key={step} className="flex items-center gap-3">
-                  {info.status === 'complete' && <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />}
-                  {info.status === 'running' && <Loader2 className="w-5 h-5 animate-spin text-blue-500 flex-shrink-0" />}
-                  {info.status === 'error' && <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />}
-                  {info.status === 'pending' && <Circle className="w-5 h-5 text-gray-300 flex-shrink-0" />}
-                  <span className={`text-sm ${
-                    info.status === 'complete' ? 'text-green-700 font-medium' : 
-                    info.status === 'error' ? 'text-red-700' :
-                    info.status === 'running' ? 'text-blue-700 font-medium' :
-                    'text-gray-500'
-                  }`}>
+                  {info.status === 'complete' && <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 dark:text-green-400" />}
+                  {info.status === 'running' && <Loader2 className="w-5 h-5 animate-spin text-blue-500 flex-shrink-0 dark:text-blue-400" />}
+                  {info.status === 'error' && <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 dark:text-red-400" />}
+                  {info.status === 'pending' && <Circle className="w-5 h-5 text-gray-300 flex-shrink-0 dark:text-gray-600" />}
+                  <span className={`text-sm ${info.status === 'complete' ? 'text-green-700 font-medium dark:text-green-400' :
+                      info.status === 'error' ? 'text-red-700 dark:text-red-400' :
+                        info.status === 'running' ? 'text-blue-700 font-medium dark:text-blue-400' :
+                          'text-gray-500 dark:text-gray-500'
+                    }`}>
                     {info.message}
                   </span>
                 </div>
@@ -630,23 +629,23 @@ export default function SimpleWorkflow() {
         <>
           {targets.count === 0 ? (
             // No Targets Found - Enhanced UX
-            <Card className="border-amber-200 bg-amber-50">
+            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-500/30">
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-600" />
-                  <CardTitle className="text-amber-800">No Targets Found</CardTitle>
+                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500" />
+                  <CardTitle className="text-amber-800 dark:text-amber-200">No Targets Found</CardTitle>
                 </div>
-                <CardDescription className="text-amber-700">
+                <CardDescription className="text-amber-700 dark:text-amber-300/80">
                   {targets.summary}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {targets.suggestions && targets.suggestions.length > 0 && (
                   <div className="space-y-3">
-                    <p className="text-sm text-amber-700 font-medium">
+                    <p className="text-sm text-amber-700 font-medium dark:text-amber-300">
                       Try these suggestions to find targets:
                     </p>
-                    <ul className="text-sm text-amber-700 space-y-2 ml-4">
+                    <ul className="text-sm text-amber-700 space-y-2 ml-4 dark:text-amber-300/90">
                       {targets.suggestions.map((suggestion, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <span className="text-amber-500 mt-0.5">•</span>
@@ -656,33 +655,33 @@ export default function SimpleWorkflow() {
                     </ul>
                   </div>
                 )}
-                
+
                 <div className="flex gap-2 pt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       setPrompt('');
                       setTargets(null);
                       setIntent(null);
                     }}
-                    className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                    className="border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/50"
                   >
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Try Different Criteria
                   </Button>
-                  
+
                   <Collapsible>
                     <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-amber-700 hover:bg-amber-100">
+                      <Button variant="ghost" size="sm" className="text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/50">
                         <ChevronDown className="h-4 w-4 mr-2" />
                         Show Search Details
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="mt-3 p-3 bg-amber-100 rounded text-xs">
-                        <strong className="text-amber-800">Searched for:</strong>
-                        <pre className="mt-1 text-amber-700 whitespace-pre-wrap">
+                      <div className="mt-3 p-3 bg-amber-100 rounded text-xs dark:bg-amber-900/30">
+                        <strong className="text-amber-800 dark:text-amber-200">Searched for:</strong>
+                        <pre className="mt-1 text-amber-700 whitespace-pre-wrap dark:text-amber-300/80">
                           {intent ? JSON.stringify(intent.target_criteria, null, 2) : 'No search criteria'}
                         </pre>
                       </div>
@@ -735,41 +734,41 @@ export default function SimpleWorkflow() {
 
       {/* Approval Gate */}
       {approvalData && !execution && (
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-orange-200 bg-orange-50 dark:bg-zinc-950 dark:border-orange-500/30 transition-colors">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-800">
+            <CardTitle className="flex items-center gap-2 text-accent-orange">
               <AlertCircle className="w-5 h-5" />
               Approval Required
             </CardTitle>
-            <CardDescription className="text-orange-700">
+            <CardDescription className="text-orange-700 dark:text-orange-300/80">
               Review the workflow details and approve execution before calls are made.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Cost and Impact Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-white rounded-lg border">
-                <div className="text-2xl font-bold text-blue-600">{approvalData.targets.count}</div>
-                <div className="text-sm text-gray-600">Targets</div>
+              <div className="text-center p-4 bg-white rounded-lg border dark:bg-zinc-900 dark:border-zinc-800">
+                <div className="text-2xl font-bold icon-blue">{approvalData.targets.count}</div>
+                <div className="text-sm text-subtle">Targets</div>
               </div>
-              <div className="text-center p-4 bg-white rounded-lg border">
-                <div className="text-2xl font-bold text-green-600">${approvalData.estimatedCost.estimatedCostUSD}</div>
-                <div className="text-sm text-gray-600">Est. Cost</div>
+              <div className="text-center p-4 bg-white rounded-lg border dark:bg-zinc-900 dark:border-zinc-800">
+                <div className="text-2xl font-bold icon-green">${approvalData.estimatedCost.estimatedCostUSD}</div>
+                <div className="text-sm text-subtle">Est. Cost</div>
               </div>
-              <div className="text-center p-4 bg-white rounded-lg border">
-                <div className="text-2xl font-bold text-purple-600">{approvalData.estimatedCost.estimatedDuration}m</div>
-                <div className="text-sm text-gray-600">Est. Duration</div>
+              <div className="text-center p-4 bg-white rounded-lg border dark:bg-zinc-900 dark:border-zinc-800">
+                <div className="text-2xl font-bold icon-purple">{approvalData.estimatedCost.estimatedDuration}m</div>
+                <div className="text-sm text-subtle">Est. Duration</div>
               </div>
             </div>
 
             {/* Warning for large batches */}
             {approvalData.targets.count > 10 && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-950/30 dark:border-red-500/30">
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
-                  <span className="text-red-800 font-medium">Large Batch Warning</span>
+                  <AlertCircle className="w-5 h-5 text-accent-red" />
+                  <span className="text-red-800 font-medium dark:text-red-200">Large Batch Warning</span>
                 </div>
-                <p className="text-red-700 text-sm mt-1">
+                <p className="text-red-700 text-sm mt-1 dark:text-red-300/80">
                   You're about to initiate {approvalData.targets.count} calls. This will cost approximately ${approvalData.estimatedCost.estimatedCostUSD} and take about {approvalData.estimatedCost.estimatedDuration} minutes to complete.
                 </p>
               </div>
@@ -777,23 +776,23 @@ export default function SimpleWorkflow() {
 
             {/* Target Preview */}
             <div>
-              <h4 className="font-semibold mb-3">Target Preview</h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <h4 className="font-semibold mb-3 text-heading">Target Preview</h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
                 {approvalData.targets.sample.map((target, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-white border rounded">
+                  <div key={index} className="flex items-center justify-between p-3 bg-white border rounded dark:bg-zinc-900 dark:border-zinc-800">
                     <div>
-                      <div className="font-medium">{target.name}</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="font-medium text-heading">{target.name}</div>
+                      <div className="text-sm text-subtle">
                         {target.dealName} • {target.company}
                       </div>
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-subtle">
                       {target.phone}
                     </div>
                   </div>
                 ))}
                 {approvalData.targets.count > approvalData.targets.sample.length && (
-                  <div className="text-center text-sm text-gray-500 py-2">
+                  <div className="text-center text-sm text-subtle py-2">
                     ... and {approvalData.targets.count - approvalData.targets.sample.length} more targets
                   </div>
                 )}
@@ -802,38 +801,38 @@ export default function SimpleWorkflow() {
 
             {/* Script Preview */}
             <div>
-              <h4 className="font-semibold mb-3">Call Script Preview</h4>
-              <div className="bg-white border rounded-lg p-4 space-y-2">
+              <h4 className="font-semibold mb-3 text-heading">Call Script Preview</h4>
+              <div className="bg-white border rounded-lg p-4 space-y-2 dark:bg-zinc-900 dark:border-zinc-800">
                 <div>
-                  <span className="font-medium text-sm text-gray-600">Opening:</span>
-                  <p className="text-sm">{approvalData.intent.script.opening}</p>
+                  <span className="font-medium text-sm text-subtle">Opening:</span>
+                  <p className="text-sm text-body">{approvalData.intent.script.opening}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-sm text-gray-600">Main Ask:</span>
-                  <p className="text-sm">{approvalData.intent.script.main_ask}</p>
+                  <span className="font-medium text-sm text-subtle">Main Ask:</span>
+                  <p className="text-sm text-body">{approvalData.intent.script.main_ask}</p>
                 </div>
                 {approvalData.intent.script.context && (
                   <div>
-                    <span className="font-medium text-sm text-gray-600">Context:</span>
-                    <p className="text-sm">{approvalData.intent.script.context}</p>
+                    <span className="font-medium text-sm text-subtle">Context:</span>
+                    <p className="text-sm text-body">{approvalData.intent.script.context}</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Approval Actions */}
-            <div className="flex gap-3 pt-4 border-t">
+            <div className="flex justify-center gap-4 pt-4 border-t dark:border-zinc-800">
               <Button
                 onClick={() => setApprovalData(null)}
                 variant="outline"
-                className="flex-1"
+                className="w-32 dark:bg-zinc-900 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
               >
                 Cancel
               </Button>
               <Button
                 onClick={executeApprovedWorkflow}
                 disabled={loading.executing}
-                className="flex-1 bg-[#ff9447] hover:bg-[#ff9447]/90"
+                className="w-52 bg-[#ff9447] hover:bg-[#ff9447]/90 text-white border-0"
               >
                 {loading.executing ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -845,7 +844,7 @@ export default function SimpleWorkflow() {
             </div>
 
             {/* Disclaimer */}
-            <div className="text-xs text-gray-500 text-center pt-2 border-t">
+            <div className="text-xs text-subtle text-center pt-2 border-t dark:border-zinc-800">
               By clicking "Approve & Execute", you confirm that you have reviewed the targets and script, 
               and authorize the system to make calls to the specified contacts.
             </div>
@@ -879,15 +878,15 @@ export default function SimpleWorkflow() {
                 </code>
               </div>
             </div>
-            
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg dark:bg-green-950/30 dark:border-green-500/30">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-green-800 font-medium">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse dark:bg-green-400"></div>
+                <span className="text-green-800 font-medium dark:text-green-200">
                   Workflow started successfully! Calls are being made to {targets?.count} target{targets?.count === 1 ? '' : 's'}.
                 </span>
               </div>
-              <p className="text-green-700 text-sm mt-1">
+              <p className="text-green-700 text-sm mt-1 dark:text-green-300/80">
                 You can monitor detailed progress in the Workflow Executions page.
               </p>
             </div>
