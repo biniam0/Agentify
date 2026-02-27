@@ -44,6 +44,7 @@ import {
 } from './ui/alert-dialog';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
+import { Input } from './ui/input';
 import { Skeleton } from './ui/skeleton';
 import { Switch } from './ui/switch';
 const MeetingsPage: React.FC = () => {
@@ -443,6 +444,22 @@ const MeetingsPage: React.FC = () => {
                   <AlertDescription className="text-red-700">{error}</AlertDescription>
                 </Alert>
               )}
+
+              {/* Search Bar */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-subtle dark:text-muted-foreground" />
+                  <Input
+                    placeholder="Search by meeting title, deal, company, or participant..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 h-9 text-sm rounded-lg border-default dark:border-border bg-elevated dark:bg-card focus-visible:ring-[hsl(var(--app-brand))]"
+                  />
+                </div>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-light text-brand border border-[hsl(var(--app-brand-muted)/0.3)] dark:bg-primary/10 dark:text-primary dark:border-primary/20">
+                  {filteredMeetings.length} meeting{filteredMeetings.length === 1 ? '' : 's'}
+                </span>
+              </div>
 
               {filteredMeetings.length === 0 ? (
                 <Card className="text-center py-16 bg-elevated dark:bg-card border border-default dark:border-border shadow-card rounded-xl">

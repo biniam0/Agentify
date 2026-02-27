@@ -397,11 +397,6 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
 
     console.log(`✅ Wildcard fetch complete: ${dealsMap.size} users mapped`);
 
-    // Log summary per user
-    dealsMap.forEach((deals, userId) => {
-      console.log(`   User ${userId.substring(0, 12)}...: ${deals.length} deals`);
-    });
-
     // ✅ REDIS CACHING: Smart update - only write if changed, refresh TTL if not
     const dataChanged = await hasDataChanged(dealsMap);
     if (dataChanged) {
