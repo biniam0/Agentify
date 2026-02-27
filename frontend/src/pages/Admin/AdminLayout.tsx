@@ -130,7 +130,7 @@ const AdminLayout: React.FC = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => navigate('/app/meetings')}
                     className="cursor-pointer focus:!bg-gray-100 focus:!text-gray-900 dark:focus:!bg-gray-700 dark:focus:!text-gray-100 hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100"
                   >

@@ -185,16 +185,6 @@ export const LogTableRow: React.FC<LogTableRowProps> = ({ item, onToggle, isExpa
                         {/* Top Action Bar */}
                         <div className="flex justify-between items-center pb-4 border-b border-subtle dark:border-border">
                             <h3 className="text-sm font-semibold text-heading dark:text-foreground">Call Details</h3>
-                            <div className="flex gap-2">
-                                <Button className="bg-brand hover:bg-brand-hover text-white gap-1.5 shadow-sm" size="sm">
-                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                    Complete
-                                </Button>
-                                <Button variant="outline" size="sm" className="gap-1.5 border-default dark:border-border hover:bg-page hover:text-heading dark:hover:bg-muted dark:hover:text-foreground">
-                                    <MessageSquare className="h-3.5 w-3.5" />
-                                    Comment
-                                </Button>
-                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
