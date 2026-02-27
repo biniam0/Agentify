@@ -213,13 +213,19 @@ export const transformBulkResponse = (
   // Initialize empty arrays for all users
   userIds.forEach(userId => dealsMap.set(userId, []));
 
+  // Track tenant statistics
+  let tenantsWithDeals = 0;
+  let tenantsWithoutDeals = 0;
+  let totalDealsProcessed = 0;
+
   tenantsData.forEach((tenant: any) => {
     if (!tenant.deals || tenant.deals.length === 0) {
-      console.log(`  ⚠️  No deals in tenant ${tenant.name || tenant.slug}`);
+      tenantsWithoutDeals++;
       return;
     }
 
-    console.log(`  📦 Processing ${tenant.deals.length} deals from tenant ${tenant.name || tenant.slug}`);
+    tenantsWithDeals++;
+    totalDealsProcessed += tenant.deals.length;
 
     // Map each deal to its actual owner
     tenant.deals.forEach((deal: any) => {
@@ -239,11 +245,10 @@ export const transformBulkResponse = (
     });
   });
 
-  console.log(`  ✅ Mapped deals to ${dealsMap.size} users`);
-  dealsMap.forEach((deals, userId) => {
-    console.log(`     User ${userId}: ${deals.length} deals`);
-  });
-
+  // Professional summary logging
+  console.log(`  ✅ Processing complete: ${tenantsWithDeals} tenants with deals, ${tenantsWithoutDeals} empty tenants`);
+  console.log(`  📊 Total deals processed: ${totalDealsProcessed} across ${dealsMap.size} users`);
+  
   return dealsMap;
 };
 

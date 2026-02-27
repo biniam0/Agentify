@@ -3,11 +3,10 @@
  * Only accessible by tamiratkebede120@gmail.com
  */
 
-import { LogOut, Moon, Sun, Search, Settings } from 'lucide-react';
+import { LogOut, Settings, Calendar, Moon, Sun } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import * as authService from '../../services/authService';
-import { Button } from '../../components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -98,22 +97,6 @@ const AdminLayout: React.FC = () => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 sm:gap-4 px-4">
-            <Button variant="ghost" size="icon" className="text-subtle hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100">
-              <Search className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              className="text-subtle hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100"
-            >
-              {theme === 'light' ? (
-                <Moon className="h-4 w-4" />
-              ) : (
-                <Sun className="h-4 w-4" />
-              )}
-            </Button>
-
             <div className="pl-2 border-l border-default dark:border-border">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -147,6 +130,13 @@ const AdminLayout: React.FC = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => navigate('/app/meetings')}
+                    className="cursor-pointer focus:!bg-gray-100 focus:!text-gray-900 dark:focus:!bg-gray-700 dark:focus:!text-gray-100 hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    <span>Clients Page</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem className="cursor-pointer focus:!bg-gray-100 focus:!text-gray-900 dark:focus:!bg-gray-700 dark:focus:!text-gray-100 hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
