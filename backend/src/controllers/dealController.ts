@@ -108,6 +108,7 @@ export const getAdminDeals = async (req: AuthRequest, res: Response): Promise<vo
 
     for (const tenant of response.data.tenants) {
       for (const deal of tenant.deals || []) {
+        const raw = deal as Record<string, any>;
         deals.push({
           id: deal.id,
           dealName: deal.dealName,
@@ -119,6 +120,11 @@ export const getAdminDeals = async (req: AuthRequest, res: Response): Promise<vo
           riskScores: deal.userDealRiskScores,
           createdAt: deal.createdAt,
           updatedAt: deal.updatedAt,
+          closeDate: raw.closeDate,
+          summary: raw.summary,
+          meetings: raw.meetings,
+          contacts: raw.contacts,
+          recommendations: raw.recommendations,
           tenantId: tenant.id,
           tenantSlug: tenant.slug,
           tenantName: tenant.name,
