@@ -1,6 +1,7 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   AlertCircle,
+  BarChart3,
   Check,
   ClipboardCopy,
   Database,
@@ -27,6 +28,8 @@ import {
 import { Card } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
+import JsonView from '@uiw/react-json-view';
+import { darkTheme } from '@uiw/react-json-view/dark';
 import * as dealService from '../../services/dealService';
 import {
   type FilterRow,
@@ -34,12 +37,103 @@ import {
   type InvestigationDeal,
   FILTER_FIELDS,
   runInvestigationQuery,
-  syntaxHighlightJson,
+  buildFiltersFromRows,
 } from '../../utils/dealFilters';
 
 let rowIdCounter = 0;
 function nextRowId() {
   return `fr-${++rowIdCounter}`;
+}
+
+const jsonViewTheme = {
+  ...darkTheme,
+  '--w-rjv-background-color': '#1e1e2e',
+  '--w-rjv-color': '#cdd6f4',
+  '--w-rjv-key-string': '#89b4fa',
+  '--w-rjv-type-string-color': '#a6e3a1',
+  '--w-rjv-type-int-color': '#fab387',
+  '--w-rjv-type-float-color': '#fab387',
+  '--w-rjv-type-boolean-color': '#cba6f7',
+  '--w-rjv-type-null-color': '#6c7086',
+  '--w-rjv-info-color': '#6c7086',
+  '--w-rjv-curlybraces-color': '#bac2de',
+  '--w-rjv-brackets-color': '#bac2de',
+  '--w-rjv-colon-color': '#6c7086',
+  '--w-rjv-ellipsis-color': '#f5c2e7',
+  '--w-rjv-arrow-color': '#585b70',
+  '--w-rjv-copied-color': '#a6e3a1',
+  '--w-rjv-copied-success-color': '#a6e3a1',
+  '--w-rjv-line-color': '#313244',
+} as React.CSSProperties;
+
+// ── Summary stats extractor ─────────────────────────────────────────
+interface ResultSummary {
+  totalDeals: number;
+  lostDeals?: number;
+  inactiveDeals?: number;
+  zeroScoreDeals?: number;
+  healthyDeals?: number;
+  actionNeeded?: number;
+  pipelineValue?: number;
+  mode: 'plain' | 'report' | 'userDealReport' | 'suggestGathering';
+}
+
+function extractSummary(result: unknown, count: number, hasReport: boolean, hasUserReport: boolean, hasSuggest: boolean): ResultSummary {
+  if (hasReport && result && typeof result === 'object' && 'summary' in result) {
+    const s = (result as Record<string, unknown>).summary as Record<string, number>;
+    return {
+      totalDeals: s.totalDeals ?? count,
+      lostDeals: s.lostDeals,
+      inactiveDeals: s.inactiveDeals,
+      zeroScoreDeals: s.zeroScoreDeals,
+      healthyDeals: s.healthyDeals,
+      actionNeeded: s.actionNeeded,
+      pipelineValue: s.pipelineValue,
+      mode: 'report',
+    };
+  }
+
+  if (hasSuggest && Array.isArray(result)) {
+    const lost = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'LOST_DEAL').length;
+    const inactive = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'INACTIVITY').length;
+    const zero = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'ZERO_SCORE').length;
+    const healthy = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'NONE').length;
+    return {
+      totalDeals: count,
+      lostDeals: lost,
+      inactiveDeals: inactive,
+      zeroScoreDeals: zero,
+      healthyDeals: healthy,
+      actionNeeded: lost + inactive + zero,
+      mode: 'suggestGathering',
+    };
+  }
+
+  if (hasUserReport && Array.isArray(result)) {
+    const lost = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'LOST_DEAL').length;
+    const inactive = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'INACTIVITY').length;
+    const zero = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'ZERO_SCORE').length;
+    return {
+      totalDeals: count,
+      lostDeals: lost,
+      inactiveDeals: inactive,
+      zeroScoreDeals: zero,
+      actionNeeded: lost + inactive + zero,
+      mode: 'userDealReport',
+    };
+  }
+
+  return { totalDeals: count, mode: 'plain' };
+}
+
+// ── Stat card component ─────────────────────────────────────────────
+function StatCard({ label, value, color }: { label: string; value: string | number; color: string }) {
+  return (
+    <div className={`rounded-lg border px-4 py-3 ${color}`}>
+      <p className="text-[11px] font-medium uppercase tracking-wider opacity-70 mb-1">{label}</p>
+      <p className="text-xl font-bold tabular-nums">{value}</p>
+    </div>
+  );
 }
 
 const AgentXInvestigations: React.FC = () => {
@@ -49,13 +143,12 @@ const AgentXInvestigations: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [filterRows, setFilterRows] = useState<FilterRow[]>([]);
-  const [jsonOutput, setJsonOutput] = useState<string>('');
-  const [highlightedHtml, setHighlightedHtml] = useState<string>('');
-  const [resultCount, setResultCount] = useState<number | null>(null);
+  const [resultData, setResultData] = useState<unknown>(null);
+  const [jsonString, setJsonString] = useState<string>('');
+  const [resultCount, setResultCount] = useState<number>(0);
+  const [summary, setSummary] = useState<ResultSummary | null>(null);
   const [queryRan, setQueryRan] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  const preRef = useRef<HTMLPreElement>(null);
 
   // ── Fetch deals from API ──────────────────────────────────────────
   const fetchDeals = useCallback(async () => {
@@ -108,9 +201,10 @@ const AgentXInvestigations: React.FC = () => {
 
   const clearFilters = () => {
     setFilterRows([]);
-    setJsonOutput('');
-    setHighlightedHtml('');
-    setResultCount(null);
+    setResultData(null);
+    setJsonString('');
+    setResultCount(0);
+    setSummary(null);
     setQueryRan(false);
   };
 
@@ -121,10 +215,15 @@ const AgentXInvestigations: React.FC = () => {
       return;
     }
     const { result, count } = runInvestigationQuery(deals, filterRows);
-    const raw = JSON.stringify(result, null, 2);
-    setJsonOutput(raw);
-    setHighlightedHtml(syntaxHighlightJson(raw));
+    const filters = buildFiltersFromRows(filterRows);
+    const hasReport = !!filters.report;
+    const hasUserReport = !!filters.userDealReport;
+    const hasSuggest = !!filters.suggestGatheringType;
+
+    setResultData(result);
+    setJsonString(JSON.stringify(result, null, 2));
     setResultCount(count);
+    setSummary(extractSummary(result, count, hasReport, hasUserReport, hasSuggest));
     setQueryRan(true);
     setCopied(false);
   };
@@ -132,7 +231,7 @@ const AgentXInvestigations: React.FC = () => {
   // ── Copy JSON ─────────────────────────────────────────────────────
   const copyJson = async () => {
     try {
-      await navigator.clipboard.writeText(jsonOutput);
+      await navigator.clipboard.writeText(jsonString);
       setCopied(true);
       toast.success('JSON copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
@@ -142,11 +241,13 @@ const AgentXInvestigations: React.FC = () => {
   };
 
   // ── Group filter fields by category for the select dropdown ───────
-  const fieldsByCategory = FILTER_FIELDS.reduce<Record<string, typeof FILTER_FIELDS>>((acc, f) => {
-    if (!acc[f.category]) acc[f.category] = [];
-    acc[f.category].push(f);
-    return acc;
-  }, {});
+  const fieldsByCategory = useMemo(() =>
+    FILTER_FIELDS.reduce<Record<string, typeof FILTER_FIELDS>>((acc, f) => {
+      if (!acc[f.category]) acc[f.category] = [];
+      acc[f.category].push(f);
+      return acc;
+    }, {}),
+  []);
 
   const getFieldConfig = (key: FilterFieldKey) => FILTER_FIELDS.find(f => f.key === key);
 
@@ -160,7 +261,7 @@ const AgentXInvestigations: React.FC = () => {
         return (
           <div className="flex items-center gap-2 flex-1">
             <Badge variant="success" className="text-xs">Active</Badge>
-            <span className="text-xs text-subtle dark:text-muted-foreground">{config.cliFlag}</span>
+            <span className="text-xs text-subtle dark:text-muted-foreground font-mono">{config.cliFlag}</span>
           </div>
         );
       case 'text':
@@ -210,7 +311,7 @@ const AgentXInvestigations: React.FC = () => {
               AgentX Investigations
             </h1>
             <p className="text-sm text-subtle dark:text-muted-foreground">
-              Query deals with filters and view results as JSON
+              Query deals with filters and explore results interactively
             </p>
           </div>
         </div>
@@ -296,7 +397,6 @@ const AgentXInvestigations: React.FC = () => {
             const config = getFieldConfig(row.field);
             return (
               <div key={row.id} className="flex items-center gap-3 group">
-                {/* Field selector */}
                 <Select
                   value={row.field}
                   onValueChange={(val) => updateFilterField(row.id, val as FilterFieldKey)}
@@ -327,10 +427,8 @@ const AgentXInvestigations: React.FC = () => {
                   </SelectContent>
                 </Select>
 
-                {/* Value input */}
                 {renderValueInput(row)}
 
-                {/* Remove button */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -343,7 +441,6 @@ const AgentXInvestigations: React.FC = () => {
             );
           })}
 
-          {/* Add filter button */}
           <Button
             variant="outline"
             size="sm"
@@ -357,60 +454,124 @@ const AgentXInvestigations: React.FC = () => {
         </div>
       </Card>
 
-      {/* ── JSON Output ────────────────────────────────────────────── */}
+      {/* ── Results ────────────────────────────────────────────────── */}
       {queryRan && (
-        <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
-          <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <h2 className="text-sm font-semibold text-heading dark:text-foreground">Results</h2>
-              {resultCount !== null && (
+        <>
+          {/* Summary Stats Panel */}
+          {summary && summary.mode !== 'plain' && (
+            <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
+              <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-brand dark:text-primary" />
+                <h2 className="text-sm font-semibold text-heading dark:text-foreground">Summary</h2>
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <StatCard
+                    label="Total"
+                    value={summary.totalDeals}
+                    color="border-[hsl(var(--app-brand-muted)/0.3)] dark:border-primary/20 bg-brand-light/50 dark:bg-primary/5 text-brand dark:text-primary"
+                  />
+                  {summary.lostDeals !== undefined && (
+                    <StatCard
+                      label="Lost"
+                      value={summary.lostDeals}
+                      color="border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400"
+                    />
+                  )}
+                  {summary.inactiveDeals !== undefined && (
+                    <StatCard
+                      label="Inactive"
+                      value={summary.inactiveDeals}
+                      color="border-orange-200 dark:border-orange-500/20 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400"
+                    />
+                  )}
+                  {summary.zeroScoreDeals !== undefined && (
+                    <StatCard
+                      label="Zero Score"
+                      value={summary.zeroScoreDeals}
+                      color="border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400"
+                    />
+                  )}
+                  {summary.healthyDeals !== undefined && (
+                    <StatCard
+                      label="Healthy"
+                      value={summary.healthyDeals}
+                      color="border-green-200 dark:border-green-500/20 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400"
+                    />
+                  )}
+                  {summary.actionNeeded !== undefined && (
+                    <StatCard
+                      label="Action Needed"
+                      value={summary.actionNeeded}
+                      color="border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400"
+                    />
+                  )}
+                  {summary.pipelineValue !== undefined && (
+                    <StatCard
+                      label="Pipeline Value"
+                      value={`$${summary.pipelineValue.toLocaleString()}`}
+                      color="border-purple-200 dark:border-purple-500/20 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400"
+                    />
+                  )}
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Interactive JSON Viewer */}
+          <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
+            <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                <h2 className="text-sm font-semibold text-heading dark:text-foreground">JSON Output</h2>
                 <Badge variant="outline" className="text-[11px] h-5 px-1.5 font-mono">
                   {resultCount} {resultCount === 1 ? 'deal' : 'deals'}
                 </Badge>
-              )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={copyJson}
+                  disabled={!jsonString}
+                  className="h-8 text-xs gap-1.5 border-default dark:border-border"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3 h-3 text-green-600" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardCopy className="w-3 h-3" />
+                      Copy JSON
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={runQuery}
+                  disabled={!fetched}
+                  className="h-8 text-xs gap-1.5"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Re-run
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={copyJson}
-                disabled={!jsonOutput}
-                className="h-8 text-xs gap-1.5 border-default dark:border-border"
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-3 h-3 text-green-600" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <ClipboardCopy className="w-3 h-3" />
-                    Copy JSON
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={runQuery}
-                disabled={!fetched}
-                className="h-8 text-xs gap-1.5"
-              >
-                <RefreshCw className="w-3 h-3" />
-                Re-run
-              </Button>
-            </div>
-          </div>
 
-          <div className="relative">
-            <pre
-              ref={preRef}
-              className="json-output overflow-auto text-[13px] leading-relaxed font-mono p-5 max-h-[70vh] bg-[#1e1e2e] text-[#cdd6f4] selection:bg-[#585b70] selection:text-[#cdd6f4]"
-              dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-            />
-          </div>
-        </Card>
+            <div className="overflow-auto max-h-[70vh] rounded-b-lg">
+              <JsonView
+                value={resultData as object}
+                style={jsonViewTheme}
+                collapsed={2}
+                displayDataTypes={false}
+                enableClipboard={true}
+              />
+            </div>
+          </Card>
+        </>
       )}
     </div>
   );
