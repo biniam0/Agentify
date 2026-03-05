@@ -10,7 +10,6 @@ import {
   Plus,
   Play,
   RefreshCw,
-  Search,
   Trash2,
   X,
 } from 'lucide-react';
@@ -247,7 +246,7 @@ const AgentXInvestigations: React.FC = () => {
       acc[f.category].push(f);
       return acc;
     }, {}),
-  []);
+    []);
 
   const getFieldConfig = (key: FilterFieldKey) => FILTER_FIELDS.find(f => f.key === key);
 
@@ -303,10 +302,7 @@ const AgentXInvestigations: React.FC = () => {
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-brand-light dark:bg-primary/15 flex items-center justify-center shadow-sm border border-[hsl(var(--app-brand-muted)/0.3)] dark:border-primary/20">
-            <Search className="w-4 h-4 text-brand dark:text-primary" />
-          </div>
-          <div>
+          <div className="flex flex-col pl-1">
             <h1 className="text-xl font-semibold tracking-tight text-heading dark:text-foreground">
               AgentX Investigations
             </h1>
@@ -352,7 +348,6 @@ const AgentXInvestigations: React.FC = () => {
       <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
         <div className="px-5 py-4 border-b border-subtle dark:border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-brand dark:text-primary" />
             <h2 className="text-sm font-semibold text-heading dark:text-foreground">Query Builder</h2>
             {filterRows.length > 0 && (
               <Badge variant="secondary" className="text-[11px] h-5 px-1.5">
@@ -441,16 +436,18 @@ const AgentXInvestigations: React.FC = () => {
             );
           })}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={addFilterRow}
-            disabled={usedFields.size >= FILTER_FIELDS.length}
-            className="h-9 text-xs border-dashed border-default dark:border-border text-subtle dark:text-muted-foreground hover:text-heading hover:border-[hsl(var(--text-muted)/0.5)] dark:hover:text-foreground dark:hover:border-border w-full"
-          >
-            <Plus className="w-3.5 h-3.5 mr-1.5" />
-            Add Filter
-          </Button>
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={addFilterRow}
+              disabled={usedFields.size >= FILTER_FIELDS.length}
+              className="h-9 text-xs border-dashed border-[hsl(var(--icon-orange)/0.5)] bg-[hsl(var(--icon-orange)/0.08)] text-[hsl(var(--icon-orange))] hover:bg-[hsl(var(--icon-orange)/0.15)] hover:border-[hsl(var(--icon-orange)/0.7)] hover:text-[hsl(var(--icon-orange))]"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              Add Filter
+            </Button>
+          </div>
         </div>
       </Card>
 

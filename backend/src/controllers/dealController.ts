@@ -39,6 +39,12 @@ interface Deal {
   userDealRiskScores: DealRiskScores;
   createdAt?: string;
   updatedAt?: string;
+  closeDate?: string;
+  summary?: string;
+  meetings?: Array<Record<string, unknown>>;
+  contacts?: Array<Record<string, unknown>>;
+  recommendations?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
 }
 
 interface Tenant {
@@ -89,7 +95,7 @@ export const getAdminDeals = async (req: AuthRequest, res: Response): Promise<vo
       throw new Error('BarrierX API returned error');
     }
 
-    // Flatten deals with tenant info
+    // Flatten deals with tenant info (including meetings/contacts for investigation filters)
     const deals: Array<{
       id: string;
       dealName: string;
@@ -101,6 +107,11 @@ export const getAdminDeals = async (req: AuthRequest, res: Response): Promise<vo
       riskScores: DealRiskScores;
       createdAt?: string;
       updatedAt?: string;
+      closeDate?: string;
+      summary?: string;
+      meetings?: Array<Record<string, unknown>>;
+      contacts?: Array<Record<string, unknown>>;
+      recommendations?: Array<Record<string, unknown>>;
       tenantId: string;
       tenantSlug: string;
       tenantName: string;
@@ -108,7 +119,6 @@ export const getAdminDeals = async (req: AuthRequest, res: Response): Promise<vo
 
     for (const tenant of response.data.tenants) {
       for (const deal of tenant.deals || []) {
-        const raw = deal as Record<string, any>;
         deals.push({
           id: deal.id,
           dealName: deal.dealName,
@@ -120,11 +130,11 @@ export const getAdminDeals = async (req: AuthRequest, res: Response): Promise<vo
           riskScores: deal.userDealRiskScores,
           createdAt: deal.createdAt,
           updatedAt: deal.updatedAt,
-          closeDate: raw.closeDate,
-          summary: raw.summary,
-          meetings: raw.meetings,
-          contacts: raw.contacts,
-          recommendations: raw.recommendations,
+          closeDate: deal.closeDate,
+          summary: deal.summary,
+          meetings: deal.meetings,
+          contacts: deal.contacts,
+          recommendations: deal.recommendations,
           tenantId: tenant.id,
           tenantSlug: tenant.slug,
           tenantName: tenant.name,
