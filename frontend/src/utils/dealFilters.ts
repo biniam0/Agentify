@@ -320,8 +320,9 @@ function isInactiveDeal(deal: InvestigationDeal, inactivityDays = 14): { inactiv
 }
 
 export function suggestGatheringTypeForDeal(deal: InvestigationDeal): { suggested: SuggestedGatheringType; reason: string } {
-  if ((deal.stage || '').toLowerCase() === 'lost') {
-    return { suggested: 'LOST_DEAL', reason: 'Stage is "Lost"' };
+  const stageLower = (deal.stage || '').toLowerCase();
+  if (stageLower === 'lost' || stageLower === 'closed lost') {
+    return { suggested: 'LOST_DEAL', reason: `Stage is "${deal.stage}"` };
   }
   const inactivity = isInactiveDeal(deal, 14);
   if (inactivity.inactive) {
@@ -418,6 +419,25 @@ function buildCategorizedReport(deals: InvestigationDeal[]) {
   };
 }
 
+function getNextFutureMeeting(deal: InvestigationDeal): string | null {
+  if (!deal.meetings?.length) return null;
+  const now = new Date();
+  const future = deal.meetings
+    .map(m => new Date(m.startTime || m.start_time || ''))
+    .filter(d => !isNaN(d.getTime()) && d >= now)
+    .sort((a, b) => a.getTime() - b.getTime());
+  return future.length > 0 ? future[0].toISOString() : null;
+}
+
+function urgencyRank(t: SuggestedGatheringType): number {
+  switch (t) {
+    case 'LOST_DEAL': return 4;
+    case 'INACTIVITY': return 3;
+    case 'ZERO_SCORE': return 2;
+    case 'NONE': return 1;
+  }
+}
+
 function buildUserDealReport(deals: InvestigationDeal[]) {
   const severityRank = (sev: string | undefined): number => {
     switch ((sev || '').toLowerCase()) {
@@ -429,7 +449,7 @@ function buildUserDealReport(deals: InvestigationDeal[]) {
     }
   };
 
-  return deals.map(d => {
+  const rows = deals.map(d => {
     const lastStr = d.updatedAt || d.createdAt || null;
     const lastAt = lastStr ? new Date(lastStr) : undefined;
     const days = lastAt && !isNaN(lastAt.getTime()) ? daysSince(lastAt) : null;
@@ -449,6 +469,7 @@ function buildUserDealReport(deals: InvestigationDeal[]) {
       lastActivityAt: lastStr,
       daysSinceActivity: days,
       meetingsCount: d.meetings?.length || 0,
+      nextMeeting: getNextFutureMeeting(d),
       suggestedGatheringType: suggested,
       suggestedReason: reason,
       totalDealRisk: totalRisk,
@@ -456,15 +477,23 @@ function buildUserDealReport(deals: InvestigationDeal[]) {
       topRecommendationSeverity: topRec?.severity || null,
     };
   });
+
+  rows.sort((a, b) => {
+    const r = urgencyRank(b.suggestedGatheringType as SuggestedGatheringType) - urgencyRank(a.suggestedGatheringType as SuggestedGatheringType);
+    if (r !== 0) return r;
+    return (b.daysSinceActivity || 0) - (a.daysSinceActivity || 0);
+  });
+
+  return rows;
 }
 
 // ─── Run full pipeline: filter + enrich ──────────────────────────────
 
-export function runInvestigationQuery(deals: InvestigationDeal[], rows: FilterRow[]): { result: unknown; count: number; filters: Filters } {
+export function runInvestigationQuery(deals: InvestigationDeal[], rows: FilterRow[]): { result: unknown; filtered: InvestigationDeal[]; count: number; filters: Filters } {
   const filters = buildFiltersFromRows(rows);
   const filtered = applyFilters(deals, filters);
   const result = enrichDeals(filtered, filters);
   const count = Array.isArray(result) ? result.length : (filtered.length);
-  return { result, count, filters };
+  return { result, filtered, count, filters };
 }
 

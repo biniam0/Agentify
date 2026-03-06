@@ -37,6 +37,7 @@ import {
   FILTER_FIELDS,
   runInvestigationQuery,
   buildFiltersFromRows,
+  suggestGatheringTypeForDeal,
 } from '../../utils/dealFilters';
 
 let rowIdCounter = 0;
@@ -68,61 +69,83 @@ const jsonViewTheme = {
 // ── Summary stats extractor ─────────────────────────────────────────
 interface ResultSummary {
   totalDeals: number;
-  lostDeals?: number;
-  inactiveDeals?: number;
-  zeroScoreDeals?: number;
-  healthyDeals?: number;
-  actionNeeded?: number;
-  pipelineValue?: number;
+  lostDeals: number;
+  inactiveDeals: number;
+  zeroScoreDeals: number;
+  healthyDeals: number;
+  actionNeeded: number;
+  pipelineValue: number;
+  dealsWithMeetings: number;
+  uniqueOwners: number;
   mode: 'plain' | 'report' | 'userDealReport' | 'suggestGathering';
 }
 
-function extractSummary(result: unknown, count: number, hasReport: boolean, hasUserReport: boolean, hasSuggest: boolean): ResultSummary {
+function extractSummary(
+  filteredDeals: InvestigationDeal[],
+  result: unknown,
+  count: number,
+  hasReport: boolean,
+  hasUserReport: boolean,
+  hasSuggest: boolean,
+): ResultSummary {
+  const pipelineValue = filteredDeals.reduce((s, d) => s + (d.amount || 0), 0);
+  const dealsWithMeetings = filteredDeals.filter(d => d.meetings && d.meetings.length > 0).length;
+  const owners = new Set(filteredDeals.map(d => d.owner?.name || 'Unknown').filter(Boolean));
+
   if (hasReport && result && typeof result === 'object' && 'summary' in result) {
     const s = (result as Record<string, unknown>).summary as Record<string, number>;
     return {
       totalDeals: s.totalDeals ?? count,
-      lostDeals: s.lostDeals,
-      inactiveDeals: s.inactiveDeals,
-      zeroScoreDeals: s.zeroScoreDeals,
-      healthyDeals: s.healthyDeals,
-      actionNeeded: s.actionNeeded,
-      pipelineValue: s.pipelineValue,
+      lostDeals: s.lostDeals ?? 0,
+      inactiveDeals: s.inactiveDeals ?? 0,
+      zeroScoreDeals: s.zeroScoreDeals ?? 0,
+      healthyDeals: s.healthyDeals ?? 0,
+      actionNeeded: s.actionNeeded ?? 0,
+      pipelineValue: s.pipelineValue ?? pipelineValue,
+      dealsWithMeetings: s.dealsWithMeetings ?? dealsWithMeetings,
+      uniqueOwners: owners.size,
       mode: 'report',
     };
   }
 
+  // For all other modes (including plain), classify deals on the fly
+  let lost = 0, inactive = 0, zero = 0, healthy = 0;
+
   if (hasSuggest && Array.isArray(result)) {
-    const lost = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'LOST_DEAL').length;
-    const inactive = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'INACTIVITY').length;
-    const zero = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'ZERO_SCORE').length;
-    const healthy = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'NONE').length;
-    return {
-      totalDeals: count,
-      lostDeals: lost,
-      inactiveDeals: inactive,
-      zeroScoreDeals: zero,
-      healthyDeals: healthy,
-      actionNeeded: lost + inactive + zero,
-      mode: 'suggestGathering',
-    };
+    lost = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'LOST_DEAL').length;
+    inactive = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'INACTIVITY').length;
+    zero = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'ZERO_SCORE').length;
+    healthy = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'NONE').length;
+  } else if (hasUserReport && Array.isArray(result)) {
+    lost = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'LOST_DEAL').length;
+    inactive = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'INACTIVITY').length;
+    zero = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'ZERO_SCORE').length;
+    healthy = count - lost - inactive - zero;
+  } else {
+    // Plain mode: classify from the raw deals
+    for (const d of filteredDeals) {
+      const { suggested } = suggestGatheringTypeForDeal(d);
+      if (suggested === 'LOST_DEAL') lost++;
+      else if (suggested === 'INACTIVITY') inactive++;
+      else if (suggested === 'ZERO_SCORE') zero++;
+      else healthy++;
+    }
   }
 
-  if (hasUserReport && Array.isArray(result)) {
-    const lost = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'LOST_DEAL').length;
-    const inactive = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'INACTIVITY').length;
-    const zero = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'ZERO_SCORE').length;
-    return {
-      totalDeals: count,
-      lostDeals: lost,
-      inactiveDeals: inactive,
-      zeroScoreDeals: zero,
-      actionNeeded: lost + inactive + zero,
-      mode: 'userDealReport',
-    };
-  }
+  const mode = hasSuggest ? 'suggestGathering' as const : hasUserReport ? 'userDealReport' as const : 'plain' as const;
 
-  return { totalDeals: count, mode: 'plain' };
+  return {
+    totalDeals: count,
+    lostDeals: lost,
+    inactiveDeals: inactive,
+    zeroScoreDeals: zero,
+    healthyDeals: healthy,
+    actionNeeded: lost + inactive + zero,
+    pipelineValue,
+    dealsWithMeetings,
+    uniqueOwners: owners.size,
+    mode,
+  };
 }
 
 // ── Stat card component ─────────────────────────────────────────────
@@ -213,7 +236,7 @@ const AgentXInvestigations: React.FC = () => {
       toast.error('Fetch deals first before running a query');
       return;
     }
-    const { result, count } = runInvestigationQuery(deals, filterRows);
+    const { result, filtered, count } = runInvestigationQuery(deals, filterRows);
     const filters = buildFiltersFromRows(filterRows);
     const hasReport = !!filters.report;
     const hasUserReport = !!filters.userDealReport;
@@ -222,7 +245,7 @@ const AgentXInvestigations: React.FC = () => {
     setResultData(result);
     setJsonString(JSON.stringify(result, null, 2));
     setResultCount(count);
-    setSummary(extractSummary(result, count, hasReport, hasUserReport, hasSuggest));
+    setSummary(extractSummary(filtered, result, count, hasReport, hasUserReport, hasSuggest));
     setQueryRan(true);
     setCopied(false);
   };
@@ -454,62 +477,64 @@ const AgentXInvestigations: React.FC = () => {
       {/* ── Results ────────────────────────────────────────────────── */}
       {queryRan && (
         <>
-          {/* Summary Stats Panel */}
-          {summary && summary.mode !== 'plain' && (
+          {/* Summary Stats Panel - always visible */}
+          {summary && (
             <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
               <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-brand dark:text-primary" />
                 <h2 className="text-sm font-semibold text-heading dark:text-foreground">Summary</h2>
               </div>
-              <div className="p-5">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="p-5 space-y-4">
+                {/* Row 1: Core metrics */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
                   <StatCard
-                    label="Total"
+                    label="Total Deals"
                     value={summary.totalDeals}
                     color="border-[hsl(var(--app-brand-muted)/0.3)] dark:border-primary/20 bg-brand-light/50 dark:bg-primary/5 text-brand dark:text-primary"
                   />
-                  {summary.lostDeals !== undefined && (
-                    <StatCard
-                      label="Lost"
-                      value={summary.lostDeals}
-                      color="border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400"
-                    />
-                  )}
-                  {summary.inactiveDeals !== undefined && (
-                    <StatCard
-                      label="Inactive"
-                      value={summary.inactiveDeals}
-                      color="border-orange-200 dark:border-orange-500/20 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400"
-                    />
-                  )}
-                  {summary.zeroScoreDeals !== undefined && (
-                    <StatCard
-                      label="Zero Score"
-                      value={summary.zeroScoreDeals}
-                      color="border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400"
-                    />
-                  )}
-                  {summary.healthyDeals !== undefined && (
-                    <StatCard
-                      label="Healthy"
-                      value={summary.healthyDeals}
-                      color="border-green-200 dark:border-green-500/20 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400"
-                    />
-                  )}
-                  {summary.actionNeeded !== undefined && (
-                    <StatCard
-                      label="Action Needed"
-                      value={summary.actionNeeded}
-                      color="border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400"
-                    />
-                  )}
-                  {summary.pipelineValue !== undefined && (
-                    <StatCard
-                      label="Pipeline Value"
-                      value={`$${summary.pipelineValue.toLocaleString()}`}
-                      color="border-purple-200 dark:border-purple-500/20 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400"
-                    />
-                  )}
+                  <StatCard
+                    label="Pipeline Value"
+                    value={`$${summary.pipelineValue.toLocaleString()}`}
+                    color="border-purple-200 dark:border-purple-500/20 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400"
+                  />
+                  <StatCard
+                    label="With Meetings"
+                    value={summary.dealsWithMeetings}
+                    color="border-cyan-200 dark:border-cyan-500/20 bg-cyan-50 dark:bg-cyan-950/20 text-cyan-700 dark:text-cyan-400"
+                  />
+                  <StatCard
+                    label="Unique Owners"
+                    value={summary.uniqueOwners}
+                    color="border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400"
+                  />
+                </div>
+                {/* Row 2: Classification breakdown */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <StatCard
+                    label="Lost"
+                    value={summary.lostDeals}
+                    color="border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400"
+                  />
+                  <StatCard
+                    label="Inactive (14d+)"
+                    value={summary.inactiveDeals}
+                    color="border-orange-200 dark:border-orange-500/20 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400"
+                  />
+                  <StatCard
+                    label="Zero Score"
+                    value={summary.zeroScoreDeals}
+                    color="border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400"
+                  />
+                  <StatCard
+                    label="Healthy"
+                    value={summary.healthyDeals}
+                    color="border-green-200 dark:border-green-500/20 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400"
+                  />
+                  <StatCard
+                    label="Action Needed"
+                    value={summary.actionNeeded}
+                    color="border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400"
+                  />
                 </div>
               </div>
             </Card>
