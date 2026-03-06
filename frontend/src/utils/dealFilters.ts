@@ -24,7 +24,7 @@ export interface InvestigationDeal extends Deal {
   summary?: string;
   meetings?: DealMeeting[];
   contacts?: DealContact[];
-  recommendations?: Array<{ title?: string; severity?: string; [key: string]: unknown }>;
+  recommendations?: Array<{ title?: string; severity?: string;[key: string]: unknown }>;
 }
 
 // ─── Filter Configuration ────────────────────────────────────────────

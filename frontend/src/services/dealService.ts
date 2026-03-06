@@ -90,3 +90,25 @@ export const triggerInfoGatheringCall = async (
   );
   return response.data;
 };
+
+export interface AiSummaryResponse {
+  ok: boolean;
+  summary: string;
+  error?: string;
+}
+
+/**
+ * Generate AI-powered summary of filtered deal data (admin only)
+ */
+export const generateAiSummary = async (
+  deals: unknown[],
+  filters?: Record<string, unknown>,
+  summary?: Record<string, unknown>,
+): Promise<AiSummaryResponse> => {
+  const response = await api.post<AiSummaryResponse>('/deals/admin/ai-summary', {
+    deals,
+    filters,
+    summary,
+  });
+  return response.data;
+};

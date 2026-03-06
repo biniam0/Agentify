@@ -10,6 +10,7 @@ import {
   Plus,
   Play,
   RefreshCw,
+  Sparkles,
   Trash2,
   X,
 } from 'lucide-react';
@@ -172,6 +173,10 @@ const AgentXInvestigations: React.FC = () => {
   const [queryRan, setQueryRan] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [lastFilteredDeals, setLastFilteredDeals] = useState<InvestigationDeal[]>([]);
+
   // ── Fetch deals from API ──────────────────────────────────────────
   const fetchDeals = useCallback(async () => {
     setLoading(true);
@@ -246,8 +251,10 @@ const AgentXInvestigations: React.FC = () => {
     setJsonString(JSON.stringify(result, null, 2));
     setResultCount(count);
     setSummary(extractSummary(filtered, result, count, hasReport, hasUserReport, hasSuggest));
+    setLastFilteredDeals(filtered);
     setQueryRan(true);
     setCopied(false);
+    setAiSummary('');
   };
 
   // ── Copy JSON ─────────────────────────────────────────────────────
@@ -259,6 +266,42 @@ const AgentXInvestigations: React.FC = () => {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error('Failed to copy');
+    }
+  };
+
+  // ── Generate AI Summary ───────────────────────────────────────────
+  const generateAiSummary = async () => {
+    if (!resultData || lastFilteredDeals.length === 0) {
+      toast.error('Run a query first');
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const filters = buildFiltersFromRows(filterRows);
+      const filtersForAi: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(filters)) {
+        if (v !== undefined && v !== false) {
+          filtersForAi[k] = v instanceof Date ? v.toISOString().split('T')[0] : v;
+        }
+      }
+
+      const dealsToSend = Array.isArray(resultData) ? resultData : lastFilteredDeals;
+      const response = await dealService.generateAiSummary(
+        dealsToSend as unknown[],
+        filtersForAi,
+        summary ? (summary as unknown as Record<string, unknown>) : undefined,
+      );
+
+      if (response.ok && response.summary) {
+        setAiSummary(response.summary);
+      } else {
+        toast.error(response.error || 'Failed to generate summary');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'AI summary failed';
+      toast.error(msg);
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -539,6 +582,71 @@ const AgentXInvestigations: React.FC = () => {
               </div>
             </Card>
           )}
+
+          {/* AI Insights */}
+          <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
+            <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <h2 className="text-sm font-semibold text-heading dark:text-foreground">AI Insights</h2>
+                <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-mono text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-500/30">
+                  DeepSeek
+                </Badge>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={generateAiSummary}
+                disabled={true}
+                className="h-8 text-xs gap-1.5 border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+              >
+                {aiLoading ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3 h-3" />
+                )}
+                {aiLoading ? 'Analyzing...' : aiSummary ? 'Regenerate' : 'Generate Summary'}
+              </Button>
+            </div>
+            <div className="px-5 py-4">
+              {aiLoading && (
+                <div className="flex items-center gap-3 text-subtle dark:text-muted-foreground py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
+                  <div>
+                    <p className="text-sm font-medium text-heading dark:text-foreground">Analyzing {resultCount} deals...</p>
+                    <p className="text-xs mt-0.5">DeepSeek is generating insights from your filtered data</p>
+                  </div>
+                </div>
+              )}
+              {!aiLoading && !aiSummary && (
+                <div className="text-center py-6 text-subtle dark:text-muted-foreground">
+                  <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">AI-powered insights coming soon</p>
+                  <p className="text-xs mt-1">DeepSeek will analyze your filtered deals and provide actionable recommendations</p>
+                </div>
+              )}
+              {!aiLoading && aiSummary && (
+                <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-body dark:text-foreground [&_ul]:space-y-1.5 [&_li]:leading-relaxed [&_strong]:text-heading dark:[&_strong]:text-foreground [&_p]:my-2">
+                  {aiSummary.split('\n').map((line, i) => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return null;
+                    if (trimmed.startsWith('# ')) return <h3 key={i} className="text-base font-semibold mt-3 mb-1">{trimmed.slice(2)}</h3>;
+                    if (trimmed.startsWith('## ')) return <h4 key={i} className="text-sm font-semibold mt-3 mb-1">{trimmed.slice(3)}</h4>;
+                    if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
+                      const content = trimmed.slice(2);
+                      return (
+                        <div key={i} className="flex gap-2 py-0.5">
+                          <span className="text-amber-500 mt-0.5 shrink-0">•</span>
+                          <span dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                        </div>
+                      );
+                    }
+                    return <p key={i} dangerouslySetInnerHTML={{ __html: trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />;
+                  })}
+                </div>
+              )}
+            </div>
+          </Card>
 
           {/* Interactive JSON Viewer */}
           <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
