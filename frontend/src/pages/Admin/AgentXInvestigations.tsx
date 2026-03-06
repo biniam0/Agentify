@@ -1,0 +1,710 @@
+import React, { useState, useCallback, useMemo } from 'react';
+import {
+  AlertCircle,
+  BarChart3,
+  Check,
+  ClipboardCopy,
+  Database,
+  Filter,
+  Loader2,
+  Plus,
+  Play,
+  RefreshCw,
+  Sparkles,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
+import { Card } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
+import { toast } from 'sonner';
+import JsonView from '@uiw/react-json-view';
+import { darkTheme } from '@uiw/react-json-view/dark';
+import * as dealService from '../../services/dealService';
+import {
+  type FilterRow,
+  type FilterFieldKey,
+  type InvestigationDeal,
+  FILTER_FIELDS,
+  runInvestigationQuery,
+  buildFiltersFromRows,
+  suggestGatheringTypeForDeal,
+} from '../../utils/dealFilters';
+
+let rowIdCounter = 0;
+function nextRowId() {
+  return `fr-${++rowIdCounter}`;
+}
+
+const jsonViewTheme = {
+  ...darkTheme,
+  '--w-rjv-background-color': '#1e1e2e',
+  '--w-rjv-color': '#cdd6f4',
+  '--w-rjv-key-string': '#89b4fa',
+  '--w-rjv-type-string-color': '#a6e3a1',
+  '--w-rjv-type-int-color': '#fab387',
+  '--w-rjv-type-float-color': '#fab387',
+  '--w-rjv-type-boolean-color': '#cba6f7',
+  '--w-rjv-type-null-color': '#6c7086',
+  '--w-rjv-info-color': '#6c7086',
+  '--w-rjv-curlybraces-color': '#bac2de',
+  '--w-rjv-brackets-color': '#bac2de',
+  '--w-rjv-colon-color': '#6c7086',
+  '--w-rjv-ellipsis-color': '#f5c2e7',
+  '--w-rjv-arrow-color': '#585b70',
+  '--w-rjv-copied-color': '#a6e3a1',
+  '--w-rjv-copied-success-color': '#a6e3a1',
+  '--w-rjv-line-color': '#313244',
+} as React.CSSProperties;
+
+// ── Summary stats extractor ─────────────────────────────────────────
+interface ResultSummary {
+  totalDeals: number;
+  lostDeals: number;
+  inactiveDeals: number;
+  zeroScoreDeals: number;
+  healthyDeals: number;
+  actionNeeded: number;
+  pipelineValue: number;
+  dealsWithMeetings: number;
+  uniqueOwners: number;
+  mode: 'plain' | 'report' | 'userDealReport' | 'suggestGathering';
+}
+
+function extractSummary(
+  filteredDeals: InvestigationDeal[],
+  result: unknown,
+  count: number,
+  hasReport: boolean,
+  hasUserReport: boolean,
+  hasSuggest: boolean,
+): ResultSummary {
+  const pipelineValue = filteredDeals.reduce((s, d) => s + (d.amount || 0), 0);
+  const dealsWithMeetings = filteredDeals.filter(d => d.meetings && d.meetings.length > 0).length;
+  const owners = new Set(filteredDeals.map(d => d.owner?.name || 'Unknown').filter(Boolean));
+
+  if (hasReport && result && typeof result === 'object' && 'summary' in result) {
+    const s = (result as Record<string, unknown>).summary as Record<string, number>;
+    return {
+      totalDeals: s.totalDeals ?? count,
+      lostDeals: s.lostDeals ?? 0,
+      inactiveDeals: s.inactiveDeals ?? 0,
+      zeroScoreDeals: s.zeroScoreDeals ?? 0,
+      healthyDeals: s.healthyDeals ?? 0,
+      actionNeeded: s.actionNeeded ?? 0,
+      pipelineValue: s.pipelineValue ?? pipelineValue,
+      dealsWithMeetings: s.dealsWithMeetings ?? dealsWithMeetings,
+      uniqueOwners: owners.size,
+      mode: 'report',
+    };
+  }
+
+  // For all other modes (including plain), classify deals on the fly
+  let lost = 0, inactive = 0, zero = 0, healthy = 0;
+
+  if (hasSuggest && Array.isArray(result)) {
+    lost = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'LOST_DEAL').length;
+    inactive = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'INACTIVITY').length;
+    zero = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'ZERO_SCORE').length;
+    healthy = result.filter((d: Record<string, unknown>) => d._suggestedGatheringType === 'NONE').length;
+  } else if (hasUserReport && Array.isArray(result)) {
+    lost = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'LOST_DEAL').length;
+    inactive = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'INACTIVITY').length;
+    zero = result.filter((d: Record<string, unknown>) => d.suggestedGatheringType === 'ZERO_SCORE').length;
+    healthy = count - lost - inactive - zero;
+  } else {
+    // Plain mode: classify from the raw deals
+    for (const d of filteredDeals) {
+      const { suggested } = suggestGatheringTypeForDeal(d);
+      if (suggested === 'LOST_DEAL') lost++;
+      else if (suggested === 'INACTIVITY') inactive++;
+      else if (suggested === 'ZERO_SCORE') zero++;
+      else healthy++;
+    }
+  }
+
+  const mode = hasSuggest ? 'suggestGathering' as const : hasUserReport ? 'userDealReport' as const : 'plain' as const;
+
+  return {
+    totalDeals: count,
+    lostDeals: lost,
+    inactiveDeals: inactive,
+    zeroScoreDeals: zero,
+    healthyDeals: healthy,
+    actionNeeded: lost + inactive + zero,
+    pipelineValue,
+    dealsWithMeetings,
+    uniqueOwners: owners.size,
+    mode,
+  };
+}
+
+// ── Stat card component ─────────────────────────────────────────────
+function StatCard({ label, value, color }: { label: string; value: string | number; color: string }) {
+  return (
+    <div className={`rounded-lg border px-4 py-3 ${color}`}>
+      <p className="text-[11px] font-medium uppercase tracking-wider opacity-70 mb-1">{label}</p>
+      <p className="text-xl font-bold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+const AgentXInvestigations: React.FC = () => {
+  const [deals, setDeals] = useState<InvestigationDeal[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fetched, setFetched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [filterRows, setFilterRows] = useState<FilterRow[]>([]);
+  const [resultData, setResultData] = useState<unknown>(null);
+  const [jsonString, setJsonString] = useState<string>('');
+  const [resultCount, setResultCount] = useState<number>(0);
+  const [summary, setSummary] = useState<ResultSummary | null>(null);
+  const [queryRan, setQueryRan] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [lastFilteredDeals, setLastFilteredDeals] = useState<InvestigationDeal[]>([]);
+
+  // ── Fetch deals from API ──────────────────────────────────────────
+  const fetchDeals = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await dealService.getAdminDeals();
+      const raw = (response.deals || []) as unknown as InvestigationDeal[];
+      setDeals(raw);
+      setFetched(true);
+      toast.success(`Fetched ${raw.length} deals`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to fetch deals';
+      setError(msg);
+      toast.error('Failed to fetch deals');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Filter row management ─────────────────────────────────────────
+  const usedFields = new Set(filterRows.map(r => r.field));
+
+  const addFilterRow = () => {
+    const available = FILTER_FIELDS.filter(f => !usedFields.has(f.key));
+    if (available.length === 0) {
+      toast.info('All filters are already added');
+      return;
+    }
+    setFilterRows(prev => [
+      ...prev,
+      { id: nextRowId(), field: available[0].key, value: available[0].inputType === 'boolean' ? 'true' : '' },
+    ]);
+  };
+
+  const removeFilterRow = (id: string) => {
+    setFilterRows(prev => prev.filter(r => r.id !== id));
+  };
+
+  const updateFilterField = (id: string, newField: FilterFieldKey) => {
+    const config = FILTER_FIELDS.find(f => f.key === newField);
+    setFilterRows(prev =>
+      prev.map(r => r.id === id ? { ...r, field: newField, value: config?.inputType === 'boolean' ? 'true' : '' } : r)
+    );
+  };
+
+  const updateFilterValue = (id: string, value: string) => {
+    setFilterRows(prev => prev.map(r => r.id === id ? { ...r, value } : r));
+  };
+
+  const clearFilters = () => {
+    setFilterRows([]);
+    setResultData(null);
+    setJsonString('');
+    setResultCount(0);
+    setSummary(null);
+    setQueryRan(false);
+  };
+
+  // ── Run query ─────────────────────────────────────────────────────
+  const runQuery = () => {
+    if (!fetched || deals.length === 0) {
+      toast.error('Fetch deals first before running a query');
+      return;
+    }
+    const { result, filtered, count } = runInvestigationQuery(deals, filterRows);
+    const filters = buildFiltersFromRows(filterRows);
+    const hasReport = !!filters.report;
+    const hasUserReport = !!filters.userDealReport;
+    const hasSuggest = !!filters.suggestGatheringType;
+
+    setResultData(result);
+    setJsonString(JSON.stringify(result, null, 2));
+    setResultCount(count);
+    setSummary(extractSummary(filtered, result, count, hasReport, hasUserReport, hasSuggest));
+    setLastFilteredDeals(filtered);
+    setQueryRan(true);
+    setCopied(false);
+    setAiSummary('');
+  };
+
+  // ── Copy JSON ─────────────────────────────────────────────────────
+  const copyJson = async () => {
+    try {
+      await navigator.clipboard.writeText(jsonString);
+      setCopied(true);
+      toast.success('JSON copied to clipboard');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy');
+    }
+  };
+
+  // ── Generate AI Summary ───────────────────────────────────────────
+  const generateAiSummary = async () => {
+    if (!resultData || lastFilteredDeals.length === 0) {
+      toast.error('Run a query first');
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const filters = buildFiltersFromRows(filterRows);
+      const filtersForAi: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(filters)) {
+        if (v !== undefined && v !== false) {
+          filtersForAi[k] = v instanceof Date ? v.toISOString().split('T')[0] : v;
+        }
+      }
+
+      const dealsToSend = Array.isArray(resultData) ? resultData : lastFilteredDeals;
+      const response = await dealService.generateAiSummary(
+        dealsToSend as unknown[],
+        filtersForAi,
+        summary ? (summary as unknown as Record<string, unknown>) : undefined,
+      );
+
+      if (response.ok && response.summary) {
+        setAiSummary(response.summary);
+      } else {
+        toast.error(response.error || 'Failed to generate summary');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'AI summary failed';
+      toast.error(msg);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // ── Group filter fields by category for the select dropdown ───────
+  const fieldsByCategory = useMemo(() =>
+    FILTER_FIELDS.reduce<Record<string, typeof FILTER_FIELDS>>((acc, f) => {
+      if (!acc[f.category]) acc[f.category] = [];
+      acc[f.category].push(f);
+      return acc;
+    }, {}),
+    []);
+
+  const getFieldConfig = (key: FilterFieldKey) => FILTER_FIELDS.find(f => f.key === key);
+
+  // ── Render a filter value input based on field type ────────────────
+  const renderValueInput = (row: FilterRow) => {
+    const config = getFieldConfig(row.field);
+    if (!config) return null;
+
+    switch (config.inputType) {
+      case 'boolean':
+        return (
+          <div className="flex items-center gap-2 flex-1">
+            <Badge variant="success" className="text-xs">Active</Badge>
+            <span className="text-xs text-subtle dark:text-muted-foreground font-mono">{config.cliFlag}</span>
+          </div>
+        );
+      case 'text':
+        return (
+          <Input
+            type="text"
+            placeholder={config.placeholder || 'Enter value...'}
+            value={row.value}
+            onChange={(e) => updateFilterValue(row.id, e.target.value)}
+            className="flex-1 h-9 text-sm rounded-lg border-default dark:border-border bg-elevated dark:bg-card"
+          />
+        );
+      case 'number':
+        return (
+          <Input
+            type="number"
+            placeholder={config.placeholder || '0'}
+            value={row.value}
+            onChange={(e) => updateFilterValue(row.id, e.target.value)}
+            className="flex-1 h-9 text-sm rounded-lg border-default dark:border-border bg-elevated dark:bg-card"
+          />
+        );
+      case 'date':
+        return (
+          <Input
+            type="date"
+            value={row.value}
+            onChange={(e) => updateFilterValue(row.id, e.target.value)}
+            className="flex-1 h-9 text-sm rounded-lg border-default dark:border-border bg-elevated dark:bg-card"
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col pl-1">
+            <h1 className="text-xl font-semibold tracking-tight text-heading dark:text-foreground">
+              AgentX Investigations
+            </h1>
+            <p className="text-sm text-subtle dark:text-muted-foreground">
+              Query deals with filters and explore results interactively
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchDeals}
+            disabled={loading}
+            className="border-default dark:border-border text-subtle dark:text-muted-foreground hover:!bg-gray-100 hover:text-heading dark:hover:!bg-gray-700 dark:hover:text-foreground rounded-lg h-9 text-xs font-medium"
+          >
+            {loading ? (
+              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+            ) : (
+              <Database className="w-3.5 h-3.5 mr-1.5" />
+            )}
+            {fetched ? 'Refresh Deals' : 'Fetch Deals'}
+          </Button>
+          {fetched && (
+            <Badge variant="outline" className="text-xs h-7 px-2.5">
+              {deals.length} deals loaded
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* ── Error ──────────────────────────────────────────────────── */}
+      {error && (
+        <div className="rounded-lg border border-red-200 dark:border-red-500/20 bg-red-50/50 dark:bg-red-950/10 p-4">
+          <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Query Builder ──────────────────────────────────────────── */}
+      <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
+        <div className="px-5 py-4 border-b border-subtle dark:border-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-heading dark:text-foreground">Query Builder</h2>
+            {filterRows.length > 0 && (
+              <Badge variant="secondary" className="text-[11px] h-5 px-1.5">
+                {filterRows.length} filter{filterRows.length !== 1 ? 's' : ''}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {filterRows.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="h-8 text-xs text-subtle hover:text-red-600 dark:hover:text-red-400"
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                Clear All
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={runQuery}
+              disabled={!fetched || loading}
+              className="h-8 text-xs gap-1.5 bg-brand hover:bg-brand-hover text-white shadow-sm"
+            >
+              <Play className="w-3 h-3" />
+              Run Query
+            </Button>
+          </div>
+        </div>
+
+        <div className="px-5 py-4 space-y-3">
+          {filterRows.length === 0 && (
+            <div className="text-center py-6 text-subtle dark:text-muted-foreground">
+              <Filter className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">No filters added yet</p>
+              <p className="text-xs mt-1">Add filters to narrow down the results, or run without filters to get all deals</p>
+            </div>
+          )}
+
+          {filterRows.map((row) => {
+            const config = getFieldConfig(row.field);
+            return (
+              <div key={row.id} className="flex items-center gap-3 group">
+                <Select
+                  value={row.field}
+                  onValueChange={(val) => updateFilterField(row.id, val as FilterFieldKey)}
+                >
+                  <SelectTrigger className="w-56 h-9 text-xs rounded-lg border-default dark:border-border bg-elevated dark:bg-card shrink-0">
+                    <SelectValue>{config?.label || row.field}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(fieldsByCategory).map(([category, fields]) => (
+                      <SelectGroup key={category}>
+                        <SelectLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+                          {category}
+                        </SelectLabel>
+                        {fields.map(f => (
+                          <SelectItem
+                            key={f.key}
+                            value={f.key}
+                            disabled={usedFields.has(f.key) && f.key !== row.field}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{f.label}</span>
+                              <span className="text-[10px] text-muted-foreground font-mono">{f.cliFlag}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {renderValueInput(row)}
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeFilterRow(row.id)}
+                  className="h-9 w-9 p-0 shrink-0 text-subtle hover:text-red-600 dark:hover:text-red-400 opacity-60 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            );
+          })}
+
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={addFilterRow}
+              disabled={usedFields.size >= FILTER_FIELDS.length}
+              className="h-9 text-xs border-dashed border-[hsl(var(--icon-orange)/0.5)] bg-[hsl(var(--icon-orange)/0.08)] text-[hsl(var(--icon-orange))] hover:bg-[hsl(var(--icon-orange)/0.15)] hover:border-[hsl(var(--icon-orange)/0.7)] hover:text-[hsl(var(--icon-orange))]"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              Add Filter
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* ── Results ────────────────────────────────────────────────── */}
+      {queryRan && (
+        <>
+          {/* Summary Stats Panel - always visible */}
+          {summary && (
+            <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
+              <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-brand dark:text-primary" />
+                <h2 className="text-sm font-semibold text-heading dark:text-foreground">Summary</h2>
+              </div>
+              <div className="p-5 space-y-4">
+                {/* Row 1: Core metrics */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
+                  <StatCard
+                    label="Total Deals"
+                    value={summary.totalDeals}
+                    color="border-[hsl(var(--app-brand-muted)/0.3)] dark:border-primary/20 bg-brand-light/50 dark:bg-primary/5 text-brand dark:text-primary"
+                  />
+                  <StatCard
+                    label="Pipeline Value"
+                    value={`$${summary.pipelineValue.toLocaleString()}`}
+                    color="border-purple-200 dark:border-purple-500/20 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400"
+                  />
+                  <StatCard
+                    label="With Meetings"
+                    value={summary.dealsWithMeetings}
+                    color="border-cyan-200 dark:border-cyan-500/20 bg-cyan-50 dark:bg-cyan-950/20 text-cyan-700 dark:text-cyan-400"
+                  />
+                  <StatCard
+                    label="Unique Owners"
+                    value={summary.uniqueOwners}
+                    color="border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400"
+                  />
+                </div>
+                {/* Row 2: Classification breakdown */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <StatCard
+                    label="Lost"
+                    value={summary.lostDeals}
+                    color="border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400"
+                  />
+                  <StatCard
+                    label="Inactive (14d+)"
+                    value={summary.inactiveDeals}
+                    color="border-orange-200 dark:border-orange-500/20 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400"
+                  />
+                  <StatCard
+                    label="Zero Score"
+                    value={summary.zeroScoreDeals}
+                    color="border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400"
+                  />
+                  <StatCard
+                    label="Healthy"
+                    value={summary.healthyDeals}
+                    color="border-green-200 dark:border-green-500/20 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400"
+                  />
+                  <StatCard
+                    label="Action Needed"
+                    value={summary.actionNeeded}
+                    color="border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400"
+                  />
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* AI Insights */}
+          <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
+            <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <h2 className="text-sm font-semibold text-heading dark:text-foreground">AI Insights</h2>
+                <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-mono text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-500/30">
+                  DeepSeek
+                </Badge>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={generateAiSummary}
+                disabled={true}
+                className="h-8 text-xs gap-1.5 border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+              >
+                {aiLoading ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3 h-3" />
+                )}
+                {aiLoading ? 'Analyzing...' : aiSummary ? 'Regenerate' : 'Generate Summary'}
+              </Button>
+            </div>
+            <div className="px-5 py-4">
+              {aiLoading && (
+                <div className="flex items-center gap-3 text-subtle dark:text-muted-foreground py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
+                  <div>
+                    <p className="text-sm font-medium text-heading dark:text-foreground">Analyzing {resultCount} deals...</p>
+                    <p className="text-xs mt-0.5">DeepSeek is generating insights from your filtered data</p>
+                  </div>
+                </div>
+              )}
+              {!aiLoading && !aiSummary && (
+                <div className="text-center py-6 text-subtle dark:text-muted-foreground">
+                  <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">AI-powered insights coming soon</p>
+                  <p className="text-xs mt-1">DeepSeek will analyze your filtered deals and provide actionable recommendations</p>
+                </div>
+              )}
+              {!aiLoading && aiSummary && (
+                <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-body dark:text-foreground [&_ul]:space-y-1.5 [&_li]:leading-relaxed [&_strong]:text-heading dark:[&_strong]:text-foreground [&_p]:my-2">
+                  {aiSummary.split('\n').map((line, i) => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return null;
+                    if (trimmed.startsWith('# ')) return <h3 key={i} className="text-base font-semibold mt-3 mb-1">{trimmed.slice(2)}</h3>;
+                    if (trimmed.startsWith('## ')) return <h4 key={i} className="text-sm font-semibold mt-3 mb-1">{trimmed.slice(3)}</h4>;
+                    if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
+                      const content = trimmed.slice(2);
+                      return (
+                        <div key={i} className="flex gap-2 py-0.5">
+                          <span className="text-amber-500 mt-0.5 shrink-0">•</span>
+                          <span dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                        </div>
+                      );
+                    }
+                    return <p key={i} dangerouslySetInnerHTML={{ __html: trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />;
+                  })}
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Interactive JSON Viewer */}
+          <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
+            <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                <h2 className="text-sm font-semibold text-heading dark:text-foreground">JSON Output</h2>
+                <Badge variant="outline" className="text-[11px] h-5 px-1.5 font-mono">
+                  {resultCount} {resultCount === 1 ? 'deal' : 'deals'}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={copyJson}
+                  disabled={!jsonString}
+                  className="h-8 text-xs gap-1.5 border-default dark:border-border"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3 h-3 text-green-600" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardCopy className="w-3 h-3" />
+                      Copy JSON
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={runQuery}
+                  disabled={!fetched}
+                  className="h-8 text-xs gap-1.5"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Re-run
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-auto max-h-[70vh] rounded-b-lg">
+              <JsonView
+                value={resultData as object}
+                style={jsonViewTheme}
+                collapsed={2}
+                displayDataTypes={false}
+                enableClipboard={true}
+              />
+            </div>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default AgentXInvestigations;

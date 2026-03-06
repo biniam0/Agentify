@@ -14,6 +14,7 @@ import {
   HelpCircle,
   MessageSquare,
   Phone,
+  SearchCode,
   Settings,
   Target,
   Timer,
@@ -59,6 +60,11 @@ const mainNavItems = [
     title: 'BarrierX Info',
     url: '/admin/barrierx-info',
     icon: Target,
+  },
+  {
+    title: 'Investigations',
+    url: '/admin/agentx-investigations',
+    icon: SearchCode,
   },
   {
     title: 'Workflows',

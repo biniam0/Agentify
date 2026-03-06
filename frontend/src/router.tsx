@@ -27,6 +27,7 @@ import SchedulerLog from './components/Admin/SchedulerLog';
 import ErrorsLog from './components/Admin/ErrorsLog';
 import BarrierXInfo from './pages/Admin/BarrierXInfo';
 import ClientsDeals from './pages/Admin/ClientsDeals';
+import AgentXInvestigations from './pages/Admin/AgentXInvestigations';
 
 const router = createBrowserRouter([
   {
@@ -111,6 +112,10 @@ const router = createBrowserRouter([
       {
         path: 'barrierx-info',
         element: <BarrierXInfo />,
+      },
+      {
+        path: 'agentx-investigations',
+        element: <AgentXInvestigations />,
       },
       {
         path: 'workflows',
