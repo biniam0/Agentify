@@ -26,6 +26,33 @@ export interface DealWorkflowStatus {
   lastCallDate: string;
 }
 
+export interface DealInsight {
+  whyLost: string;
+  competitor: string;
+  whatToDoNext: string;
+}
+
+export interface AiAnalysis {
+  summary: string;
+  impact: string;
+  recommendation: string;
+}
+
+export interface NextStepCard {
+  id: string;
+  title: string;
+  description: string;
+  icon: 'search' | 'document' | 'calendar';
+}
+
+export interface TimelineEvent {
+  id: string;
+  title: string;
+  description: string;
+  timestamp?: string;
+  completed: boolean;
+}
+
 export interface V2Deal {
   id: string;
   companyName: string;
@@ -39,4 +66,15 @@ export interface V2Deal {
   nextStep: string;
   contact: DealContact;
   workflowStatus: DealWorkflowStatus;
+  dealExternalId?: string;
+  conversationId?: string;
+  duration?: string;
+  analysisTag?: string;
+  dealOutcome?: string;
+  dealOutcomeReason?: string;
+  insight?: DealInsight;
+  aiAnalysis?: AiAnalysis;
+  recommendedNextSteps?: NextStepCard[];
+  timeline?: TimelineEvent[];
+  totalTimelineEvents?: number;
 }

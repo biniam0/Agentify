@@ -6,6 +6,7 @@ import AlertBanner from './components/AlertBanner';
 import StatsCards from './components/StatsCards';
 import WorkflowActions from './components/WorkflowActions';
 import ActiveDealsSection from './components/ActiveDealsSection';
+import DealDetailModal from './components/DealDetailModal';
 import type { V2Deal } from './data/types';
 
 const V2DashboardPage = () => {
@@ -22,11 +23,8 @@ const V2DashboardPage = () => {
       <WorkflowActions />
       <ActiveDealsSection onViewDetails={setSelectedDeal} />
 
-      {/* Phase 4: Deal Detail Modal */}
       {selectedDeal && (
-        <div className="hidden">
-          {/* DealDetailModal will replace this placeholder in Phase 4 */}
-        </div>
+        <DealDetailModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
       )}
     </div>
   );

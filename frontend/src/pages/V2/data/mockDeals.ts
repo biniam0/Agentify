@@ -20,6 +20,35 @@ export const MOCK_DEALS: V2Deal[] = [
       current: 'Lost Deal Analysis',
       lastCallDate: 'Feb 12, 2026',
     },
+    dealExternalId: '428141796558',
+    conversationId: 'conv_3901kk9k4on...',
+    duration: '1m 4s',
+    analysisTag: 'Lost Deal Analysis',
+    dealOutcome: 'Deal Lost',
+    dealOutcomeReason: 'Internal decision (economic buyer)',
+    insight: {
+      whyLost: 'No scope and little understanding of how the platform concept works.',
+      competitor: 'Internal decision (economic buyer)',
+      whatToDoNext: 'Get the economic buyer to the table faster.',
+    },
+    aiAnalysis: {
+      summary:
+        'Deal lost due to a lack of scope and insufficient understanding of the platform concept by the economic buyer. The contact indicated that the decision-maker was never properly engaged during the sales process.',
+      impact:
+        'Missed opportunity to educate the economic buyer early — similar pattern seen in 3 other lost deals this quarter.',
+      recommendation:
+        'Introduce an executive briefing step before proposal stage to align economic buyers on platform value.',
+    },
+    recommendedNextSteps: [
+      { id: '1', title: 'Review Similar Deal', description: 'Find deals lost to internal decisions', icon: 'search' },
+      { id: '2', title: 'Update Sales Playbook', description: 'Add executive briefing step', icon: 'document' },
+      { id: '3', title: 'Schedule Team Review', description: 'Discuss pattern with sales team', icon: 'calendar' },
+    ],
+    timeline: [
+      { id: '1', title: 'Scheduler Job Run', description: 'Feb 12, 2026 14:05:00', completed: true },
+      { id: '2', title: 'Invite your team', description: 'Start collaborating with your team', completed: false },
+    ],
+    totalTimelineEvents: 7,
   },
   {
     id: '2',
