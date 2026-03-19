@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ArrowRight, ArrowDown, Mail, Phone, Calendar } from 'lucide-react';
+import { ChevronDown, ArrowRight, ArrowDown, Mail, Phone, Calendar, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { V2Deal, DealStatus, RiskLevel } from '../data/types';
 
@@ -14,13 +14,19 @@ const STATUS_STYLES: Record<DealStatus, string> = {
 
 const RISK_BAR_COLOR: Record<RiskLevel, string> = {
   'Low risk': 'bg-emerald-500',
-  'Medium risk': 'bg-orange-400',
-  'High risk': 'bg-red-500',
+  'Medium risk': 'bg-orange-500',
+  'High risk': 'bg-red-600',
 };
 
 const RISK_TEXT_COLOR: Record<RiskLevel, string> = {
-  'Low risk': 'text-emerald-700',
-  'Medium risk': 'text-orange-600',
+  'Low risk': 'text-gray-500',
+  'Medium risk': 'text-gray-500',
+  'High risk': 'text-gray-500',
+};
+
+const RISK_SCORE_COLOR: Record<RiskLevel, string> = {
+  'Low risk': 'text-emerald-500',
+  'Medium risk': 'text-orange-500',
   'High risk': 'text-red-600',
 };
 
@@ -37,7 +43,10 @@ const CompanyAvatar = ({ name, color }: { name: string; color: string }) => (
     className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
     style={{ backgroundColor: color }}
   >
-    {name.charAt(0)}
+    {/* Abstract logo placeholder matching the screenshot */}
+    <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 opacity-90">
+      <path d="M12 2L2 12L12 22L22 12L12 2Z" fill="currentColor" fillOpacity="0.8" />
+    </svg>
   </div>
 );
 
@@ -47,46 +56,52 @@ interface ExpandedRowProps {
 }
 
 const ExpandedRow = ({ deal, onViewDetails }: ExpandedRowProps) => (
-  <tr className="bg-gray-50 border-b border-gray-100">
-    <td colSpan={6} className="px-5 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-12">
+  <tr className="bg-white">
+    <td colSpan={6} className="px-5 pb-5 pt-2 relative">
+      {/* Red line indicator for expanded row */}
+      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#B3261E]" />
+      
+      <div className="flex items-center justify-between pl-4 border border-default rounded-xl p-5 shadow-sm ml-2">
+        <div className="flex items-center gap-24">
           <div>
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-              Contact Info
+            <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
+              CONTACT INFO
             </p>
-            <p className="text-sm font-medium text-gray-900 mb-2">{deal.contact.name}</p>
+            <p className="text-[15px] font-medium text-heading mb-3">{deal.contact.name}</p>
             <div className="flex items-center gap-2">
-              <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
-                <Mail className="h-3 w-3" />
+              <button className="inline-flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
+                <Mail className="h-4 w-4 text-subtle" />
                 Email
               </button>
-              <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
-                <Phone className="h-3 w-3" />
+              <button className="inline-flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
+                <Phone className="h-4 w-4 text-subtle" />
                 Call
               </button>
             </div>
           </div>
 
           <div>
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-              Workflow Status
+            <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
+              WORKFLOW STATUS
             </p>
-            <p className="text-sm font-medium text-gray-900 mb-1">
+            <p className="text-[15px] font-medium text-heading mb-3">
               Current: {deal.workflowStatus.current}
             </p>
-            <p className="text-xs text-gray-500 flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              Call completed {deal.workflowStatus.lastCallDate}
-            </p>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-md">
+              <Calendar className="h-3.5 w-3.5 text-subtle" />
+              <span className="text-xs font-medium text-body">
+                Call completed {deal.workflowStatus.lastCallDate}
+              </span>
+            </div>
           </div>
         </div>
 
         <button
           onClick={() => onViewDetails(deal)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors shadow-sm"
         >
-          + View full details
+          <Plus className="h-4 w-4" />
+          View full details
         </button>
       </div>
     </td>
@@ -120,27 +135,27 @@ const DealsTable = ({ deals, onViewDetails }: DealsTableProps) => {
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-gray-200">
+          <tr className="border-b border-default">
             <th className="w-10" />
-            <th className="text-left py-3 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="text-left py-3 px-3 text-xs font-semibold text-subtle uppercase tracking-wider">
               Company & Deal
             </th>
-            <th className="text-left py-3 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="text-left py-3 px-3 text-xs font-semibold text-subtle uppercase tracking-wider">
               <button
                 onClick={() => handleSort('status')}
-                className="inline-flex items-center gap-1 hover:text-gray-700 transition-colors"
+                className="inline-flex items-center gap-1 hover:text-heading transition-colors"
               >
                 Status
                 <ArrowDown className={cn('h-3 w-3', sortField === 'status' && sortDir === 'asc' && 'rotate-180')} />
               </button>
             </th>
-            <th className="text-left py-3 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="text-left py-3 px-3 text-xs font-semibold text-subtle uppercase tracking-wider">
               Value
             </th>
-            <th className="text-left py-3 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="text-left py-3 px-3 text-xs font-semibold text-subtle uppercase tracking-wider">
               Barrier Score
             </th>
-            <th className="text-left py-3 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="text-left py-3 px-3 text-xs font-semibold text-subtle uppercase tracking-wider">
               Next step
             </th>
           </tr>
@@ -174,65 +189,67 @@ interface DealRowProps {
 
 const DealRow = ({ deal, isExpanded, onToggle, onViewDetails }: DealRowProps) => (
   <>
-    <tr
-      className={cn(
-        'border-b border-gray-100 hover:bg-gray-50/50 transition-colors cursor-pointer',
-        isExpanded && 'bg-gray-50/50'
-      )}
-      onClick={onToggle}
-    >
-      <td className="py-3.5 pl-4 pr-1">
+  <tr
+    className={cn(
+      'border-b border-default hover:bg-gray-50/50 transition-colors cursor-pointer',
+      isExpanded && 'bg-white border-b-0'
+    )}
+    onClick={onToggle}
+  >
+      <td className="py-4 pl-4 pr-1 relative">
+        {/* Red line indicator for expanded row */}
+        {isExpanded && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#B3261E]" />}
         <ChevronDown
           className={cn(
-            'h-4 w-4 text-gray-400 transition-transform',
+            'h-4 w-4 text-subtle transition-transform',
             isExpanded && 'rotate-180'
           )}
         />
       </td>
-      <td className="py-3.5 px-3">
+      <td className="py-4 px-3">
         <div className="flex items-center gap-3">
           <CompanyAvatar name={deal.companyName} color={deal.companyLogoColor} />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">{deal.companyName}</p>
-            <p className="text-xs text-gray-500 truncate">{deal.companySubtitle}</p>
+            <p className="text-sm font-medium text-heading truncate">{deal.companyName}</p>
+            <p className="text-xs text-subtle truncate">{deal.companySubtitle}</p>
           </div>
         </div>
       </td>
-      <td className="py-3.5 px-3">
+      <td className="py-4 px-3">
         <span className={cn('inline-flex px-2.5 py-1 text-xs font-medium rounded-full', STATUS_STYLES[deal.status])}>
           {deal.status}
         </span>
       </td>
-      <td className="py-3.5 px-3">
-        <span className="text-sm font-medium text-gray-900">{formatCurrency(deal.value)}</span>
+      <td className="py-4 px-3">
+        <span className="text-sm font-medium text-heading">{formatCurrency(deal.value)}</span>
       </td>
-      <td className="py-3.5 px-3">
-        <div className="flex items-center gap-3">
-          <div>
+      <td className="py-4 px-3">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between w-32">
             <span className={cn('text-xs font-medium', RISK_TEXT_COLOR[deal.riskLevel])}>
               {deal.riskLevel}
             </span>
+            <span className={cn('text-xs font-semibold text-right', RISK_SCORE_COLOR[deal.riskLevel])}>
+              {deal.barrierScore}
+            </span>
           </div>
-          <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="w-32 h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className={cn('h-full rounded-full', RISK_BAR_COLOR[deal.riskLevel])}
               style={{ width: `${deal.barrierScore}%` }}
             />
           </div>
-          <span className={cn('text-sm font-semibold min-w-[2ch] text-right', RISK_TEXT_COLOR[deal.riskLevel])}>
-            {deal.barrierScore}
-          </span>
         </div>
       </td>
-      <td className="py-3.5 px-3">
+      <td className="py-4 px-3">
         <button
           onClick={(e) => {
             e.stopPropagation();
           }}
-          className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors group"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
         >
           {deal.nextStep}
-          <ArrowRight className="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+          <ArrowRight className="h-3.5 w-3.5 text-subtle" />
         </button>
       </td>
     </tr>

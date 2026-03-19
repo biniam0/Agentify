@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { Plus } from 'lucide-react';
 import DealsSearchBar from './DealsSearchBar';
 import DealsFilterTabs from './DealsFilterTabs';
 import DealsTable from './DealsTable';
@@ -33,10 +32,6 @@ const ActiveDealsSection = ({ onViewDetails }: ActiveDealsSectionProps) => {
             Manage and track your ongoing opportunities.
           </p>
         </div>
-        <button className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 border border-emerald-600 hover:bg-emerald-50 px-3.5 py-2 rounded-lg transition-colors">
-          <Plus className="h-4 w-4" />
-          Add workflow
-        </button>
       </div>
 
       <DealsSearchBar onSearch={setSearchQuery} />

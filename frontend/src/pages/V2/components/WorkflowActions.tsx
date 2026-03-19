@@ -1,5 +1,4 @@
 import { Play, Plus, Info, Send, FileText, PhoneOutgoing } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 interface Workflow {
@@ -8,7 +7,6 @@ interface Workflow {
   description: string;
   readyCount: number;
   icon: React.ReactNode;
-  iconBg: string;
 }
 
 const WORKFLOWS: Workflow[] = [
@@ -17,39 +15,36 @@ const WORKFLOWS: Workflow[] = [
     title: 'Initial Outreach',
     description: 'Send intro emails and schedule first calls.',
     readyCount: 12,
-    icon: <PhoneOutgoing className="h-4 w-4 text-emerald-600" />,
-    iconBg: 'bg-emerald-100',
+    icon: <PhoneOutgoing className="h-4 w-4 text-brand" />,
   },
   {
     id: 'follow-up',
     title: 'Follow-up Sequence',
     description: 'Automated follow-ups for unresponsive leads.',
     readyCount: 5,
-    icon: <Send className="h-4 w-4 text-violet-600" />,
-    iconBg: 'bg-violet-100',
+    icon: <Send className="h-4 w-4 text-brand" />,
   },
   {
     id: 'contract-negotiation',
     title: 'Contract Negotiation',
     description: 'Prepare and send standard contract templates.',
     readyCount: 3,
-    icon: <FileText className="h-4 w-4 text-orange-500" />,
-    iconBg: 'bg-orange-100',
+    icon: <FileText className="h-4 w-4 text-brand" />,
   },
 ];
 
 const WorkflowCard = ({ workflow }: { workflow: Workflow }) => (
-  <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col">
-    <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center mb-4', workflow.iconBg)}>
+  <div className="bg-white rounded-xl border border-default p-5 flex flex-col">
+    <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-4 bg-brand-light">
       {workflow.icon}
     </div>
 
-    <h3 className="text-sm font-semibold text-gray-900 mb-1">{workflow.title}</h3>
-    <p className="text-sm text-gray-500 mb-4 flex-1">{workflow.description}</p>
+    <h3 className="text-sm font-semibold text-heading mb-1">{workflow.title}</h3>
+    <p className="text-sm text-subtle mb-4 flex-1">{workflow.description}</p>
 
-    <p className="text-xs font-medium text-emerald-600 mb-3">{workflow.readyCount} deals ready</p>
+    <p className="text-xs font-medium text-brand mb-3">{workflow.readyCount} deals ready</p>
 
-    <button className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+    <button className="w-full flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
       <Play className="h-3.5 w-3.5 fill-current" />
       Run workflow
     </button>
@@ -63,7 +58,7 @@ const WorkflowActions = () => {
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-gray-900">Workflow Actions</h2>
+          <h2 className="text-lg font-semibold text-heading">Workflow Actions</h2>
           <div className="relative">
             <button
               onMouseEnter={() => setShowTooltip(true)}

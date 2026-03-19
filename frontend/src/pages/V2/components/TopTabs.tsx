@@ -15,16 +15,16 @@ interface TopTabsProps {
 
 const TopTabs = ({ activeTab, onTabChange }: TopTabsProps) => {
   return (
-    <div className="inline-flex border border-gray-200 rounded-lg overflow-hidden mb-6 bg-white">
+    <div className="flex bg-gray-50/50 p-1 border border-gray-200 rounded-xl mb-6">
       {TABS.map((tab) => (
         <button
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
           className={cn(
-            'px-8 py-3 text-sm font-medium transition-colors border-r border-gray-200 last:border-r-0',
+            'flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all',
             activeTab === tab.id
-              ? 'bg-gray-900 text-white'
-              : 'bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+              ? 'bg-white text-gray-900 shadow-sm border border-gray-200/50'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'
           )}
         >
           {tab.label}
