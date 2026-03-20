@@ -45,7 +45,7 @@ const WorkflowCard = ({ workflow }: { workflow: Workflow }) => (
     <p className="text-xs font-medium text-brand mb-3">{workflow.readyCount} deals ready</p>
 
     <button className="w-full flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
-      <Play className="h-3.5 w-3.5 fill-current" />
+      <Play className="h-3.5 w-3.5" />
       Run workflow
     </button>
   </div>

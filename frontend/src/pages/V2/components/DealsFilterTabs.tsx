@@ -17,7 +17,7 @@ const DealsFilterTabs = () => {
   const activeTab = location.pathname.split('/v2/')[1] || 'calls';
 
   return (
-    <div className="flex gap-0 border-b border-gray-200">
+    <div className="flex gap-0 border-b border-default mb-6 relative">
       {FILTER_TABS.map((tab) => (
         <button
           key={tab.id}
@@ -25,13 +25,13 @@ const DealsFilterTabs = () => {
           className={cn(
             'px-4 py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap',
             activeTab === tab.id
-              ? 'text-emerald-600'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'text-brand'
+              : 'text-subtle hover:text-heading'
           )}
         >
           {tab.label}
           {activeTab === tab.id && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-full" />
+            <span className="absolute -bottom-[1px] left-0 right-0 h-0.5 bg-brand z-10" />
           )}
         </button>
       ))}

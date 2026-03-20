@@ -37,7 +37,7 @@ const ActiveDealsSection = ({ onViewDetails }: ActiveDealsSectionProps) => {
       <DealsSearchBar onSearch={setSearchQuery} />
       <DealsFilterTabs />
 
-      <div className="bg-white rounded-b-xl border border-t-0 border-gray-200">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <DealsTable deals={filteredDeals} onViewDetails={onViewDetails} />
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { Search, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface DealsSearchBarProps {
   onSearch?: (query: string) => void;
@@ -16,7 +17,7 @@ const DealsSearchBar = ({ onSearch }: DealsSearchBarProps) => {
   return (
     <div className="flex items-center justify-between gap-4 mb-4">
       <div className="relative flex-1 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 text-bold" />
         <input
           type="text"
           value={query}
@@ -27,18 +28,18 @@ const DealsSearchBar = ({ onSearch }: DealsSearchBarProps) => {
       </div>
 
       <div className="flex items-center gap-2">
-        <button className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+        <Button variant="outline" className="gap-1.5 px-3 py-2.5 h-auto text-sm text-gray-600 bg-white border-gray-200 rounded-lg hover:bg-gray-50 font-normal">
           Status
           <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
-        </button>
-        <button className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+        </Button>
+        <Button variant="outline" className="gap-1.5 px-3 py-2.5 h-auto text-sm text-gray-600 bg-white border-gray-200 rounded-lg hover:bg-gray-50 font-normal">
           Workflow
           <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
-        </button>
-        <button className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+        </Button>
+        <Button variant="outline" className="gap-1.5 px-3 py-2.5 h-auto text-sm text-gray-600 bg-white border-gray-200 rounded-lg hover:bg-gray-50 font-normal">
           <SlidersHorizontal className="h-3.5 w-3.5" />
           More filters
-        </button>
+        </Button>
       </div>
     </div>
   );
