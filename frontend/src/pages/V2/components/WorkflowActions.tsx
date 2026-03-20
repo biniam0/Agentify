@@ -51,7 +51,7 @@ const WorkflowCard = ({ workflow }: { workflow: Workflow }) => (
   </div>
 );
 
-const WorkflowActions = () => {
+const WorkflowActions = ({ onAddWorkflow }: { onAddWorkflow?: () => void }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
   return (
@@ -75,7 +75,10 @@ const WorkflowActions = () => {
             )}
           </div>
         </div>
-        <button className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 border border-emerald-600 hover:bg-emerald-50 px-3.5 py-2 rounded-lg transition-colors">
+        <button 
+          onClick={onAddWorkflow}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-brand hover:bg-brand-hover px-3.5 py-2 rounded-lg transition-colors"
+        >
           <Plus className="h-4 w-4" />
           Add workflow
         </button>

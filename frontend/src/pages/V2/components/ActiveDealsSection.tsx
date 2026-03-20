@@ -7,6 +7,7 @@ import type { V2Deal } from '../data/types';
 
 interface ActiveDealsSectionProps {
   onViewDetails: (deal: V2Deal) => void;
+  onAddWorkflow?: () => void;
 }
 
 const ActiveDealsSection = ({ onViewDetails }: ActiveDealsSectionProps) => {
