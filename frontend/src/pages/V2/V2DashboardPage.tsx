@@ -5,14 +5,14 @@ import TopTabs, { type TopTabId } from './components/TopTabs';
 import AlertBanner from './components/AlertBanner';
 import StatsCards from './components/StatsCards';
 import WorkflowActions from './components/WorkflowActions';
-import ActiveDealsSection from './components/ActiveDealsSection';
-import DealDetailModal from './components/DealDetailModal';
+import CallsSection from './components/CallsSection';
+import CallDetailModal from './components/CallDetailModal';
 import AddWorkflowModal from './components/AddWorkflowModal';
-import type { V2Deal } from './data/types';
+import type { CallLog } from '@/services/loggingService';
 
 const V2DashboardPage = () => {
   const [activeTopTab, setActiveTopTab] = useState<TopTabId>('deals-overview');
-  const [selectedDeal, setSelectedDeal] = useState<V2Deal | null>(null);
+  const [selectedCall, setSelectedCall] = useState<CallLog | null>(null);
   const [isAddWorkflowOpen, setIsAddWorkflowOpen] = useState(false);
   const user = authService.getUser();
 
@@ -23,10 +23,10 @@ const V2DashboardPage = () => {
       <AlertBanner />
       <StatsCards />
       <WorkflowActions onAddWorkflow={() => setIsAddWorkflowOpen(true)} />
-      <ActiveDealsSection onViewDetails={setSelectedDeal} onAddWorkflow={() => setIsAddWorkflowOpen(true)} />
+      <CallsSection onViewDetails={setSelectedCall} />
 
-      {selectedDeal && (
-        <DealDetailModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
+      {selectedCall && (
+        <CallDetailModal log={selectedCall} onClose={() => setSelectedCall(null)} />
       )}
 
       {isAddWorkflowOpen && (
