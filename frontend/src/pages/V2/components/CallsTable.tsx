@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ArrowRight, ArrowDown, Mail, Phone, Calendar, Plus, Clock } from 'lucide-react';
+import { ChevronDown, ArrowRight, ArrowDown, Mail, Phone, Calendar, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -59,24 +59,24 @@ const CallAvatar = ({ id }: { id: string }) => {
     <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
       {svgIndex === 0 && (
         <svg width="36" height="36" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="40" height="40" rx="20" fill="#F3F0FF"/>
-          <path d="M20 12V16M20 24V28M12 20H16M24 20H28M14.3431 14.3431L17.1716 17.1716M22.8284 22.8284L25.6569 25.6569M14.3431 25.6569L17.1716 22.8284M22.8284 17.1716L25.6569 14.3431M16 12L18 16M24 28L22 24M12 24L16 22M28 16L24 18M13 17L16.5 18.5M27 23L23.5 21.5M17 27L18.5 23.5M23 13L21.5 16.5" stroke="#6D28D9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          <circle cx="20" cy="20" r="3" fill="#6D28D9"/>
+          <rect width="40" height="40" rx="20" fill="#F3F0FF" />
+          <path d="M20 12V16M20 24V28M12 20H16M24 20H28M14.3431 14.3431L17.1716 17.1716M22.8284 22.8284L25.6569 25.6569M14.3431 25.6569L17.1716 22.8284M22.8284 17.1716L25.6569 14.3431M16 12L18 16M24 28L22 24M12 24L16 22M28 16L24 18M13 17L16.5 18.5M27 23L23.5 21.5M17 27L18.5 23.5M23 13L21.5 16.5" stroke="#6D28D9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="20" cy="20" r="3" fill="#6D28D9" />
         </svg>
       )}
       {svgIndex === 1 && (
         <svg width="36" height="36" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="40" height="40" rx="20" fill="transparent"/>
-          <circle cx="18" cy="18" r="6" fill="#2563EB"/>
-          <circle cx="22" cy="22" r="6" fill="#3B82F6" fillOpacity="0.9"/>
+          <rect width="40" height="40" rx="20" fill="transparent" />
+          <circle cx="18" cy="18" r="6" fill="#2563EB" />
+          <circle cx="22" cy="22" r="6" fill="#3B82F6" fillOpacity="0.9" />
         </svg>
       )}
       {svgIndex === 2 && (
         <svg width="36" height="36" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="40" height="40" rx="20" fill="#F5F3FF"/>
-          <path d="M14 14L26 14L26 26L14 26Z" fill="#4F46E5"/>
-          <path d="M20 12L28 20L20 28L12 20L20 12Z" fill="#4F46E5"/>
-          <circle cx="20" cy="20" r="4" fill="white"/>
+          <rect width="40" height="40" rx="20" fill="#F5F3FF" />
+          <path d="M14 14L26 14L26 26L14 26Z" fill="#4F46E5" />
+          <path d="M20 12L28 20L20 28L12 20L20 12Z" fill="#4F46E5" />
+          <circle cx="20" cy="20" r="4" fill="white" />
         </svg>
       )}
     </div>
@@ -95,50 +95,40 @@ const ExpandedCallRow = ({ log, onViewDetails }: ExpandedCallRowProps) => (
         <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#DB475D]" />
 
         <div className="flex items-center justify-between pl-4 border border-default rounded-lg p-5 shadow-sm ml-2">
-          <div className="flex items-center gap-24">
-            <div>
-              <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
-                CONTACT INFO
-              </p>
-              <p className="text-[15px] font-medium text-heading mb-1">{log.ownerName || log.userName}</p>
-              <p className="text-xs text-subtle mb-3">{log.phoneNumber}</p>
-              <div className="flex items-center gap-2">
-                <button className="inline-flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
-                  <Mail className="h-4 w-4 text-subtle" />
-                  Email
-                </button>
-                <button className="inline-flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
-                  <Phone className="h-4 w-4 text-subtle" />
-                  Call
-                </button>
-              </div>
+          <div>
+            <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
+              CONTACT INFO
+            </p>
+            <p className="text-[15px] font-medium text-heading mb-1">{log.ownerName || log.userName}</p>
+            {/* <p className="text-xs text-subtle mb-3">{log.phoneNumber}</p> */}
+            <div className="flex items-center gap-2 mt-3">
+              <button className="inline-flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
+                <Mail className="h-4 w-4 text-subtle" />
+                Email
+              </button>
+              <button className="inline-flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
+                <Phone className="h-4 w-4 text-subtle" />
+                Call
+              </button>
             </div>
+          </div>
 
-            <div>
-              <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
-                CALL STATUS
-              </p>
-              <p className="text-[15px] font-medium text-heading mb-1">
-                {log.triggerSource} &middot; {log.callType.replace('_', ' ')}
-              </p>
-              <div className="flex items-center gap-2">
-                {log.completedAt && (
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-md">
-                    <Calendar className="h-3.5 w-3.5 text-subtle" />
-                    <span className="text-xs font-medium text-body">
-                      Completed {formatTimestamp(log.completedAt)}
-                    </span>
-                  </div>
-                )}
-                {log.duration && (
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-md">
-                    <Clock className="h-3.5 w-3.5 text-subtle" />
-                    <span className="text-xs font-medium text-body">
-                      {formatDuration(log.duration)}
-                    </span>
-                  </div>
-                )}
-              </div>
+          <div>
+            <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
+              WORKFLOW STATUS
+            </p>
+            <p className="text-[15px] font-medium text-heading mb-3">
+              Current: {log.callType.replace('_', ' ')}
+            </p>
+            <div className="flex items-center gap-2">
+              {log.completedAt && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-md">
+                  <Calendar className="h-3.5 w-3.5 text-subtle" />
+                  <span className="text-xs font-medium text-body">
+                    Call completed {formatTimestamp(log.completedAt)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
