@@ -12,10 +12,13 @@ import InfoGatheringSection from './components/InfoGatheringSection';
 import InfoGatheringDetailModal from './components/InfoGatheringDetailModal';
 import ClientsDealsSection from './components/ClientsDealsSection';
 import ClientsDealDetailModal from './components/ClientsDealDetailModal';
+import ClientsMeetingsSection from './components/ClientsMeetingsSection';
+import ClientsMeetingDetailModal from './components/ClientsMeetingDetailModal';
 import AddWorkflowModal from './components/AddWorkflowModal';
 import type { CallLog } from '@/services/loggingService';
 import type { BarrierXInfoRecord } from './components/InfoGatheringTable';
 import type { Deal } from '@/services/dealService';
+import type { Meeting } from '@/types';
 
 const V2DashboardPage = () => {
   const location = useLocation();
@@ -23,14 +26,19 @@ const V2DashboardPage = () => {
   const [selectedCall, setSelectedCall] = useState<CallLog | null>(null);
   const [selectedInfoRecord, setSelectedInfoRecord] = useState<BarrierXInfoRecord | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [isAddWorkflowOpen, setIsAddWorkflowOpen] = useState(false);
   const user = authService.getUser();
 
   const pathname = location.pathname;
   const isInfoGatheringTab = pathname.includes('/info-gatherings');
   const isClientsDealsTab = pathname.includes('/clients-deals');
+  const isClientsMeetingsTab = pathname.includes('/clients-meetings');
 
   const renderActiveSection = () => {
+    if (isClientsMeetingsTab) {
+      return <ClientsMeetingsSection onViewDetails={setSelectedMeeting} />;
+    }
     if (isClientsDealsTab) {
       return <ClientsDealsSection onViewDetails={setSelectedDeal} />;
     }
@@ -60,6 +68,10 @@ const V2DashboardPage = () => {
 
       {selectedDeal && (
         <ClientsDealDetailModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
+      )}
+
+      {selectedMeeting && (
+        <ClientsMeetingDetailModal meeting={selectedMeeting} onClose={() => setSelectedMeeting(null)} />
       )}
 
       {isAddWorkflowOpen && (
