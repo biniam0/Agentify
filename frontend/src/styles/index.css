@@ -78,10 +78,10 @@
     --border-default: 213 27% 84%;         /* = slate-200 */
     
     /* Brand Color (emerald theme) */
-    --app-brand: 160 84% 39%;              /* = emerald-600 */
-    --app-brand-hover: 160 84% 34%;        /* = emerald-700 */
-    --app-brand-light: 152 81% 96%;        /* = emerald-50 */
-    --app-brand-muted: 156 72% 67%;        /* = emerald-400 */
+    --app-brand: 152 32% 48%;              /* = #53A17D */
+    --app-brand-hover: 152 32% 43%;        /* slightly darker for hover */
+    --app-brand-light: 152 32% 96%;        /* light tint */
+    --app-brand-muted: 152 32% 67%;        /* muted tint */
     
     /* Status Badge Colors */
     --status-success-bg: 142 76% 36%;
@@ -100,6 +100,13 @@
     --icon-green: 142 71% 45%;             /* = green-500 */
     --icon-purple: 271 81% 56%;            /* = purple-500 */
     --icon-orange: 24.6 95% 53.1%;         /* = orange-500 */
+    
+    /* Alert Banner Colors */
+    --alert-bg: 30 100% 98%;
+    --alert-border: 30 80% 85%;
+    --alert-icon-bg: 30 100% 94%;
+    --alert-primary: 25 100% 45%;
+    --alert-primary-hover: 25 100% 40%;
     
     /* Card Styling */
     --card-shadow: 0 2px 8px -3px rgb(0 0 0 / 0.06), 0 1px 3px -1px rgb(0 0 0 / 0.03);
@@ -168,10 +175,10 @@
     --border-default: 217 33% 24%;
     
     /* Brand (stays vibrant in dark) */
-    --app-brand: 160 84% 39%;
-    --app-brand-hover: 160 84% 45%;
-    --app-brand-light: 160 84% 15%;
-    --app-brand-muted: 156 72% 50%;
+    --app-brand: 152 32% 48%;
+    --app-brand-hover: 152 32% 53%;
+    --app-brand-light: 152 32% 15%;
+    --app-brand-muted: 152 32% 50%;
     
     /* Status Badge Colors (brighter for dark mode) */
     --status-success-text: 142 71% 55%;
@@ -185,6 +192,13 @@
     --icon-green: 142 71% 55%;
     --icon-purple: 271 81% 66%;
     --icon-orange: 24.6 95% 60%;
+    
+    /* Alert Banner Colors (Dark Mode) */
+    --alert-bg: 25 30% 15%;
+    --alert-border: 25 40% 25%;
+    --alert-icon-bg: 25 50% 20%;
+    --alert-primary: 25 90% 55%;
+    --alert-primary-hover: 25 90% 60%;
     
     /* Card Styling */
     --card-shadow: 0 6px 18px -4px rgb(0 0 0 / 0.3), 0 3px 6px -2px rgb(0 0 0 / 0.18);

@@ -15,6 +15,10 @@ import UserCallAnalytics from './pages/User/Logs/UserCallAnalytics';
 // Workflow imports
 import SimpleWorkflow from './pages/Workflows/SimpleWorkflow';
 
+// V2 imports
+import V2Layout from './pages/V2/V2Layout';
+import V2DashboardPage from './pages/V2/V2DashboardPage';
+
 // Admin imports
 import AdminLayout from './pages/Admin/AdminLayout';
 import LogsLayout from './pages/Admin/Logs/LogsLayout';
@@ -86,6 +90,23 @@ const router = createBrowserRouter([
           },
         ],
       },
+    ],
+  },
+  // V2 Routes (AgentX v2.0 - Admin only)
+  {
+    path: '/v2',
+    element: (
+      <ProtectedRoute>
+        <V2Layout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <Navigate to="/v2/calls" replace /> },
+      { path: 'calls', element: <V2DashboardPage /> },
+      { path: 'info-gatherings', element: <V2DashboardPage /> },
+      { path: 'meeting-scheduled', element: <V2DashboardPage /> },
+      { path: 'investigations', element: <V2DashboardPage /> },
+      { path: 'high-risk', element: <V2DashboardPage /> },
     ],
   },
   // Admin Routes
