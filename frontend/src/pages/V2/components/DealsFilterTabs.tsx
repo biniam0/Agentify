@@ -5,9 +5,9 @@ import type { FilterTab } from '../data/types';
 const FILTER_TABS: { id: FilterTab; label: string }[] = [
   { id: 'calls', label: 'All calls' },
   { id: 'info-gatherings', label: 'Info Gathering' },
-  { id: 'meeting-scheduled', label: 'Meeting Scheduled' },
+  { id: 'clients-meetings', label: 'Clients Meetings' },
   { id: 'investigations', label: 'Investigations' },
-  { id: 'high-risk', label: 'High Risk Only' },
+  { id: 'clients-deals', label: 'Clients Deals' },
 ];
 
 const DealsFilterTabs = () => {

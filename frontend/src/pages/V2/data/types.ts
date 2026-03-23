@@ -11,9 +11,9 @@ export type RiskLevel = 'Low risk' | 'Medium risk' | 'High risk';
 export type FilterTab =
   | 'calls'
   | 'info-gatherings'
-  | 'meeting-scheduled'
+  | 'clients-meetings'
   | 'investigations'
-  | 'high-risk';
+  | 'clients-deals';
 
 export interface DealContact {
   name: string;

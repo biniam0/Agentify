@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import {
   X,
   Phone,
@@ -11,7 +11,6 @@ import {
   AlertCircle,
   Sparkles,
   Star,
-  MapPin,
   Search,
   FileText,
   CalendarDays,
@@ -100,10 +99,10 @@ const CallOutcomeCard = ({ log }: { log: CallLog }) => {
   const isSuccess = log.callSuccessful === true;
   const isFailed = log.status === 'FAILED' || log.status === 'NO_ANSWER' || log.status === 'BUSY';
 
-  // Mock barrier score for now
   const barrierScore = 12;
   const riskLevel = 'High Risk';
-  const isHighRisk = barrierScore < 30;
+  const isHighRisk = barrierScore >= 80;
+  const isLowRisk = barrierScore <= 30;
 
   return (
     <div className="flex items-start justify-between bg-white border border-default rounded-xl p-5">
@@ -206,7 +205,7 @@ const AiAnalysisCard = ({ log }: { log: CallLog }) => {
   );
 };
 
-const RecommendedNextSteps = ({ log }: { log: CallLog }) => {
+const RecommendedNextSteps = ({ log: _log }: { log: CallLog }) => {
   // Mock data for now since this isn't in the CallLog API
   const steps = [
     { id: '1', title: 'Review Similar Deal', description: 'Find deals lost to internal decisions', icon: Search },

@@ -104,9 +104,9 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/v2/calls" replace /> },
       { path: 'calls', element: <V2DashboardPage /> },
       { path: 'info-gatherings', element: <V2DashboardPage /> },
-      { path: 'meeting-scheduled', element: <V2DashboardPage /> },
+      { path: 'clients-meetings', element: <V2DashboardPage /> },
       { path: 'investigations', element: <V2DashboardPage /> },
-      { path: 'high-risk', element: <V2DashboardPage /> },
+      { path: 'clients-deals', element: <V2DashboardPage /> },
     ],
   },
   // Admin Routes
