@@ -20,6 +20,13 @@ export default {
   			ring: 'hsl(var(--ring))',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
+        alert: {
+          bg: 'hsl(var(--alert-bg))',
+          border: 'hsl(var(--alert-border))',
+          iconBg: 'hsl(var(--alert-icon-bg))',
+          primary: 'hsl(var(--alert-primary))',
+          primaryHover: 'hsl(var(--alert-primary-hover))',
+        },
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
   				foreground: 'hsl(var(--primary-foreground))'
