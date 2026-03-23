@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import * as meetingService from '@/services/meetingService';
 import type { Meeting } from '@/types';
+import MeetingAgendaFormatter from './MeetingAgendaFormatter';
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -150,7 +151,7 @@ const MeetingOverviewCard = ({ meeting }: { meeting: Meeting }) => {
       {meeting.agenda && (
         <div className="mt-4 pt-4 border-t border-default">
           <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">AGENDA</p>
-          <p className="text-sm text-body leading-relaxed">{meeting.agenda}</p>
+          <MeetingAgendaFormatter agenda={meeting.agenda} variant="full" />
         </div>
       )}
     </div>

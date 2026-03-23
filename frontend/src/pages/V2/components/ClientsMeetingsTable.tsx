@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { Meeting } from '@/types';
+import MeetingAgendaFormatter from './MeetingAgendaFormatter';
 
 const STATUS_STYLES: Record<string, string> = {
   scheduled: 'bg-blue-50 text-blue-600',
@@ -85,7 +86,9 @@ const ExpandedMeetingRow = ({ meeting, onViewDetails }: { meeting: Meeting; onVi
             <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">MEETING INFO</p>
             <p className="text-[15px] font-medium text-heading mb-1">{meeting.title}</p>
             {meeting.agenda && (
-              <p className="text-xs text-subtle mb-3 line-clamp-2">{meeting.agenda}</p>
+              <div className="mb-3">
+                <MeetingAgendaFormatter agenda={meeting.agenda} variant="compact" />
+              </div>
             )}
             <div className="flex items-center gap-3 text-xs text-subtle">
               <span className="inline-flex items-center gap-1">
