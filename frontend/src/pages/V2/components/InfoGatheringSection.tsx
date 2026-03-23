@@ -12,11 +12,12 @@ import type { BarrierXInfoRecord } from './InfoGatheringTable';
 
 interface InfoGatheringSectionProps {
   onViewDetails: (record: BarrierXInfoRecord) => void;
+  jobRunning?: boolean;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-const InfoGatheringSection = ({ onViewDetails }: InfoGatheringSectionProps) => {
+const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectionProps) => {
   const [records, setRecords] = useState<BarrierXInfoRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -54,6 +55,12 @@ const InfoGatheringSection = ({ onViewDetails }: InfoGatheringSectionProps) => {
   useEffect(() => {
     fetchRecords();
   }, [fetchRecords]);
+
+  useEffect(() => {
+    if (!jobRunning) return;
+    const interval = setInterval(fetchRecords, 5000);
+    return () => clearInterval(interval);
+  }, [jobRunning, fetchRecords]);
 
   const filteredRecords = searchQuery
     ? records.filter((r) => {

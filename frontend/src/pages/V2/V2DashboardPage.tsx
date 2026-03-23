@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import * as authService from '@/services/authService';
 import HeroSection from './components/HeroSection';
@@ -6,6 +6,7 @@ import TopTabs, { type TopTabId } from './components/TopTabs';
 import AlertBanner from './components/AlertBanner';
 import StatsCards from './components/StatsCards';
 import WorkflowActions from './components/WorkflowActions';
+import type { JobStatus } from './components/WorkflowActions';
 import CallsSection from './components/CallsSection';
 import CallDetailModal from './components/CallDetailModal';
 import InfoGatheringSection from './components/InfoGatheringSection';
@@ -28,7 +29,12 @@ const V2DashboardPage = () => {
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [isAddWorkflowOpen, setIsAddWorkflowOpen] = useState(false);
+  const [jobRunning, setJobRunning] = useState(false);
   const user = authService.getUser();
+
+  const handleJobStatusChange = useCallback((status: JobStatus | null) => {
+    setJobRunning(!!status?.isRunning);
+  }, []);
 
   const pathname = location.pathname;
   const isInfoGatheringTab = pathname.includes('/info-gatherings');
@@ -43,7 +49,7 @@ const V2DashboardPage = () => {
       return <ClientsDealsSection onViewDetails={setSelectedDeal} />;
     }
     if (isInfoGatheringTab) {
-      return <InfoGatheringSection onViewDetails={setSelectedInfoRecord} />;
+      return <InfoGatheringSection onViewDetails={setSelectedInfoRecord} jobRunning={jobRunning} />;
     }
     return <CallsSection onViewDetails={setSelectedCall} />;
   };
@@ -54,7 +60,7 @@ const V2DashboardPage = () => {
       <TopTabs activeTab={activeTopTab} onTabChange={setActiveTopTab} />
       <AlertBanner />
       <StatsCards />
-      <WorkflowActions onAddWorkflow={() => setIsAddWorkflowOpen(true)} />
+      <WorkflowActions onAddWorkflow={() => setIsAddWorkflowOpen(true)} onJobStatusChange={handleJobStatusChange} />
 
       {renderActiveSection()}
 
