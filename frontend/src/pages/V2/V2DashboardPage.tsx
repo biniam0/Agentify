@@ -17,8 +17,10 @@ import ClientsMeetingsSection from './components/ClientsMeetingsSection';
 import ClientsMeetingDetailModal from './components/ClientsMeetingDetailModal';
 import SmsSentSection from './components/SmsSentSection';
 import SmsDetailModal from './components/SmsDetailModal';
+import CrmActionsSection from './components/CrmActionsSection';
+import CrmActionDetailModal from './components/CrmActionDetailModal';
 import AddWorkflowModal from './components/AddWorkflowModal';
-import type { CallLog, SmsLog } from '@/services/loggingService';
+import type { CallLog, SmsLog, CrmActionLog } from '@/services/loggingService';
 import type { BarrierXInfoRecord } from './components/InfoGatheringTable';
 import type { Deal } from '@/services/dealService';
 import type { Meeting } from '@/types';
@@ -31,6 +33,7 @@ const V2DashboardPage = () => {
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [selectedSms, setSelectedSms] = useState<SmsLog | null>(null);
+  const [selectedCrmAction, setSelectedCrmAction] = useState<CrmActionLog | null>(null);
   const [isAddWorkflowOpen, setIsAddWorkflowOpen] = useState(false);
   const [jobRunning, setJobRunning] = useState(false);
   const user = authService.getUser();
@@ -44,8 +47,12 @@ const V2DashboardPage = () => {
   const isClientsDealsTab = pathname.includes('/clients-deals');
   const isClientsMeetingsTab = pathname.includes('/clients-meetings');
   const isSmsSentTab = pathname.includes('/sms-sent');
+  const isCrmActionsTab = pathname.includes('/crm-actions');
 
   const renderActiveSection = () => {
+    if (isCrmActionsTab) {
+      return <CrmActionsSection onViewDetails={setSelectedCrmAction} />;
+    }
     if (isSmsSentTab) {
       return <SmsSentSection onViewDetails={setSelectedSms} />;
     }
@@ -89,6 +96,10 @@ const V2DashboardPage = () => {
 
       {selectedSms && (
         <SmsDetailModal sms={selectedSms} onClose={() => setSelectedSms(null)} />
+      )}
+
+      {selectedCrmAction && (
+        <CrmActionDetailModal log={selectedCrmAction} onClose={() => setSelectedCrmAction(null)} />
       )}
 
       {isAddWorkflowOpen && (

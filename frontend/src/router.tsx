@@ -108,6 +108,7 @@ const router = createBrowserRouter([
       { path: 'investigations', element: <V2DashboardPage /> },
       { path: 'clients-deals', element: <V2DashboardPage /> },
       { path: 'sms-sent', element: <V2DashboardPage /> },
+      { path: 'crm-actions', element: <V2DashboardPage /> },
     ],
   },
   // Admin Routes

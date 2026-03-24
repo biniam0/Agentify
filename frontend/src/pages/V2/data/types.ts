@@ -14,7 +14,8 @@ export type FilterTab =
   | 'clients-meetings'
   | 'investigations'
   | 'clients-deals'
-  | 'sms-sent';
+  | 'sms-sent'
+  | 'crm-actions';
 
 export interface DealContact {
   name: string;
