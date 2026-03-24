@@ -1,7 +1,61 @@
 import { useEffect, useState } from 'react';
-import { X, Sparkles, Target, BarChart2 } from 'lucide-react';
+import {
+  X,
+  Sparkles,
+  Target,
+  BarChart2,
+  Loader2,
+  CheckCircle2,
+  Circle,
+  AlertCircle,
+  AlertTriangle,
+  Users,
+  DollarSign,
+  Clock,
+  Phone,
+  RotateCcw,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import api from '@/services/api';
+
+interface SimpleIntent {
+  action: string;
+  target_criteria: Record<string, string | number | string[] | undefined>;
+  script: {
+    opening: string;
+    main_ask: string;
+    context?: string;
+  };
+  goal: string;
+}
+
+interface WorkflowTarget {
+  name: string;
+  phone: string;
+  email?: string;
+  dealId: string;
+  dealName: string;
+  dealStage?: string;
+  dealAmount?: number;
+  company?: string;
+}
+
+interface ApprovalData {
+  intent: SimpleIntent;
+  targets: { count: number; sample: WorkflowTarget[]; summary: string };
+  estimatedCost: { estimatedCalls: number; estimatedCostUSD: number; estimatedDuration: number };
+  requiresApproval: boolean;
+}
+
+type Step = 'prompt' | 'processing' | 'no-targets' | 'approval' | 'executing' | 'success';
+
+interface SubStep {
+  status: 'pending' | 'running' | 'complete' | 'error' | 'warning';
+  message: string;
+}
 
 interface AddWorkflowModalProps {
   onClose: () => void;
@@ -9,11 +63,30 @@ interface AddWorkflowModalProps {
 
 const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
   const [prompt, setPrompt] = useState('');
+  const [step, setStep] = useState<Step>('prompt');
 
-  // Close on escape key
+  const [intent, setIntent] = useState<SimpleIntent | null>(null);
+  const [targets, setTargets] = useState<{
+    count: number;
+    sample: WorkflowTarget[];
+    summary: string;
+    suggestions?: string[];
+  } | null>(null);
+  const [approvalData, setApprovalData] = useState<ApprovalData | null>(null);
+  const [execution, setExecution] = useState<{ id: string; batchId: string } | null>(null);
+
+  const [substeps, setSubsteps] = useState<Record<string, SubStep>>({
+    parsing: { status: 'pending', message: 'Analyzing your request...' },
+    finding: { status: 'pending', message: 'Searching for targets...' },
+    executing: { status: 'pending', message: 'Starting workflow...' },
+  });
+
+  const [error, setError] = useState<{ title: string; suggestion: string } | null>(null);
+  const [scriptExpanded, setScriptExpanded] = useState(false);
+
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && step !== 'processing' && step !== 'executing') onClose();
     };
     document.addEventListener('keydown', handleEsc);
     document.body.style.overflow = 'hidden';
@@ -21,119 +94,513 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
       document.removeEventListener('keydown', handleEsc);
       document.body.style.overflow = '';
     };
-  }, [onClose]);
+  }, [onClose, step]);
+
+  const runWorkflow = async () => {
+    if (!prompt.trim()) return;
+
+    setStep('processing');
+    setError(null);
+    setSubsteps({
+      parsing: { status: 'running', message: 'Analyzing prompt with AI...' },
+      finding: { status: 'pending', message: 'Searching for targets...' },
+      executing: { status: 'pending', message: 'Awaiting approval...' },
+    });
+
+    try {
+      const response = await api.post('/workflows/run-simple', {
+        prompt,
+        workflowName: `Workflow - ${new Date().toLocaleString()}`,
+      });
+
+      setIntent(response.data.intent);
+      setTargets(response.data.targets);
+
+      if (response.data.noTargetsFound) {
+        setSubsteps({
+          parsing: { status: 'complete', message: 'Intent parsed successfully!' },
+          finding: { status: 'warning', message: 'No targets match your criteria' },
+          executing: { status: 'pending', message: 'Cannot execute without targets' },
+        });
+        setTargets({
+          count: 0,
+          sample: [],
+          summary: response.data.targets?.summary || 'No matching contacts found.',
+          suggestions: response.data.suggestions,
+        });
+        setStep('no-targets');
+        return;
+      }
+
+      if (response.data.requiresApproval) {
+        setApprovalData({
+          intent: response.data.intent,
+          targets: response.data.targets,
+          estimatedCost: response.data.estimatedCost,
+          requiresApproval: true,
+        });
+        setSubsteps({
+          parsing: { status: 'complete', message: 'Intent parsed successfully!' },
+          finding: { status: 'complete', message: `Found ${response.data.targets.count} target${response.data.targets.count === 1 ? '' : 's'}!` },
+          executing: { status: 'pending', message: 'Awaiting your approval...' },
+        });
+        setStep('approval');
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message;
+      setStep('prompt');
+      if (msg.includes('security') || msg.includes('injection')) {
+        setError({ title: 'Your prompt contains potentially unsafe content.', suggestion: 'Try rephrasing your request in simpler terms.' });
+      } else if (msg.includes('timeout')) {
+        setError({ title: 'The AI is taking too long to process.', suggestion: 'Try a shorter, more specific prompt.' });
+      } else {
+        setError({ title: 'Failed to process your request.', suggestion: msg || 'Please try again or use a different prompt.' });
+      }
+    }
+  };
+
+  const executeApproved = async () => {
+    if (!approvalData) return;
+
+    setStep('executing');
+    setSubsteps((prev) => ({
+      ...prev,
+      executing: { status: 'running', message: 'Submitting calls to ElevenLabs...' },
+    }));
+
+    try {
+      const response = await api.post('/workflows/approve-and-execute', {
+        intent: approvalData.intent,
+        workflowName: `Approved Workflow - ${new Date().toLocaleString()}`,
+        userConfirmation: true,
+        estimatedCost: approvalData.estimatedCost,
+      });
+
+      setExecution({
+        id: response.data.execution.id,
+        batchId: response.data.execution.batchId,
+      });
+
+      setSubsteps((prev) => ({
+        ...prev,
+        executing: { status: 'complete', message: 'Calls initiated successfully!' },
+      }));
+      setStep('success');
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message;
+      setStep('approval');
+      setError({ title: 'Failed to execute the workflow.', suggestion: msg || 'Please try again.' });
+      setSubsteps((prev) => ({
+        ...prev,
+        executing: { status: 'error', message: 'Execution failed' },
+      }));
+    }
+  };
+
+  const reset = () => {
+    setPrompt('');
+    setStep('prompt');
+    setIntent(null);
+    setTargets(null);
+    setApprovalData(null);
+    setExecution(null);
+    setError(null);
+    setSubsteps({
+      parsing: { status: 'pending', message: 'Analyzing your request...' },
+      finding: { status: 'pending', message: 'Searching for targets...' },
+      executing: { status: 'pending', message: 'Starting workflow...' },
+    });
+  };
+
+  const StepIcon = ({ status }: { status: SubStep['status'] }) => {
+    switch (status) {
+      case 'complete': return <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />;
+      case 'running': return <Loader2 className="h-4 w-4 text-brand animate-spin shrink-0" />;
+      case 'error': return <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />;
+      case 'warning': return <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />;
+      default: return <Circle className="h-4 w-4 text-gray-300 shrink-0" />;
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={step !== 'processing' && step !== 'executing' ? onClose : undefined} />
 
-      {/* Modal Content */}
-      <div className="relative w-full max-w-[720px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-[720px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 mx-4">
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 flex items-start justify-between">
+        <div className="px-6 pt-6 pb-4 flex items-start justify-between border-b border-default">
           <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-6 h-6 rounded bg-emerald-50 flex items-center justify-center">
-                <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-brand/10 flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-brand" />
               </div>
-              <h2 className="text-xl font-semibold text-gray-900">Workflow Creator</h2>
+              <h2 className="text-lg font-semibold text-heading">
+                {step === 'success' ? 'Workflow Launched' : step === 'approval' ? 'Review & Approve' : 'Workflow Creator'}
+              </h2>
             </div>
-            <p className="text-sm text-gray-500">
-              Describe the workflow you want to create in plain English.
+            <p className="text-sm text-subtle">
+              {step === 'prompt' && 'Describe what you want to do in plain English.'}
+              {step === 'processing' && 'Processing your workflow request...'}
+              {step === 'no-targets' && 'No matching contacts were found.'}
+              {step === 'approval' && 'Review the targets and approve execution.'}
+              {step === 'executing' && 'Executing your approved workflow...'}
+              {step === 'success' && 'Your workflow has been launched successfully.'}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          {step !== 'processing' && step !== 'executing' && (
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400">
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         {/* Body */}
-        <div className="px-6 pb-6 space-y-4">
-          {/* Suggestions Cards */}
-          <div className="grid grid-cols-2 gap-4 bg-gray-50/50 border border-gray-100 rounded-xl p-5">
-            {/* Column 1 */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Target className="h-4 w-4 text-emerald-500" />
-                <h3 className="text-sm font-semibold text-emerald-500">Client Check-ins & Interactions</h3>
+        <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
+
+          {/* Error Banner */}
+          {error && (
+            <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-red-800">{error.title}</p>
+                <p className="text-xs text-red-600 mt-0.5">{error.suggestion}</p>
               </div>
-              <ul className="space-y-2.5">
-                <li className="text-sm text-gray-600 flex items-start gap-2">
-                  <span className="w-1 h-1 rounded-full bg-emerald-300 mt-2 flex-shrink-0" />
-                  "Call Andreja about the Bosa Properties deal"
-                </li>
-                <li className="text-sm text-gray-600 flex items-start gap-2">
-                  <span className="w-1 h-1 rounded-full bg-emerald-300 mt-2 flex-shrink-0" />
-                  "Client check in with Tamirat for BarrierX deal"
-                </li>
-                <li className="text-sm text-gray-600 flex items-start gap-2">
-                  <span className="w-1 h-1 rounded-full bg-emerald-300 mt-2 flex-shrink-0" />
-                  "Schedule check-in with the owner of Wesgroup deal"
-                </li>
-              </ul>
+              <button onClick={() => setError(null)} className="p-0.5 text-red-400 hover:text-red-600">
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
+          )}
 
-            {/* Column 2 */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <BarChart2 className="h-4 w-4 text-emerald-500" />
-                <h3 className="text-sm font-semibold text-emerald-500">Filter by Deal Stage</h3>
+          {/* ──── STEP: PROMPT ──── */}
+          {step === 'prompt' && (
+            <>
+              <div className="grid grid-cols-2 gap-4 bg-gray-50/50 border border-gray-100 rounded-xl p-5">
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target className="h-4 w-4 text-brand" />
+                    <h3 className="text-sm font-semibold text-brand">Client Check-ins</h3>
+                  </div>
+                  <ul className="space-y-2.5">
+                    {[
+                      '"Call Andreja Andrejevic about the "Ten Brinke (DE), Operating Model 2026" deal.',
+                      '"Client check in with Tamirat for BarrierX deal"',
+                      '"Schedule check-in with the owner of Wesgroup deal"',
+                    ].map((t) => (
+                      <li key={t} className="text-sm text-gray-600 flex items-start gap-2 cursor-pointer hover:text-heading transition-colors" onClick={() => setPrompt(t.replace(/"/g, ''))}>
+                        <span className="w-1 h-1 rounded-full bg-brand/40 mt-2 shrink-0" />
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <BarChart2 className="h-4 w-4 text-brand" />
+                    <h3 className="text-sm font-semibold text-brand">Filter by Deal Stage</h3>
+                  </div>
+                  <ul className="space-y-2.5">
+                    {[
+                      '"Call all owners of Lost deals"',
+                      '"Call everyone with deals in Negotiation"',
+                      '"Call owners of Closed Lost deals to ask why"',
+                    ].map((t) => (
+                      <li key={t} className="text-sm text-gray-600 flex items-start gap-2 cursor-pointer hover:text-heading transition-colors" onClick={() => setPrompt(t.replace(/"/g, ''))}>
+                        <span className="w-1 h-1 rounded-full bg-brand/40 mt-2 shrink-0" />
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              <ul className="space-y-2.5">
-                <li className="text-sm text-gray-600 flex items-start gap-2">
-                  <span className="w-1 h-1 rounded-full bg-emerald-300 mt-2 flex-shrink-0" />
-                  "Call all owners of Lost deals"
-                </li>
-                <li className="text-sm text-gray-600 flex items-start gap-2">
-                  <span className="w-1 h-1 rounded-full bg-emerald-300 mt-2 flex-shrink-0" />
-                  "Call everyone with deals in Negotiation"
-                </li>
-                <li className="text-sm text-gray-600 flex items-start gap-2">
-                  <span className="w-1 h-1 rounded-full bg-emerald-300 mt-2 flex-shrink-0" />
-                  "Call owners of Closed Lost deals to ask why"
-                </li>
-              </ul>
-            </div>
-          </div>
 
-          {/* Text Area */}
-          <div className="relative">
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Example: Call Andreja about his Bosa Properties deal..."
-              className="w-full min-h-[120px] p-4 text-sm bg-white border border-emerald-400 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-gray-400"
-            />
-            {/* Resize handle visual indicator */}
-            <div className="absolute bottom-2 right-2 flex flex-col gap-0.5 opacity-30 pointer-events-none">
-              <div className="w-2 h-[1px] bg-gray-600 rotate-45 transform origin-right" />
-              <div className="w-3 h-[1px] bg-gray-600 rotate-45 transform origin-right" />
-            </div>
-          </div>
+              <div className="relative">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Example: Call Andreja about his Bosa Properties deal..."
+                  className="w-full min-h-[100px] p-4 text-sm bg-white border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand placeholder:text-gray-400 transition-colors"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && prompt.trim()) runWorkflow();
+                  }}
+                />
+              </div>
 
-          {/* Action Button */}
-          <div className="flex justify-end pt-2">
-            <Button
-              disabled={!prompt.trim()}
-              className={cn(
-                "gap-2 px-6 py-2.5 h-auto font-medium rounded-lg transition-all",
-                prompt.trim() 
-                  ? "bg-brand hover:bg-brand-hover text-white" 
-                  : "bg-gray-100 text-gray-400 hover:bg-gray-100 cursor-not-allowed"
+              <div className="flex items-center justify-between pt-1">
+                <p className="text-[11px] text-subtle">Press <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono border border-gray-200">Ctrl+Enter</kbd> to run</p>
+                <Button
+                  onClick={runWorkflow}
+                  disabled={!prompt.trim()}
+                  className={cn(
+                    'gap-2 px-5 py-2.5 h-auto font-medium rounded-lg transition-all',
+                    prompt.trim() ? 'bg-brand hover:bg-brand-hover text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  )}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Preview Workflow
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* ──── STEP: PROCESSING ──── */}
+          {step === 'processing' && (
+            <div className="py-6 space-y-6">
+              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                <div className="bg-brand h-2 rounded-full transition-all duration-700 ease-out animate-pulse" style={{ width: '60%' }} />
+              </div>
+              <div className="space-y-3">
+                {Object.entries(substeps).map(([key, info]) => (
+                  <div key={key} className="flex items-center gap-3">
+                    <StepIcon status={info.status} />
+                    <span className={cn(
+                      'text-sm',
+                      info.status === 'complete' && 'text-emerald-700 font-medium',
+                      info.status === 'running' && 'text-heading font-medium',
+                      info.status === 'error' && 'text-red-600',
+                      info.status === 'pending' && 'text-subtle',
+                    )}>
+                      {info.message}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ──── STEP: NO TARGETS ──── */}
+          {step === 'no-targets' && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">No Targets Found</p>
+                  <p className="text-xs text-amber-700 mt-1">{targets?.summary}</p>
+                </div>
+              </div>
+
+              {targets?.suggestions && targets.suggestions.length > 0 && (
+                <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">Try these suggestions</p>
+                  <ul className="space-y-1.5">
+                    {targets.suggestions.map((s, i) => (
+                      <li key={i} className="text-sm text-amber-700 flex items-start gap-2">
+                        <span className="text-amber-400 mt-1">•</span>
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
-            >
-              <Sparkles className="h-4 w-4" />
-              Generate Workflow
-            </Button>
-          </div>
+
+              {intent && (
+                <div className="bg-gray-50 border border-default rounded-xl p-4">
+                  <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">SEARCH CRITERIA USED</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(intent.target_criteria)
+                      .filter(([, v]) => v)
+                      .map(([key, value]) => (
+                        <span key={key} className="inline-flex px-2.5 py-1 bg-white border border-default rounded-lg text-xs text-heading">
+                          <span className="text-subtle mr-1">{key}:</span>
+                          {Array.isArray(value) ? value.join(', ') : String(value)}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={reset} className="gap-2 h-9 text-sm border-default">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ──── STEP: APPROVAL ──── */}
+          {step === 'approval' && approvalData && (
+            <div className="space-y-5">
+              {/* Cost Summary */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                  <Users className="h-4 w-4 text-blue-500 mx-auto mb-1.5" />
+                  <p className="text-2xl font-bold text-blue-700">{approvalData.targets.count}</p>
+                  <p className="text-[11px] text-blue-500 font-medium">Targets</p>
+                </div>
+                <div className="text-center p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+                  <DollarSign className="h-4 w-4 text-emerald-500 mx-auto mb-1.5" />
+                  <p className="text-2xl font-bold text-emerald-700">${approvalData.estimatedCost.estimatedCostUSD}</p>
+                  <p className="text-[11px] text-emerald-500 font-medium">Est. Cost</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 border border-purple-100 rounded-xl">
+                  <Clock className="h-4 w-4 text-purple-500 mx-auto mb-1.5" />
+                  <p className="text-2xl font-bold text-purple-700">{approvalData.estimatedCost.estimatedDuration}m</p>
+                  <p className="text-[11px] text-purple-500 font-medium">Est. Duration</p>
+                </div>
+              </div>
+
+              {/* Large batch warning */}
+              {approvalData.targets.count > 10 && (
+                <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl">
+                  <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Large Batch Warning</p>
+                    <p className="text-xs text-red-600 mt-0.5">
+                      You're about to initiate {approvalData.targets.count} calls costing ~${approvalData.estimatedCost.estimatedCostUSD} and taking ~{approvalData.estimatedCost.estimatedDuration} min.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Targets preview */}
+              <div>
+                <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">TARGET PREVIEW</p>
+                <div className="bg-white border border-default rounded-xl divide-y divide-default max-h-48 overflow-y-auto">
+                  {approvalData.targets.sample.map((t, i) => (
+                    <div key={i} className="flex items-center justify-between px-4 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-heading">{t.name.charAt(0)}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-heading truncate">{t.name}</p>
+                          <p className="text-xs text-subtle truncate">{t.dealName}{t.company ? ` · ${t.company}` : ''}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-subtle shrink-0 ml-2">
+                        <Phone className="h-3 w-3" />
+                        {t.phone}
+                      </div>
+                    </div>
+                  ))}
+                  {approvalData.targets.count > approvalData.targets.sample.length && (
+                    <div className="px-4 py-2.5 text-center text-xs text-subtle">
+                      + {approvalData.targets.count - approvalData.targets.sample.length} more targets
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Script preview */}
+              <div>
+                <button
+                  onClick={() => setScriptExpanded(!scriptExpanded)}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider">CALL SCRIPT</p>
+                  {scriptExpanded ? <ChevronUp className="h-3.5 w-3.5 text-subtle" /> : <ChevronDown className="h-3.5 w-3.5 text-subtle" />}
+                </button>
+                {scriptExpanded && (
+                  <div className="mt-2 bg-gray-50 border border-default rounded-xl p-4 space-y-2.5">
+                    <div>
+                      <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Opening</p>
+                      <p className="text-sm text-heading mt-0.5">{approvalData.intent.script.opening}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Main Ask</p>
+                      <p className="text-sm text-heading mt-0.5">{approvalData.intent.script.main_ask}</p>
+                    </div>
+                    {approvalData.intent.script.context && (
+                      <div>
+                        <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Context</p>
+                        <p className="text-sm text-heading mt-0.5">{approvalData.intent.script.context}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ──── STEP: EXECUTING ──── */}
+          {step === 'executing' && (
+            <div className="py-8 flex flex-col items-center gap-4">
+              <Loader2 className="h-10 w-10 text-brand animate-spin" />
+              <div className="text-center">
+                <p className="text-sm font-medium text-heading">Executing workflow...</p>
+                <p className="text-xs text-subtle mt-1">Submitting calls to ElevenLabs</p>
+              </div>
+            </div>
+          )}
+
+          {/* ──── STEP: SUCCESS ──── */}
+          {step === 'success' && execution && (
+            <div className="space-y-5">
+              <div className="flex flex-col items-center text-center py-4">
+                <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+                  <CheckCircle2 className="h-7 w-7 text-emerald-500" />
+                </div>
+                <p className="text-lg font-semibold text-heading">Workflow Launched!</p>
+                <p className="text-sm text-subtle mt-1">
+                  Calls are being made to {targets?.count} target{targets?.count === 1 ? '' : 's'}.
+                </p>
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <p className="text-sm font-medium text-emerald-800">Calls in progress</p>
+                </div>
+                <p className="text-xs text-emerald-600">
+                  You can monitor progress in the Calls tab. Results will appear as calls complete.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 border border-default rounded-xl p-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Execution ID</p>
+                    <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{execution.id}</code>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Batch ID</p>
+                    <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{execution.batchId}</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Footer */}
+        {(step === 'approval' || step === 'success') && (
+          <div className="px-6 py-4 border-t border-default flex items-center justify-between bg-gray-50/50">
+            {step === 'approval' && (
+              <>
+                <Button variant="outline" onClick={reset} className="h-9 text-sm border-default">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={executeApproved}
+                  className="gap-2 h-9 text-sm bg-brand hover:bg-brand-hover text-white"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Approve & Execute
+                </Button>
+              </>
+            )}
+            {step === 'success' && (
+              <>
+                <Button variant="outline" onClick={reset} className="h-9 text-sm border-default gap-2">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  New Workflow
+                </Button>
+                <Button onClick={onClose} className="h-9 text-sm bg-brand hover:bg-brand-hover text-white">
+                  Done
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Disclaimer for approval step */}
+        {step === 'approval' && (
+          <div className="px-6 pb-4">
+            <p className="text-[11px] text-subtle text-center">
+              By clicking "Approve & Execute", you authorize the system to make calls to the specified contacts.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
