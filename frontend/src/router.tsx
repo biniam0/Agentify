@@ -105,7 +105,6 @@ const router = createBrowserRouter([
       { path: 'calls', element: <V2DashboardPage /> },
       { path: 'info-gatherings', element: <V2DashboardPage /> },
       { path: 'clients-meetings', element: <V2DashboardPage /> },
-      { path: 'investigations', element: <V2DashboardPage /> },
       { path: 'clients-deals', element: <V2DashboardPage /> },
       { path: 'sms-sent', element: <V2DashboardPage /> },
       { path: 'crm-actions', element: <V2DashboardPage /> },

@@ -6,7 +6,6 @@ const FILTER_TABS: { id: FilterTab; label: string }[] = [
   { id: 'calls', label: 'All calls' },
   { id: 'info-gatherings', label: 'Info Gathering' },
   { id: 'clients-meetings', label: 'Clients Meetings' },
-  { id: 'investigations', label: 'Investigations' },
   { id: 'clients-deals', label: 'Clients Deals' },
   { id: 'sms-sent', label: 'SMS Sent' },
   { id: 'crm-actions', label: 'CRM Actions' },

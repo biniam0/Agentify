@@ -12,7 +12,6 @@ export type FilterTab =
   | 'calls'
   | 'info-gatherings'
   | 'clients-meetings'
-  | 'investigations'
   | 'clients-deals'
   | 'sms-sent'
   | 'crm-actions';
