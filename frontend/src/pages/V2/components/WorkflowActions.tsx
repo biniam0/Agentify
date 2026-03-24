@@ -1,8 +1,11 @@
-import { Play, Plus, Info, Target, XCircle, Clock, Loader2, Square, X } from 'lucide-react';
+import { Play, Plus, Info, Target, XCircle, Clock, Loader2, Square, X, Sparkles } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeader } from '@/services/authService';
 import { toast } from 'sonner';
+import api from '@/services/api';
+import type { WorkflowExecStatus } from './AddWorkflowModal';
+import { getPersistedWorkflowExec, clearWorkflowExec } from './AddWorkflowModal';
 
 export interface JobStatus {
   isRunning: boolean;
@@ -158,14 +161,18 @@ const WorkflowCard = ({ card, jobStatus, initialLoading, onTrigger, onStop, trig
 interface WorkflowActionsProps {
   onAddWorkflow?: () => void;
   onJobStatusChange?: (status: JobStatus | null) => void;
+  onViewWorkflowExec?: (exec: WorkflowExecStatus) => void;
+  workflowExecRefreshKey?: number;
 }
 
-const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsProps) => {
+const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec, workflowExecRefreshKey }: WorkflowActionsProps) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [triggeringType, setTriggeringType] = useState<GatheringType | null>(null);
   const [isStopping, setIsStopping] = useState(false);
   const [dismissedError, setDismissedError] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [workflowExec, setWorkflowExec] = useState<WorkflowExecStatus | null>(null);
+  const [wfCancelling, setWfCancelling] = useState(false);
 
   const persisted = getPersistedJob();
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(
@@ -219,6 +226,64 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsPr
     const interval = setInterval(fetchJobStatus, 5000);
     return () => clearInterval(interval);
   }, [jobStatus?.isRunning, fetchJobStatus]);
+
+  const fetchWorkflowExec = useCallback(async () => {
+    try {
+      const res = await api.get('/workflows/execution-status');
+      if (res.data.active) {
+        setWorkflowExec(res.data.execution);
+      } else {
+        setWorkflowExec(null);
+        clearWorkflowExec();
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const persisted = getPersistedWorkflowExec();
+    if (persisted) {
+      setWorkflowExec({
+        id: persisted.executionId,
+        workflowId: '',
+        workflowName: persisted.workflowName,
+        prompt: '',
+        status: 'RUNNING',
+        totalTargets: persisted.totalTargets,
+        callsInitiated: 0,
+        callsCompleted: 0,
+        callsFailed: 0,
+        batchId: persisted.batchId,
+        startedAt: persisted.startedAt,
+        createdAt: persisted.startedAt,
+      });
+    }
+    fetchWorkflowExec();
+  }, [fetchWorkflowExec]);
+
+  useEffect(() => {
+    fetchWorkflowExec();
+  }, [workflowExecRefreshKey, fetchWorkflowExec]);
+
+  useEffect(() => {
+    if (!workflowExec) return;
+    const interval = setInterval(fetchWorkflowExec, 8000);
+    return () => clearInterval(interval);
+  }, [workflowExec, fetchWorkflowExec]);
+
+  const handleCancelWorkflow = async () => {
+    if (!workflowExec || wfCancelling) return;
+    setWfCancelling(true);
+    try {
+      await api.post('/workflows/execution/cancel-all');
+      toast.success('Workflow cancelled');
+    } catch (err: any) {
+      toast.error('Failed to cancel workflow', { description: err.response?.data?.error || err.message });
+    } finally {
+      clearWorkflowExec();
+      setWorkflowExec(null);
+      setWfCancelling(false);
+    }
+  };
 
   const handleTrigger = async (type: GatheringType) => {
     if (triggeringType || jobStatus?.isRunning) return;
@@ -385,6 +450,42 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsPr
           >
             <X className="h-3.5 w-3.5 text-red-400" />
           </button>
+        </div>
+      )}
+
+      {/* Active Workflow Execution Card */}
+      {workflowExec && (
+        <div
+          className="mb-4 flex items-center justify-between bg-brand/5 border border-brand/20 rounded-xl px-4 py-3 cursor-pointer hover:bg-brand/10 transition-colors"
+          onClick={() => onViewWorkflowExec?.(workflowExec)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+              <Sparkles className="h-4 w-4 text-brand" />
+            </div>
+            <div className="text-sm">
+              <span className="font-semibold text-heading">
+                {workflowExec.workflowName || 'NL Workflow'}
+              </span>
+              <span className="text-subtle ml-2">
+                &bull; {workflowExec.callsCompleted}/{workflowExec.totalTargets} completed
+                {workflowExec.callsFailed > 0 && (
+                  <span className="text-red-500 ml-1">&bull; {workflowExec.callsFailed} failed</span>
+                )}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-brand" />
+            <button
+              onClick={(e) => { e.stopPropagation(); handleCancelWorkflow(); }}
+              disabled={wfCancelling}
+              className="inline-flex items-center gap-1.5 text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {wfCancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Square className="h-3.5 w-3.5" />}
+              Stop
+            </button>
+          </div>
         </div>
       )}
 

@@ -78,4 +78,22 @@ router.post('/run-simple', authenticate, workflowController.runSimpleWorkflow);
  */
 router.post('/approve-and-execute', authenticate, workflowController.approveAndExecuteWorkflow);
 
+/**
+ * GET /api/workflows/execution-status
+ * Get the latest active workflow execution status
+ */
+router.get('/execution-status', authenticate, workflowController.getExecutionStatus);
+
+/**
+ * POST /api/workflows/execution/cancel-all
+ * Cancel ALL running/pending workflow executions
+ */
+router.post('/execution/cancel-all', authenticate, workflowController.cancelAllExecutions);
+
+/**
+ * POST /api/workflows/execution/:id/cancel
+ * Cancel a running workflow execution
+ */
+router.post('/execution/:id/cancel', authenticate, workflowController.cancelExecution);
+
 export default router;
