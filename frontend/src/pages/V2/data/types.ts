@@ -13,7 +13,8 @@ export type FilterTab =
   | 'info-gatherings'
   | 'clients-meetings'
   | 'investigations'
-  | 'clients-deals';
+  | 'clients-deals'
+  | 'sms-sent';
 
 export interface DealContact {
   name: string;
