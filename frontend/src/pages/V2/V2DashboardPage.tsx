@@ -56,7 +56,7 @@ const V2DashboardPage = () => {
 
   return (
     <div>
-      <HeroSection dealCount={5} userName={user?.name?.split(' ')[0] || 'there'} />
+      <HeroSection userName={user?.name?.split(' ')[0] || 'there'} />
       <TopTabs activeTab={activeTopTab} onTabChange={setActiveTopTab} />
       <AlertBanner />
       <StatsCards />
