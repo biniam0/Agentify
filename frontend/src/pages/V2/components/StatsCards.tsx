@@ -1,6 +1,9 @@
 import { MoreVertical, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
 import {
   getCallAnalytics,
   getCallLogs,
@@ -9,7 +12,10 @@ import {
   type CallAnalytics,
 } from '@/services/loggingService';
 
+type CardId = 'totalCalls' | 'completedCalls' | 'sms' | 'crm';
+
 interface StatCard {
+  id: CardId;
   title: string;
   value: string;
   change: number | null;
@@ -19,6 +25,8 @@ interface StatCard {
 }
 
 const SPARKLINE_DAYS = 12;
+
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function daysAgo(n: number): string {
   const d = new Date();
@@ -49,6 +57,15 @@ function groupByDay<T extends { createdAt: string }>(
   }
 
   return Object.values(counts);
+}
+
+function buildChartData(sparkline: number[], days: number): { name: string; value: number }[] {
+  const today = new Date();
+  return sparkline.map((value, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (days - 1 - i));
+    return { name: DAY_NAMES[d.getDay()], value };
+  });
 }
 
 const Sparkline = ({ data, positive }: { data: number[]; positive: boolean }) => {
@@ -131,6 +148,7 @@ function buildCards(
 
   return [
     {
+      id: 'totalCalls' as CardId,
       title: 'Total Calls',
       value: loading ? '—' : formatNumber(totalCalls),
       change: totalChange,
@@ -139,6 +157,7 @@ function buildCards(
       loading,
     },
     {
+      id: 'completedCalls' as CardId,
       title: 'Completed Workflows',
       value: loading ? '—' : formatNumber(completedCalls),
       change: completedChange,
@@ -147,6 +166,7 @@ function buildCards(
       loading,
     },
     {
+      id: 'sms' as CardId,
       title: 'SMS Sent',
       value: loading ? '—' : formatNumber(counts.smsTotal),
       change: smsChange,
@@ -155,6 +175,7 @@ function buildCards(
       loading,
     },
     {
+      id: 'crm' as CardId,
       title: 'CRM Actions',
       value: loading ? '—' : formatNumber(counts.crmTotal),
       change: crmChange,
@@ -164,6 +185,13 @@ function buildCards(
     },
   ];
 }
+
+const CHART_TITLES: Record<CardId, string> = {
+  totalCalls: 'Total Calls Overview',
+  completedCalls: 'Completed Workflows Overview',
+  sms: 'SMS Sent Overview',
+  crm: 'CRM Actions Overview',
+};
 
 const StatsCards = () => {
   const [currentAnalytics, setCurrentAnalytics] = useState<CallAnalytics | null>(null);
@@ -176,6 +204,7 @@ const StatsCards = () => {
     crmTotal: 0, crmPrev: 0, crmSuccess: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [selectedCard, setSelectedCard] = useState<CardId | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -200,7 +229,6 @@ const StatsCards = () => {
           getCrmActionLogs({ startDate: startDate60, limit: 5000 }),
         ]);
 
-        // Call analytics
         const current = currentRes.success ? currentRes.data : null;
         const full60 = fullRes.success ? fullRes.data : null;
         setCurrentAnalytics(current);
@@ -229,12 +257,10 @@ const StatsCards = () => {
           });
         }
 
-        // Call sparklines
         const callLogs = callLogsRes.data ?? [];
         const totalCallsSpark = groupByDay(callLogs, SPARKLINE_DAYS);
         const completedCallsSpark = groupByDay(callLogs, SPARKLINE_DAYS, (l) => l.status === 'COMPLETED' || l.callSuccessful === true);
 
-        // SMS data
         const smsCurrent = smsCurrentRes.data ?? [];
         const smsAll60 = smsPrevRes.data ?? [];
         const smsPrevOnly = smsAll60.filter((s) => {
@@ -243,7 +269,6 @@ const StatsCards = () => {
         });
         const smsSpark = groupByDay(smsCurrent, SPARKLINE_DAYS);
 
-        // CRM data
         const crmCurrent = crmCurrentRes.data ?? [];
         const crmAll60 = crmPrevRes.data ?? [];
         const crmPrevOnly = crmAll60.filter((c) => {
@@ -279,61 +304,136 @@ const StatsCards = () => {
 
   const cards = buildCards(currentAnalytics, previousAnalytics, sparklines, counts, loading);
 
+  const chartData = useMemo(() => {
+    if (!selectedCard) return [];
+    return buildChartData(sparklines[selectedCard], SPARKLINE_DAYS);
+  }, [selectedCard, sparklines]);
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      {cards.map((stat) => {
-        const isPositive = (stat.change ?? 0) >= 0;
-        const hasChange = stat.change !== null;
+    <div className="mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {cards.map((stat) => {
+          const isPositive = (stat.change ?? 0) >= 0;
+          const hasChange = stat.change !== null;
+          const isSelected = selectedCard === stat.id;
 
-        return (
-          <div
-            key={stat.title}
-            className="bg-white rounded-xl border border-gray-200 p-5 relative"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <span className="text-sm text-gray-500 font-medium">{stat.title}</span>
-              <button className="p-0.5 -mr-1 -mt-0.5 rounded hover:bg-gray-100 transition-colors">
-                <MoreVertical className="h-4 w-4 text-gray-400" />
-              </button>
-            </div>
-
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="flex items-baseline gap-2.5">
-                  {stat.loading ? (
-                    <Loader2 className="h-7 w-7 animate-spin text-gray-300" />
-                  ) : (
-                    <span className="text-3xl font-bold text-gray-900 tracking-tight">
-                      {stat.value}
-                    </span>
-                  )}
-                  {hasChange && !stat.loading && (
-                    <span
-                      className={cn(
-                        'inline-flex items-center gap-0.5 text-xs font-semibold',
-                        isPositive ? 'text-emerald-600' : 'text-red-500'
-                      )}
-                    >
-                      {isPositive ? (
-                        <TrendingUp className="h-3 w-3" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3" />
-                      )}
-                      {isPositive ? '+' : ''}
-                      {stat.change}%
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400 mt-1">{stat.changeLabel}</p>
+          return (
+            <div
+              key={stat.id}
+              onClick={() => !stat.loading && setSelectedCard(isSelected ? null : stat.id)}
+              className={cn(
+                'bg-white rounded-xl border p-5 relative cursor-pointer transition-all',
+                isSelected
+                  ? 'border-brand ring-1 ring-brand/20 shadow-sm'
+                  : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+              )}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <span className="text-sm text-gray-500 font-medium">{stat.title}</span>
+                <button
+                  className="p-0.5 -mr-1 -mt-0.5 rounded hover:bg-gray-100 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4 text-gray-400" />
+                </button>
               </div>
 
-              {!stat.loading && (
-                <Sparkline data={stat.sparkline} positive={isPositive} />
-              )}
+              <div className="flex items-end justify-between">
+                <div>
+                  <div className="flex items-baseline gap-2.5">
+                    {stat.loading ? (
+                      <Loader2 className="h-7 w-7 animate-spin text-gray-300" />
+                    ) : (
+                      <span className="text-3xl font-bold text-gray-900 tracking-tight">
+                        {stat.value}
+                      </span>
+                    )}
+                    {hasChange && !stat.loading && (
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-0.5 text-xs font-semibold',
+                          isPositive ? 'text-emerald-600' : 'text-red-500'
+                        )}
+                      >
+                        {isPositive ? (
+                          <TrendingUp className="h-3 w-3" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3" />
+                        )}
+                        {isPositive ? '+' : ''}
+                        {stat.change}%
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">{stat.changeLabel}</p>
+                </div>
+
+                {!stat.loading && (
+                  <Sparkline data={stat.sparkline} positive={isPositive} />
+                )}
+              </div>
             </div>
+          );
+        })}
+      </div>
+
+      {selectedCard && chartData.length > 0 && (
+        <div className="mt-4 bg-white rounded-xl border border-gray-200 p-6 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="mb-5">
+            <h3 className="text-base font-semibold text-gray-900">
+              {CHART_TITLES[selectedCard]}
+            </h3>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Data for the last {SPARKLINE_DAYS} days
+            </p>
           </div>
-        );
-      })}
+
+          <div style={{ width: '100%', height: 280 }}>
+            <ResponsiveContainer>
+              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="statsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4b7cf3" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#4b7cf3" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#9ca3af', fontSize: 12 }}
+                  dy={8}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#9ca3af', fontSize: 12 }}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.08)',
+                    fontSize: '13px',
+                    padding: '8px 12px',
+                  }}
+                  labelStyle={{ fontWeight: 600, marginBottom: 2 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#4b7cf3"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#statsGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
