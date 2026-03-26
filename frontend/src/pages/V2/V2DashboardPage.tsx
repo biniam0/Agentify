@@ -20,6 +20,7 @@ import SmsDetailModal from './components/SmsDetailModal';
 import CrmActionsSection from './components/CrmActionsSection';
 import CrmActionDetailModal from './components/CrmActionDetailModal';
 import AddWorkflowModal from './components/AddWorkflowModal';
+import type { WorkflowExecStatus } from './components/AddWorkflowModal';
 import type { CallLog, SmsLog, CrmActionLog } from '@/services/loggingService';
 import type { BarrierXInfoRecord } from './components/InfoGatheringTable';
 import type { Deal } from '@/services/dealService';
@@ -35,11 +36,22 @@ const V2DashboardPage = () => {
   const [selectedSms, setSelectedSms] = useState<SmsLog | null>(null);
   const [selectedCrmAction, setSelectedCrmAction] = useState<CrmActionLog | null>(null);
   const [isAddWorkflowOpen, setIsAddWorkflowOpen] = useState(false);
+  const [activeWorkflowExec, setActiveWorkflowExec] = useState<WorkflowExecStatus | null>(null);
+  const [wfExecRefreshKey, setWfExecRefreshKey] = useState(0);
   const [jobRunning, setJobRunning] = useState(false);
   const user = authService.getUser();
 
   const handleJobStatusChange = useCallback((status: JobStatus | null) => {
     setJobRunning(!!status?.isRunning);
+  }, []);
+
+  const handleViewWorkflowExec = useCallback((exec: WorkflowExecStatus) => {
+    setActiveWorkflowExec(exec);
+    setIsAddWorkflowOpen(true);
+  }, []);
+
+  const handleWorkflowExecChange = useCallback(() => {
+    setWfExecRefreshKey((k) => k + 1);
   }, []);
 
   const pathname = location.pathname;
@@ -74,7 +86,12 @@ const V2DashboardPage = () => {
       <TopTabs activeTab={activeTopTab} onTabChange={setActiveTopTab} />
       <AlertBanner />
       <StatsCards />
-      <WorkflowActions onAddWorkflow={() => setIsAddWorkflowOpen(true)} onJobStatusChange={handleJobStatusChange} />
+      <WorkflowActions
+        onAddWorkflow={() => { setActiveWorkflowExec(null); setIsAddWorkflowOpen(true); }}
+        onJobStatusChange={handleJobStatusChange}
+        onViewWorkflowExec={handleViewWorkflowExec}
+        workflowExecRefreshKey={wfExecRefreshKey}
+      />
 
       {renderActiveSection()}
 
@@ -103,7 +120,11 @@ const V2DashboardPage = () => {
       )}
 
       {isAddWorkflowOpen && (
-        <AddWorkflowModal onClose={() => setIsAddWorkflowOpen(false)} />
+        <AddWorkflowModal
+          onClose={() => { setIsAddWorkflowOpen(false); setActiveWorkflowExec(null); }}
+          activeExecution={activeWorkflowExec}
+          onExecutionChange={handleWorkflowExecChange}
+        />
       )}
     </div>
   );

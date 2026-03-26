@@ -1,8 +1,11 @@
-import { Play, Plus, Info, Target, XCircle, Clock, Loader2, Square, X } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { Play, Plus, Info, Target, XCircle, Clock, Loader2, Square, X, Sparkles } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeader } from '@/services/authService';
 import { toast } from 'sonner';
+import api from '@/services/api';
+import type { WorkflowExecStatus } from './AddWorkflowModal';
+import { getPersistedWorkflowExec, clearWorkflowExec } from './AddWorkflowModal';
 
 export interface JobStatus {
   isRunning: boolean;
@@ -31,6 +34,8 @@ interface GatheringCard {
   subtitle: string;
   icon: React.ReactNode;
 }
+
+const STORAGE_KEY = 'agentx_info_gathering_job';
 
 const GATHERING_CARDS: GatheringCard[] = [
   {
@@ -68,15 +73,38 @@ const TYPE_LABELS: Record<GatheringType, string> = {
   INACTIVITY: 'Inactivity',
 };
 
+function persistRunningJob(type: GatheringType, startedAt: string) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ type, startedAt }));
+  } catch { /* quota exceeded etc */ }
+}
+
+function clearPersistedJob() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch { /* ignore */ }
+}
+
+function getPersistedJob(): { type: GatheringType; startedAt: string } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.type && parsed?.startedAt) return parsed;
+  } catch { /* corrupted */ }
+  return null;
+}
+
 interface WorkflowCardProps {
   card: GatheringCard;
   jobStatus: JobStatus | null;
+  initialLoading: boolean;
   onTrigger: (type: GatheringType) => void;
   onStop: () => void;
   triggering: boolean;
 }
 
-const WorkflowCard = ({ card, jobStatus, onTrigger, onStop, triggering }: WorkflowCardProps) => {
+const WorkflowCard = ({ card, jobStatus, initialLoading, onTrigger, onStop, triggering }: WorkflowCardProps) => {
   const isThisRunning = jobStatus?.isRunning && jobStatus.type === card.id;
   const anyRunning = jobStatus?.isRunning;
 
@@ -115,7 +143,7 @@ const WorkflowCard = ({ card, jobStatus, onTrigger, onStop, triggering }: Workfl
       ) : (
         <button
           onClick={() => onTrigger(card.id)}
-          disabled={triggering || !!anyRunning}
+          disabled={triggering || !!anyRunning || initialLoading}
           className="w-full flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-white text-sm font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {triggering ? (
@@ -133,14 +161,38 @@ const WorkflowCard = ({ card, jobStatus, onTrigger, onStop, triggering }: Workfl
 interface WorkflowActionsProps {
   onAddWorkflow?: () => void;
   onJobStatusChange?: (status: JobStatus | null) => void;
+  onViewWorkflowExec?: (exec: WorkflowExecStatus) => void;
+  workflowExecRefreshKey?: number;
 }
 
-const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsProps) => {
+const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec, workflowExecRefreshKey }: WorkflowActionsProps) => {
   const [showTooltip, setShowTooltip] = useState(false);
-  const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [triggeringType, setTriggeringType] = useState<GatheringType | null>(null);
   const [isStopping, setIsStopping] = useState(false);
   const [dismissedError, setDismissedError] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [workflowExec, setWorkflowExec] = useState<WorkflowExecStatus | null>(null);
+  const [wfCancelling, setWfCancelling] = useState(false);
+
+  const persisted = getPersistedJob();
+  const [jobStatus, setJobStatus] = useState<JobStatus | null>(
+    persisted
+      ? {
+          isRunning: true,
+          type: persisted.type,
+          startedAt: persisted.startedAt,
+          eligibleDeals: 0,
+          completedCalls: 0,
+          failedCalls: 0,
+          lastError: null,
+          recentOutput: [],
+          dbStats: { pending: 0, inProgress: 0, completed: 0, failed: 0, total: 0 },
+        }
+      : null
+  );
+
+  const jobStatusRef = useRef(jobStatus);
+  jobStatusRef.current = jobStatus;
 
   const fetchJobStatus = useCallback(async () => {
     try {
@@ -150,13 +202,19 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsPr
       if (!response.ok) return;
       const data = await response.json();
       setJobStatus(data);
+
+      if (data.isRunning && data.type) {
+        persistRunningJob(data.type, data.startedAt || new Date().toISOString());
+      } else {
+        clearPersistedJob();
+      }
     } catch {
-      // silently fail
+      // silently fail — keep localStorage-backed state
     }
   }, []);
 
   useEffect(() => {
-    fetchJobStatus();
+    fetchJobStatus().finally(() => setInitialLoading(false));
   }, [fetchJobStatus]);
 
   useEffect(() => {
@@ -169,16 +227,77 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsPr
     return () => clearInterval(interval);
   }, [jobStatus?.isRunning, fetchJobStatus]);
 
+  const fetchWorkflowExec = useCallback(async () => {
+    try {
+      const res = await api.get('/workflows/execution-status');
+      if (res.data.active) {
+        setWorkflowExec(res.data.execution);
+      } else {
+        setWorkflowExec(null);
+        clearWorkflowExec();
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const persisted = getPersistedWorkflowExec();
+    if (persisted) {
+      setWorkflowExec({
+        id: persisted.executionId,
+        workflowId: '',
+        workflowName: persisted.workflowName,
+        prompt: '',
+        status: 'RUNNING',
+        totalTargets: persisted.totalTargets,
+        callsInitiated: 0,
+        callsCompleted: 0,
+        callsFailed: 0,
+        batchId: persisted.batchId,
+        startedAt: persisted.startedAt,
+        createdAt: persisted.startedAt,
+      });
+    }
+    fetchWorkflowExec();
+  }, [fetchWorkflowExec]);
+
+  useEffect(() => {
+    fetchWorkflowExec();
+  }, [workflowExecRefreshKey, fetchWorkflowExec]);
+
+  useEffect(() => {
+    if (!workflowExec) return;
+    const interval = setInterval(fetchWorkflowExec, 8000);
+    return () => clearInterval(interval);
+  }, [workflowExec, fetchWorkflowExec]);
+
+  const handleCancelWorkflow = async () => {
+    if (!workflowExec || wfCancelling) return;
+    setWfCancelling(true);
+    try {
+      await api.post('/workflows/execution/cancel-all');
+      toast.success('Workflow cancelled');
+    } catch (err: any) {
+      toast.error('Failed to cancel workflow', { description: err.response?.data?.error || err.message });
+    } finally {
+      clearWorkflowExec();
+      setWorkflowExec(null);
+      setWfCancelling(false);
+    }
+  };
+
   const handleTrigger = async (type: GatheringType) => {
     if (triggeringType || jobStatus?.isRunning) return;
     setTriggeringType(type);
     setDismissedError(false);
 
+    const startedAt = new Date().toISOString();
+    persistRunningJob(type, startedAt);
+
     setJobStatus(prev => ({
       ...prev,
       isRunning: true,
       type,
-      startedAt: new Date().toISOString(),
+      startedAt,
       eligibleDeals: 0,
       completedCalls: 0,
       failedCalls: 0,
@@ -194,6 +313,7 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsPr
       });
       if (!response.ok) {
         const error = await response.json();
+        clearPersistedJob();
         setJobStatus(prev => prev ? { ...prev, isRunning: false, lastError: error.message } : null);
         toast.error('Failed to start calls', { description: error.message });
       } else {
@@ -202,6 +322,7 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsPr
         setTimeout(fetchJobStatus, 1000);
       }
     } catch {
+      clearPersistedJob();
       setJobStatus(prev => prev ? { ...prev, isRunning: false } : null);
       toast.error('Failed to start calls');
     } finally {
@@ -213,6 +334,7 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsPr
     if (isStopping || !jobStatus?.isRunning) return;
     setIsStopping(true);
     setJobStatus(prev => prev ? { ...prev, isRunning: false } : null);
+    clearPersistedJob();
 
     try {
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/stop-zero-score`, {
@@ -221,6 +343,9 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsPr
       });
       if (!response.ok) {
         setJobStatus(prev => prev ? { ...prev, isRunning: true } : null);
+        if (jobStatusRef.current?.type) {
+          persistRunningJob(jobStatusRef.current.type, jobStatusRef.current.startedAt || new Date().toISOString());
+        }
         toast.error('Failed to stop calls');
       } else {
         toast.success('Calls stopped');
@@ -228,6 +353,9 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsPr
       }
     } catch {
       setJobStatus(prev => prev ? { ...prev, isRunning: true } : null);
+      if (jobStatusRef.current?.type) {
+        persistRunningJob(jobStatusRef.current.type, jobStatusRef.current.startedAt || new Date().toISOString());
+      }
       toast.error('Failed to stop calls');
     } finally {
       setIsStopping(false);
@@ -266,8 +394,16 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsPr
         </button>
       </div>
 
+      {/* Checking status indicator on initial load */}
+      {initialLoading && persisted && (
+        <div className="mb-4 flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+          <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+          <span className="text-sm text-subtle">Checking for running jobs...</span>
+        </div>
+      )}
+
       {/* Running Job Status Bar */}
-      {jobStatus?.isRunning && jobStatus.type && (
+      {!initialLoading && jobStatus?.isRunning && jobStatus.type && (
         <div className="mb-4 flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
           <div className="flex items-center gap-3">
             <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
@@ -317,12 +453,49 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange }: WorkflowActionsPr
         </div>
       )}
 
+      {/* Active Workflow Execution Card */}
+      {workflowExec && (
+        <div
+          className="mb-4 flex items-center justify-between bg-brand/5 border border-brand/20 rounded-xl px-4 py-3 cursor-pointer hover:bg-brand/10 transition-colors"
+          onClick={() => onViewWorkflowExec?.(workflowExec)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+              <Sparkles className="h-4 w-4 text-brand" />
+            </div>
+            <div className="text-sm">
+              <span className="font-semibold text-heading">
+                {workflowExec.workflowName || 'NL Workflow'}
+              </span>
+              <span className="text-subtle ml-2">
+                &bull; {workflowExec.callsCompleted}/{workflowExec.totalTargets} completed
+                {workflowExec.callsFailed > 0 && (
+                  <span className="text-red-500 ml-1">&bull; {workflowExec.callsFailed} failed</span>
+                )}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-brand" />
+            <button
+              onClick={(e) => { e.stopPropagation(); handleCancelWorkflow(); }}
+              disabled={wfCancelling}
+              className="inline-flex items-center gap-1.5 text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {wfCancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Square className="h-3.5 w-3.5" />}
+              Stop
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {GATHERING_CARDS.map((card) => (
           <WorkflowCard
             key={card.id}
             card={card}
             jobStatus={jobStatus}
+            initialLoading={initialLoading}
             onTrigger={handleTrigger}
             onStop={handleStop}
             triggering={triggeringType === card.id}

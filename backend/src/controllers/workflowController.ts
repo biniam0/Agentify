@@ -667,6 +667,149 @@ export const approveAndExecuteWorkflow = async (req: AuthenticatedRequest, res: 
 };
 
 /**
+ * Get the latest active workflow execution status
+ * GET /api/workflows/execution-status
+ */
+export const getExecutionStatus = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    let userId = req.user?.userId;
+    if (!userId && req.service) userId = 'service-account';
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const execution = await prisma.workflowExecution.findFirst({
+      where: {
+        status: { in: ['PENDING', 'RUNNING'] },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        workflow: { select: { name: true, nlPrompt: true, workflowConfig: true } },
+      },
+    });
+
+    if (!execution) {
+      return res.json({ active: false });
+    }
+
+    const outcomes = await prisma.workflowCallOutcome.groupBy({
+      by: ['status'],
+      where: { executionId: execution.id },
+      _count: { status: true },
+    });
+
+    const outcomeMap: Record<string, number> = {};
+    outcomes.forEach((o) => { outcomeMap[o.status] = o._count.status; });
+
+    const batchId = (execution.metadata as any)?.batchId || null;
+
+    return res.json({
+      active: true,
+      execution: {
+        id: execution.id,
+        workflowId: execution.workflowId,
+        workflowName: execution.workflow.name,
+        prompt: execution.workflow.nlPrompt,
+        status: execution.status,
+        totalTargets: execution.totalTargets,
+        callsInitiated: outcomeMap['INITIATED'] || 0,
+        callsCompleted: (outcomeMap['COMPLETED'] || 0) + (outcomeMap['SUCCESSFUL'] || 0),
+        callsFailed: outcomeMap['FAILED'] || 0,
+        batchId,
+        startedAt: execution.startedAt,
+        createdAt: execution.createdAt,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Get execution status error:', error.message);
+    return res.status(500).json({ error: 'Failed to get execution status' });
+  }
+};
+
+/**
+ * Cancel a running workflow execution
+ * POST /api/workflows/execution/:id/cancel
+ */
+export const cancelExecution = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    let userId = req.user?.userId;
+    if (!userId && req.service) userId = 'service-account';
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const { id } = req.params;
+
+    const execution = await prisma.workflowExecution.findUnique({ where: { id } });
+    if (!execution) return res.status(404).json({ error: 'Execution not found' });
+    if (execution.status !== 'RUNNING' && execution.status !== 'PENDING') {
+      return res.status(400).json({ error: `Execution is already ${execution.status}` });
+    }
+
+    await prisma.workflowExecution.update({
+      where: { id },
+      data: {
+        status: 'CANCELLED',
+        completedAt: new Date(),
+        errorMessage: `Cancelled by user ${userId}`,
+      },
+    });
+
+    await prisma.workflowCallOutcome.updateMany({
+      where: { executionId: id, status: 'INITIATED' },
+      data: { status: 'FAILED' },
+    });
+
+    console.log(`⛔ Workflow execution ${id} cancelled by ${userId}`);
+
+    return res.json({ ok: true, message: 'Execution cancelled' });
+  } catch (error: any) {
+    console.error('❌ Cancel execution error:', error.message);
+    return res.status(500).json({ error: 'Failed to cancel execution' });
+  }
+};
+
+/**
+ * Cancel ALL running/pending workflow executions
+ * POST /api/workflows/execution/cancel-all
+ */
+export const cancelAllExecutions = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    let userId = req.user?.userId;
+    if (!userId && req.service) userId = 'service-account';
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const staleExecutions = await prisma.workflowExecution.findMany({
+      where: { status: { in: ['PENDING', 'RUNNING'] } },
+      select: { id: true },
+    });
+
+    if (staleExecutions.length === 0) {
+      return res.json({ ok: true, cancelled: 0, message: 'No active executions found' });
+    }
+
+    const ids = staleExecutions.map((e) => e.id);
+
+    await prisma.workflowExecution.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        status: 'CANCELLED',
+        completedAt: new Date(),
+        errorMessage: `Bulk cancelled by user ${userId}`,
+      },
+    });
+
+    await prisma.workflowCallOutcome.updateMany({
+      where: { executionId: { in: ids }, status: 'INITIATED' },
+      data: { status: 'FAILED' },
+    });
+
+    console.log(`⛔ Cancelled ${ids.length} workflow execution(s) by ${userId}`);
+
+    return res.json({ ok: true, cancelled: ids.length, message: `${ids.length} execution(s) cancelled` });
+  } catch (error: any) {
+    console.error('❌ Cancel all executions error:', error.message);
+    return res.status(500).json({ error: 'Failed to cancel executions' });
+  }
+};
+
+/**
  * Calculate estimated cost for workflow execution
  */
 const calculateEstimatedCost = (targetCount: number): { 
