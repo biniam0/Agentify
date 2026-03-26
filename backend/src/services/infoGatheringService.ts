@@ -114,6 +114,15 @@ const EXCLUDED_PHONE_NUMBERS = [
 
 const BARRIERX_BULK_API = `${config.barrierx.baseUrl}/api/external/tenants/bulk`;
 
+// Calls are only allowed between 08:00 and 16:00 UTC
+const CALLING_HOUR_START = 8;
+const CALLING_HOUR_END = 16;
+
+function isWithinCallingHours(): boolean {
+  const utcHour = new Date().getUTCHours();
+  return utcHour >= CALLING_HOUR_START && utcHour < CALLING_HOUR_END;
+}
+
 // ============================================
 // JOB STATE (Singleton)
 // ============================================
@@ -637,6 +646,12 @@ async function processDeals(
 
   // Process in batches
   for (let batchIndex = 0; batchIndex < jobState.totalBatches && !jobState.shouldStop; batchIndex++) {
+    if (!isWithinCallingHours()) {
+      log(`⏰ Outside calling hours (${CALLING_HOUR_START}:00-${CALLING_HOUR_END}:00 UTC) — stopping automatically.`);
+      jobState.shouldStop = true;
+      break;
+    }
+
     jobState.currentBatch = batchIndex + 1;
 
     const batchStart = batchIndex * BATCH_SIZE;
@@ -651,6 +666,12 @@ async function processDeals(
 
     for (const { tenant, deal } of batch) {
       if (jobState.shouldStop) break;
+
+      if (!isWithinCallingHours()) {
+        log(`⏰ Outside calling hours mid-batch — stopping before next call.`);
+        jobState.shouldStop = true;
+        break;
+      }
 
       log(`\n─────────────────────────────────────────`);
       log(`📋 Deal: ${deal.dealName}`);
@@ -736,7 +757,10 @@ export async function startZeroScoreGathering(triggeredBy: string): Promise<{ su
     return { success: false, error: 'A job is already running' };
   }
 
-  // Check required config
+  if (!isWithinCallingHours()) {
+    return { success: false, error: `Calls are only allowed between ${CALLING_HOUR_START}:00 and ${CALLING_HOUR_END}:00 UTC. Current UTC time: ${new Date().toISOString().slice(11, 16)}` };
+  }
+
   if (!config.barrierx.apiKey) {
     return { success: false, error: 'BARRIERX_API_KEY not configured' };
   }
@@ -788,6 +812,10 @@ export async function startLostDealGathering(triggeredBy: string): Promise<{ suc
     return { success: false, error: 'A job is already running' };
   }
 
+  if (!isWithinCallingHours()) {
+    return { success: false, error: `Calls are only allowed between ${CALLING_HOUR_START}:00 and ${CALLING_HOUR_END}:00 UTC. Current UTC time: ${new Date().toISOString().slice(11, 16)}` };
+  }
+
   if (!config.barrierx.apiKey) {
     return { success: false, error: 'BARRIERX_API_KEY not configured' };
   }
@@ -837,6 +865,10 @@ export async function startLostDealGathering(triggeredBy: string): Promise<{ suc
 export async function startInactivityGathering(triggeredBy: string): Promise<{ success: boolean; error?: string }> {
   if (jobState.isRunning) {
     return { success: false, error: 'A job is already running' };
+  }
+
+  if (!isWithinCallingHours()) {
+    return { success: false, error: `Calls are only allowed between ${CALLING_HOUR_START}:00 and ${CALLING_HOUR_END}:00 UTC. Current UTC time: ${new Date().toISOString().slice(11, 16)}` };
   }
 
   if (!config.barrierx.apiKey) {

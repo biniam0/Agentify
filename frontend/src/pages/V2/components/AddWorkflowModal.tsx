@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   X,
   Sparkles,
@@ -16,10 +16,12 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  Square,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import api from '@/services/api';
+import { toast } from 'sonner';
 
 interface SimpleIntent {
   action: string;
@@ -50,20 +52,58 @@ interface ApprovalData {
   requiresApproval: boolean;
 }
 
-type Step = 'prompt' | 'processing' | 'no-targets' | 'approval' | 'executing' | 'success';
+export interface WorkflowExecStatus {
+  id: string;
+  workflowId: string;
+  workflowName: string;
+  prompt: string;
+  status: string;
+  totalTargets: number;
+  callsInitiated: number;
+  callsCompleted: number;
+  callsFailed: number;
+  batchId: string | null;
+  startedAt: string | null;
+  createdAt: string;
+}
+
+type Step = 'prompt' | 'processing' | 'no-targets' | 'approval' | 'executing' | 'success' | 'live-progress';
 
 interface SubStep {
   status: 'pending' | 'running' | 'complete' | 'error' | 'warning';
   message: string;
 }
 
-interface AddWorkflowModalProps {
-  onClose: () => void;
+const WF_STORAGE_KEY = 'agentx_workflow_exec';
+
+function persistWorkflowExec(data: { executionId: string; batchId: string; totalTargets: number; workflowName: string; startedAt: string }) {
+  try { localStorage.setItem(WF_STORAGE_KEY, JSON.stringify(data)); } catch { /* ignore */ }
 }
 
-const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
+export function clearWorkflowExec() {
+  try { localStorage.removeItem(WF_STORAGE_KEY); } catch { /* ignore */ }
+}
+
+export function getPersistedWorkflowExec(): { executionId: string; batchId: string; totalTargets: number; workflowName: string; startedAt: string } | null {
+  try {
+    const raw = localStorage.getItem(WF_STORAGE_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (p?.executionId) return p;
+  } catch { /* corrupted */ }
+  return null;
+}
+
+interface AddWorkflowModalProps {
+  onClose: () => void;
+  activeExecution?: WorkflowExecStatus | null;
+  onExecutionChange?: () => void;
+}
+
+const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWorkflowModalProps) => {
+  const hasActiveExec = !!activeExecution;
   const [prompt, setPrompt] = useState('');
-  const [step, setStep] = useState<Step>('prompt');
+  const [step, setStep] = useState<Step>(hasActiveExec ? 'live-progress' : 'prompt');
 
   const [intent, setIntent] = useState<SimpleIntent | null>(null);
   const [targets, setTargets] = useState<{
@@ -73,7 +113,12 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
     suggestions?: string[];
   } | null>(null);
   const [approvalData, setApprovalData] = useState<ApprovalData | null>(null);
-  const [execution, setExecution] = useState<{ id: string; batchId: string } | null>(null);
+  const [execution, setExecution] = useState<{ id: string; batchId: string } | null>(
+    hasActiveExec ? { id: activeExecution!.id, batchId: activeExecution!.batchId || '' } : null
+  );
+
+  const [liveStatus, setLiveStatus] = useState<WorkflowExecStatus | null>(activeExecution || null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const [substeps, setSubsteps] = useState<Record<string, SubStep>>({
     parsing: { status: 'pending', message: 'Analyzing your request...' },
@@ -83,6 +128,26 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
 
   const [error, setError] = useState<{ title: string; suggestion: string } | null>(null);
   const [scriptExpanded, setScriptExpanded] = useState(false);
+
+  const fetchLiveStatus = useCallback(async () => {
+    try {
+      const res = await api.get('/workflows/execution-status');
+      if (res.data.active) {
+        setLiveStatus(res.data.execution);
+      } else {
+        setLiveStatus(null);
+        clearWorkflowExec();
+        setStep('success');
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (step !== 'live-progress') return;
+    fetchLiveStatus();
+    const interval = setInterval(fetchLiveStatus, 5000);
+    return () => clearInterval(interval);
+  }, [step, fetchLiveStatus]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -169,17 +234,29 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
     }));
 
     try {
+      const workflowName = `Approved Workflow - ${new Date().toLocaleString()}`;
       const response = await api.post('/workflows/approve-and-execute', {
         intent: approvalData.intent,
-        workflowName: `Approved Workflow - ${new Date().toLocaleString()}`,
+        workflowName,
         userConfirmation: true,
         estimatedCost: approvalData.estimatedCost,
       });
 
-      setExecution({
+      const execData = {
         id: response.data.execution.id,
         batchId: response.data.execution.batchId,
+      };
+      setExecution(execData);
+
+      persistWorkflowExec({
+        executionId: execData.id,
+        batchId: execData.batchId,
+        totalTargets: approvalData.targets.count,
+        workflowName,
+        startedAt: new Date().toISOString(),
       });
+
+      onExecutionChange?.();
 
       setSubsteps((prev) => ({
         ...prev,
@@ -197,6 +274,23 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
     }
   };
 
+  const handleCancel = async () => {
+    if (isCancelling) return;
+    setIsCancelling(true);
+
+    try {
+      await api.post('/workflows/execution/cancel-all');
+      toast.success('Workflow cancelled');
+    } catch (err: any) {
+      toast.error('Failed to cancel', { description: err.response?.data?.error || err.message });
+    } finally {
+      clearWorkflowExec();
+      onExecutionChange?.();
+      setIsCancelling(false);
+      onClose();
+    }
+  };
+
   const reset = () => {
     setPrompt('');
     setStep('prompt');
@@ -204,6 +298,7 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
     setTargets(null);
     setApprovalData(null);
     setExecution(null);
+    setLiveStatus(null);
     setError(null);
     setSubsteps({
       parsing: { status: 'pending', message: 'Analyzing your request...' },
@@ -222,6 +317,13 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
     }
   };
 
+  const formatRelativeTime = (ts: string) => {
+    const mins = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    return `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={step !== 'processing' && step !== 'executing' ? onClose : undefined} />
@@ -235,7 +337,7 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
                 <Sparkles className="h-4 w-4 text-brand" />
               </div>
               <h2 className="text-lg font-semibold text-heading">
-                {step === 'success' ? 'Workflow Launched' : step === 'approval' ? 'Review & Approve' : 'Workflow Creator'}
+                {step === 'live-progress' ? 'Workflow In Progress' : step === 'success' ? 'Workflow Launched' : step === 'approval' ? 'Review & Approve' : 'Workflow Creator'}
               </h2>
             </div>
             <p className="text-sm text-subtle">
@@ -245,6 +347,7 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
               {step === 'approval' && 'Review the targets and approve execution.'}
               {step === 'executing' && 'Executing your approved workflow...'}
               {step === 'success' && 'Your workflow has been launched successfully.'}
+              {step === 'live-progress' && (liveStatus?.workflowName || 'Monitoring active workflow execution.')}
             </p>
           </div>
           {step !== 'processing' && step !== 'executing' && (
@@ -420,7 +523,6 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
           {/* ──── STEP: APPROVAL ──── */}
           {step === 'approval' && approvalData && (
             <div className="space-y-5">
-              {/* Cost Summary */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="text-center p-4 bg-blue-50 border border-blue-100 rounded-xl">
                   <Users className="h-4 w-4 text-blue-500 mx-auto mb-1.5" />
@@ -439,7 +541,6 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
                 </div>
               </div>
 
-              {/* Large batch warning */}
               {approvalData.targets.count > 10 && (
                 <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl">
                   <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
@@ -452,7 +553,6 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
                 </div>
               )}
 
-              {/* Targets preview */}
               <div>
                 <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">TARGET PREVIEW</p>
                 <div className="bg-white border border-default rounded-xl divide-y divide-default max-h-48 overflow-y-auto">
@@ -481,7 +581,6 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
                 </div>
               </div>
 
-              {/* Script preview */}
               <div>
                 <button
                   onClick={() => setScriptExpanded(!scriptExpanded)}
@@ -523,47 +622,123 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
             </div>
           )}
 
+          {/* ──── STEP: LIVE PROGRESS ──── */}
+          {step === 'live-progress' && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-4 p-4 bg-brand/5 border border-brand/20 rounded-xl">
+                <Loader2 className="h-8 w-8 text-brand animate-spin shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-semibold text-heading">{liveStatus?.workflowName || 'Workflow Running'}</p>
+                  <p className="text-xs text-subtle mt-0.5">
+                    Started {liveStatus?.startedAt ? formatRelativeTime(liveStatus.startedAt) : 'recently'}
+                  </p>
+                </div>
+                <span className="inline-flex px-2.5 py-1 bg-brand/10 text-brand text-xs font-semibold rounded-lg">
+                  {liveStatus?.status || 'RUNNING'}
+                </span>
+              </div>
+
+              {liveStatus && (
+                <>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                      <p className="text-2xl font-bold text-blue-700">{liveStatus.totalTargets}</p>
+                      <p className="text-[11px] text-blue-500 font-medium">Total Targets</p>
+                    </div>
+                    <div className="text-center p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+                      <p className="text-2xl font-bold text-emerald-700">{liveStatus.callsCompleted}</p>
+                      <p className="text-[11px] text-emerald-500 font-medium">Completed</p>
+                    </div>
+                    <div className="text-center p-4 bg-red-50 border border-red-100 rounded-xl">
+                      <p className="text-2xl font-bold text-red-700">{liveStatus.callsFailed}</p>
+                      <p className="text-[11px] text-red-500 font-medium">Failed</p>
+                    </div>
+                  </div>
+
+                  {liveStatus.totalTargets > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-subtle mb-1.5">
+                        <span>Progress</span>
+                        <span>{Math.round(((liveStatus.callsCompleted + liveStatus.callsFailed) / liveStatus.totalTargets) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                        <div
+                          className="bg-brand h-2.5 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.round(((liveStatus.callsCompleted + liveStatus.callsFailed) / liveStatus.totalTargets) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {liveStatus.batchId && (
+                    <div className="bg-gray-50 border border-default rounded-xl p-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Execution ID</p>
+                          <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{liveStatus.id}</code>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Batch ID</p>
+                          <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{liveStatus.batchId}</code>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           {/* ──── STEP: SUCCESS ──── */}
-          {step === 'success' && execution && (
+          {step === 'success' && (
             <div className="space-y-5">
               <div className="flex flex-col items-center text-center py-4">
                 <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
                   <CheckCircle2 className="h-7 w-7 text-emerald-500" />
                 </div>
-                <p className="text-lg font-semibold text-heading">Workflow Launched!</p>
+                <p className="text-lg font-semibold text-heading">
+                  {hasActiveExec && !liveStatus ? 'Workflow Completed' : 'Workflow Launched!'}
+                </p>
                 <p className="text-sm text-subtle mt-1">
-                  Calls are being made to {targets?.count} target{targets?.count === 1 ? '' : 's'}.
+                  {hasActiveExec && !liveStatus
+                    ? 'All calls have finished.'
+                    : `Calls are being made to ${targets?.count || activeExecution?.totalTargets || '?'} target(s).`
+                  }
                 </p>
               </div>
 
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  <p className="text-sm font-medium text-emerald-800">Calls in progress</p>
+                  <p className="text-sm font-medium text-emerald-800">
+                    {hasActiveExec && !liveStatus ? 'Calls completed' : 'Calls in progress'}
+                  </p>
                 </div>
                 <p className="text-xs text-emerald-600">
                   You can monitor progress in the Calls tab. Results will appear as calls complete.
                 </p>
               </div>
 
-              <div className="bg-gray-50 border border-default rounded-xl p-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Execution ID</p>
-                    <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{execution.id}</code>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Batch ID</p>
-                    <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{execution.batchId}</code>
+              {execution && (
+                <div className="bg-gray-50 border border-default rounded-xl p-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Execution ID</p>
+                      <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{execution.id}</code>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Batch ID</p>
+                      <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{execution.batchId}</code>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        {(step === 'approval' || step === 'success') && (
+        {(step === 'approval' || step === 'success' || step === 'live-progress') && (
           <div className="px-6 py-4 border-t border-default flex items-center justify-between bg-gray-50/50">
             {step === 'approval' && (
               <>
@@ -576,6 +751,21 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   Approve & Execute
+                </Button>
+              </>
+            )}
+            {step === 'live-progress' && (
+              <>
+                <Button variant="outline" onClick={onClose} className="h-9 text-sm border-default">
+                  Close
+                </Button>
+                <Button
+                  onClick={handleCancel}
+                  disabled={isCancelling}
+                  className="gap-2 h-9 text-sm bg-red-500 hover:bg-red-600 text-white"
+                >
+                  {isCancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Square className="h-3.5 w-3.5" />}
+                  Cancel Workflow
                 </Button>
               </>
             )}
@@ -593,7 +783,6 @@ const AddWorkflowModal = ({ onClose }: AddWorkflowModalProps) => {
           </div>
         )}
 
-        {/* Disclaimer for approval step */}
         {step === 'approval' && (
           <div className="px-6 pb-4">
             <p className="text-[11px] text-subtle text-center">
