@@ -4,37 +4,37 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
 
 ---
 
-## ✨ Features
+## Features
 
-- 🔐 **Hybrid Authentication** - AgentX JWT (7-day) + BarrierX tokens (1-hour)
-- 📞 **Automated Calls** - Pre-meeting (T-20) and post-meeting (T+30) via ElevenLabs
-- 🔄 **Smart Call Retry** - Auto-retry on no-answer (3 attempts, 1 min interval)
-- 📅 **Meeting Management** - Fetch and manage user meetings from BarrierX
-- 🤖 **AI Voice Agents** - Pre-call preparation & post-call follow-up agents
-- 🔄 **Scheduler Service** - Automated call triggering every 5 minutes
-- 🎯 **Smart Data Handling** - Real API + dummy data fallback for resilience
-- 💾 **Redis Caching** - ⚡ NEW: Resilient operation during API outages with smart cache updates
-- 📊 **Batch Processing** - Efficient multi-user data fetching (5x faster)
-- 🔗 **BarrierX Integration** - Real-time deal, contact, and meeting data sync
-- 📝 **Webhook Processing** - ElevenLabs call completion webhooks with payload storage
+- **Hybrid Authentication** - AgentX JWT (7-day) + BarrierX tokens (1-hour)
+- **Automated Calls** - Pre-meeting (T-20) and post-meeting (T+30) via ElevenLabs
+- **Smart Call Retry** - Auto-retry on no-answer (3 attempts, 1 min interval)
+- **Meeting Management** - Fetch and manage user meetings from BarrierX
+- **AI Voice Agents** - Pre-call preparation & post-call follow-up agents
+- **Scheduler Service** - Automated call triggering every 5 minutes
+- **Smart Data Handling** - Real API + dummy data fallback for resilience
+- **Redis Caching** - NEW: Resilient operation during API outages with smart cache updates
+- **Batch Processing** - Efficient multi-user data fetching (5x faster)
+- **BarrierX Integration** - Real-time deal, contact, and meeting data sync
+- **Webhook Processing** - ElevenLabs call completion webhooks with payload storage
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Runtime**: Node.js 18+ with TypeScript
 - **Framework**: Express.js
 - **Database**: PostgreSQL (Neon) with Prisma ORM
 - **Cache**: Redis (optional, for resilience)
 - **Authentication**: JWT (7-day validity)
-- **External APIs**: 
+- **External APIs**:
   - BarrierX API (CRM data)
   - ElevenLabs API (AI voice calls)
 - **Scheduler**: node-cron (5-minute intervals)
 
 ---
 
-## 🚀 Setup
+## Setup
 
 ### Prerequisites
 
@@ -96,7 +96,7 @@ AI-powered sales automation backend that triggers intelligent pre-meeting and po
    REDIS_PASSWORD=your-redis-password    # Redis password
    ```
    
-   > 💡 **Redis Setup**: See [REDIS_SETUP.md](./REDIS_SETUP.md) for detailed Redis configuration and testing.
+   > **Redis Setup**: See [REDIS_SETUP.md](./REDIS_SETUP.md) for detailed Redis configuration and testing.
 
 3. **Setup database:**
    ```bash
@@ -113,7 +113,7 @@ The server will start on `http://localhost:4000`
 
 ---
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### Authentication
 
@@ -210,7 +210,7 @@ GET /health
 
 ---
 
-## 🗄️ Database Schema
+## Database Schema
 
 ```prisma
 model User {
@@ -227,11 +227,11 @@ model User {
 
 ---
 
-## 🔄 Scheduler Service
+## Scheduler Service
 
 Runs every **5 minutes** to automatically trigger calls.
 
-### 🔀 Automation Modes
+### Automation Modes
 
 The scheduler supports **two modes** controlled by `AUTOMATION_MODE`:
 
@@ -250,7 +250,7 @@ AUTOMATION_MODE=authenticated
 2. Batch fetch their deals from BarrierX using user IDs
 3. Process meetings for each user
 
-#### **2. Bulk Mode** (Wildcard) ⭐ NEW
+#### **2. Bulk Mode** (Wildcard) NEW
 - Fetches **ALL users** from **ALL tenants** in **ONE API call**
 - No database or login required
 - Automatic user discovery
@@ -268,13 +268,13 @@ AUTOMATION_MODE=bulk
 3. Process meetings for all discovered users
 
 **Advantages of Bulk Mode:**
-- ✅ **87.5% fewer API calls** (1 call vs 8 calls)
-- ✅ **No user onboarding** required
-- ✅ **Always fresh data** from source of truth
-- ✅ **Auto-discovery** of new tenants/users
-- ✅ **Simpler deployment** (backend-only)
+- **87.5% fewer API calls** (1 call vs 8 calls)
+- **No user onboarding** required
+- **Always fresh data** from source of truth
+- **Auto-discovery** of new tenants/users
+- **Simpler deployment** (backend-only)
 
-### 🎯 Deal Filtering
+### Deal Filtering
 
 You can optionally filter deals using these environment variables:
 
@@ -295,7 +295,7 @@ You can optionally filter deals using these environment variables:
 
 If not specified or left empty, all tenants/pipelines will be included.
 
-### 📋 Processing Steps (Both Modes)
+### Processing Steps (Both Modes)
 
 3. **Filters** meetings:
    - **Pre-call**: Meetings starting in 18-22 minutes (T-20 ±2 min buffer)
@@ -311,7 +311,7 @@ If not specified or left empty, all tenants/pipelines will be included.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 backend/
@@ -353,7 +353,7 @@ backend/
 
 ---
 
-## 🧪 Development
+## Development
 
 ### Scripts
 
@@ -390,23 +390,23 @@ USE_MOCK_BARRIERX=true
 The backend provides detailed logging:
 
 ```
-🌐 Fetching deals from BarrierX for user: userId
-✅ Transforming 4 deals for user userId
-  📝 No contacts for deal 123, generating dummy data
-  📅 No meetings for deal 123, generating dummy data
-  📞 Using default phone for owner: +251914373107
-✅ Successfully fetched 4 deals for user userId
+ Fetching deals from BarrierX for user: userId
+ Transforming 4 deals for user userId
+   No contacts for deal 123, generating dummy data
+   No meetings for deal 123, generating dummy data
+   Using default phone for owner: +251914373107
+ Successfully fetched 4 deals for user userId
 
-🔧 Manual PRE-CALL trigger by Tamirat Kebede
-📋 Meeting: Product Demo Call
-💼 Deal: Enterprise Deal
-📞 Calling owner at: +251914373107
-✅ ElevenLabs call initiated successfully
+ Manual PRE-CALL trigger by Tamirat Kebede
+ Meeting: Product Demo Call
+ Deal: Enterprise Deal
+ Calling owner at: +251914373107
+ ElevenLabs call initiated successfully
 ```
 
 ---
 
-## 🔐 Security Notes
+## Security Notes
 
 - **Never commit** `.env` files or API keys
 - **Change** `JWT_SECRET` in production
@@ -416,7 +416,7 @@ The backend provides detailed logging:
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "BarrierX login error"
 - Verify `BARRIERX_API_KEY` is correct
@@ -439,7 +439,7 @@ The backend provides detailed logging:
 
 ---
 
-## 📖 Additional Documentation
+## Additional Documentation
 
 - **[BarrierX Integration Guide](./BARRIERX_INTEGRATION.md)** - Comprehensive guide on hybrid authentication, token management, and API integration
 - **[Bulk API Integration](./BULK_API_INTEGRATION.md)** - Modular architecture, data transformers, and performance optimization
@@ -447,17 +447,17 @@ The backend provides detailed logging:
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
 ### Environment Variables (Production)
 
 Ensure all required variables are set:
-- ✅ Database URL with SSL
-- ✅ Strong JWT secret (min 32 characters)
-- ✅ Production BarrierX API key
-- ✅ Production ElevenLabs credentials
-- ✅ `NODE_ENV=production`
-- ✅ `USE_MOCK_BARRIERX=false`
+- Database URL with SSL
+- Strong JWT secret (min 32 characters)
+- Production BarrierX API key
+- Production ElevenLabs credentials
+- `NODE_ENV=production`
+- `USE_MOCK_BARRIERX=false`
 
 ### Build & Deploy
 
@@ -474,14 +474,14 @@ Or deploy to platforms like:
 
 ---
 
-## 📝 License
+## License
 
 Proprietary - All rights reserved
 
 ---
 
-## 👥 Support
+## Support
 
 For questions or issues, contact the development team.
 
-**Built with ❤️ by the AgentX Team**
+**Built by the AgentX Team**
