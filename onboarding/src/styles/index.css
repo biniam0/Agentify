@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 262 83% 58%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 142 76% 36%;
+    --radius: 0.5rem;
+
+    /* Brand Color (emerald theme) */
+    --app-brand: 152 32% 48%;
+    --app-brand-hover: 152 32% 43%;
+
+    /* Onboarding-specific variables */
+    --ob-dark-bg: 220 20% 10%;
+    --ob-dark-surface: 220 16% 14%;
+    --ob-dark-border: 220 12% 20%;
+    --ob-dark-text: 0 0% 100%;
+    --ob-dark-text-muted: 220 10% 60%;
+
+    --ob-green-accent: 160 84% 39%;
+    --ob-green-accent-hover: 160 84% 34%;
+    --ob-teal: 168 60% 40%;
+    --ob-teal-light: 168 40% 50%;
+    --ob-teal-surface: 165 45% 35%;
+    --ob-teal-deep: 168 50% 28%;
+
+    --ob-section-light: 210 40% 98%;
+    --ob-section-white: 0 0% 100%;
+
+    --ob-marble-bg: 140 20% 92%;
+    --ob-marble-accent: 150 15% 85%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+      'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
+      'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .ob-dark-bg {
+    background-color: hsl(var(--ob-dark-bg));
+  }
+
+  .ob-dark-surface {
+    background-color: hsl(var(--ob-dark-surface));
+  }
+
+  .ob-green-accent {
+    color: hsl(var(--ob-green-accent));
+  }
+
+  .ob-bg-green-accent {
+    background-color: hsl(var(--ob-green-accent));
+  }
+
+  .ob-bg-teal {
+    background-color: hsl(var(--ob-teal));
+  }
+
+  .ob-bg-teal-surface {
+    background-color: hsl(var(--ob-teal-surface));
+  }
+
+  .ob-bg-teal-deep {
+    background-color: hsl(var(--ob-teal-deep));
+  }
+
+  .ob-section-light {
+    background-color: hsl(var(--ob-section-light));
+  }
+
+  .ob-marble-bg {
+    background-color: hsl(var(--ob-marble-bg));
+    background-image:
+      radial-gradient(ellipse at 20% 50%, hsl(var(--ob-marble-accent)) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 30%, hsl(150 20% 88%) 0%, transparent 50%);
+  }
+}
