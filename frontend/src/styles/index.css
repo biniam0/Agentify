@@ -408,8 +408,15 @@
   }
 
   /* Onboarding page utilities */
+  .ob-grid-bg {
+    background-size: 100px 100px;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  }
+
   .ob-dark-bg {
-    background-color: hsl(var(--ob-dark-bg));
+    background-color: #0A0A0B; /* Match Framer dark background */
   }
 
   .ob-dark-surface {
@@ -417,11 +424,11 @@
   }
 
   .ob-green-accent {
-    color: hsl(var(--ob-green-accent));
+    color: #00D287; /* Framer green */
   }
 
   .ob-bg-green-accent {
-    background-color: hsl(var(--ob-green-accent));
+    background-color: #00D287;
   }
 
   .ob-marble-bg {
