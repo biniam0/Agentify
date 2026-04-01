@@ -59,7 +59,6 @@ export function HowItWorksSection() {
           </p>
         </div>
 
-        {/* Cards */}
         <div
           className={`mt-14 flex flex-col gap-4 md:flex-row transition-all delay-300 duration-700 ${
             isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'
@@ -79,7 +78,6 @@ export function HowItWorksSection() {
                 }`}
                 style={{ minHeight: isActive ? '380px' : '200px' }}
               >
-                {/* Integration grid (only for Connect when active) */}
                 {isActive && step.integrations.length > 0 && (
                   <div className="mb-6 flex-1 overflow-hidden rounded-xl bg-white/10 p-3 sm:p-4">
                     <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -122,7 +120,6 @@ export function HowItWorksSection() {
           })}
         </div>
 
-        {/* Step dots */}
         <div className="mt-6 flex justify-center gap-2">
           {steps.map((_, i) => (
             <button
@@ -138,3 +135,4 @@ export function HowItWorksSection() {
     </section>
   )
 }
+

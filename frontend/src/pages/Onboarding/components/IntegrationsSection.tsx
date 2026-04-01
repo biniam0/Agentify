@@ -44,13 +44,11 @@ export function IntegrationsSection() {
           </p>
         </div>
 
-        {/* Orbit visualization */}
         <div
           className={`relative mx-auto mt-12 h-[360px] w-[360px] transition-all delay-200 duration-1000 sm:mt-16 sm:h-[480px] sm:w-[480px] md:h-[560px] md:w-[560px] ${
             isVisible ? 'scale-100 opacity-100' : 'scale-90 opacity-0'
           }`}
         >
-          {/* Rings */}
           {[1, 2, 3].map((ring) => (
             <div
               key={ring}
@@ -61,17 +59,14 @@ export function IntegrationsSection() {
             />
           ))}
 
-          {/* Center glow */}
           <div className="absolute inset-[36%] rounded-full bg-gradient-to-b from-emerald-50 via-emerald-50/60 to-transparent" />
 
-          {/* Center AgentX logo */}
           <div className="absolute left-1/2 top-1/2 z-10 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl bg-white shadow-lg ring-1 ring-gray-100 sm:h-16 sm:w-16">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-600 sm:h-10 sm:w-10">
               <span className="text-base font-bold text-white sm:text-lg">X</span>
             </div>
           </div>
 
-          {/* Integration icons */}
           {orbitItems.map((item) => {
             const radius = ringRadii[item.ring]
             const rad = (item.angle * Math.PI) / 180

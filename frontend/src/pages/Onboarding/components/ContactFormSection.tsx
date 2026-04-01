@@ -17,7 +17,6 @@ export function ContactFormSection() {
     <section id="contact" className="ob-dark-bg py-20 md:py-28">
       <div ref={ref} className="mx-auto max-w-7xl px-6">
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
-          {/* Left Column */}
           <div
             className={`space-y-6 transition-all duration-700 ${
               isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
@@ -40,13 +39,11 @@ export function ContactFormSection() {
             </p>
           </div>
 
-          {/* Right Column - Form */}
           <div
             className={`space-y-5 transition-all delay-200 duration-700 ${
               isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'
             }`}
           >
-            {/* Row: First name, Last name */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-gray-300">
@@ -68,7 +65,6 @@ export function ContactFormSection() {
               </div>
             </div>
 
-            {/* Row: Company, Email */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-gray-300">
@@ -91,7 +87,6 @@ export function ContactFormSection() {
               </div>
             </div>
 
-            {/* Row: Role, Industry */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-gray-300">
@@ -131,7 +126,6 @@ export function ContactFormSection() {
               </div>
             </div>
 
-            {/* Row: Revenue target, Number of sales */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-gray-300">
@@ -170,7 +164,6 @@ export function ContactFormSection() {
               </div>
             </div>
 
-            {/* Economic Buyer */}
             <div className="space-y-2">
               <Label className="text-gray-300">
                 Are you the Economic Buyer<span className="text-red-400">*</span>
@@ -187,7 +180,6 @@ export function ContactFormSection() {
               </Select>
             </div>
 
-            {/* Sales / GTM */}
             <div className="space-y-2">
               <Label className="text-gray-300">
                 Does your company operate in the Sales / GTM software industry?
@@ -204,7 +196,6 @@ export function ContactFormSection() {
               </Select>
             </div>
 
-            {/* Submit */}
             <Button
               size="lg"
               className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 py-6 text-base font-semibold text-white hover:from-emerald-600 hover:to-teal-600"

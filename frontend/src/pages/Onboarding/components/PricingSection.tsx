@@ -88,7 +88,6 @@ export function PricingSection({ onGetInvited }: PricingSectionProps) {
               }`}
               style={{ transitionDelay: `${200 + index * 150}ms` }}
             >
-              {/* Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-bold text-gray-900 sm:text-xl">
@@ -103,7 +102,6 @@ export function PricingSection({ onGetInvited }: PricingSectionProps) {
                 <p className="mt-1 text-sm text-gray-500">{plan.deals}</p>
               </div>
 
-              {/* Toggle */}
               <div className="mb-6 flex items-center gap-3">
                 <Switch
                   checked={annualBilling[index]}
@@ -114,7 +112,6 @@ export function PricingSection({ onGetInvited }: PricingSectionProps) {
                 <span className="text-sm text-gray-600">Annual</span>
               </div>
 
-              {/* CTA */}
               <Button
                 onClick={onGetInvited}
                 className={`mb-8 w-full ${
@@ -126,7 +123,6 @@ export function PricingSection({ onGetInvited }: PricingSectionProps) {
                 Get Invited
               </Button>
 
-              {/* Features */}
               <ul className="space-y-3">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-center gap-3 text-sm">

@@ -11,10 +11,10 @@ import { BarrierXHeader } from '../pages/User/Logs/components/BarrierXHeader';
 const UserLayout: React.FC = () => {
   // Navigation items for the header - shared across all user pages
   const navigationItems = [
-    { label: 'Meetings', path: '/meetings' },
-    // { label: 'Logs', path: '/logs' },
-    { label: 'Calls', path: '/calls' },
-    { label: 'Analytics', path: '/calls/analytics' },
+    { label: 'Meetings', path: '/app/meetings' },
+    // { label: 'Logs', path: '/app/logs' },
+    { label: 'Calls', path: '/app/calls' },
+    { label: 'Analytics', path: '/app/calls/analytics' },
   ];
 
   return (

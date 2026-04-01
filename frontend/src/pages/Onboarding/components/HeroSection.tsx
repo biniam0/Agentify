@@ -13,7 +13,6 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
     <section className="ob-dark-bg relative overflow-hidden pb-20 pt-16 md:pb-28 md:pt-24">
       <div ref={ref} className="mx-auto max-w-7xl px-6">
         <div className="grid items-center gap-12 lg:grid-cols-2">
-          {/* Left Column */}
           <div
             className={`space-y-8 transition-all duration-700 ${
               isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
@@ -41,7 +40,6 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
               Start Today - For Free
             </Button>
 
-            {/* CRM Logos */}
             <div className="flex flex-wrap items-center gap-6 pt-4 sm:gap-8">
               <span className="text-lg font-bold text-white sm:text-xl">
                 HubSp<span className="text-emerald-500">o</span>t
@@ -61,7 +59,6 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
             </div>
           </div>
 
-          {/* Right Column - Phone Mockup */}
           <div
             className={`flex justify-center transition-all delay-200 duration-700 lg:justify-end ${
               isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'
@@ -69,10 +66,8 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
           >
             <div className="relative">
               <div className="relative h-[520px] w-[260px] overflow-hidden rounded-[36px] border-[3px] border-gray-700 bg-gradient-to-br from-gray-500/20 to-gray-800/40 shadow-2xl sm:h-[580px] sm:w-[290px] sm:rounded-[40px] sm:border-4">
-                {/* Notch */}
                 <div className="absolute left-1/2 top-0 z-10 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-gray-800" />
 
-                {/* Status bar */}
                 <div className="relative z-10 flex items-center justify-between px-6 pt-3">
                   <span className="text-xs font-medium text-white">9:41</span>
                   <div className="flex items-center gap-1">
@@ -80,7 +75,6 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
                   </div>
                 </div>
 
-                {/* Call content */}
                 <div className="flex flex-col items-center pt-14 sm:pt-16">
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 shadow-lg shadow-emerald-600/30">
                     <span className="text-lg font-bold text-white">X</span>
@@ -89,7 +83,6 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
                   <p className="text-sm text-gray-400">connecting...</p>
                 </div>
 
-                {/* Call actions */}
                 <div className="absolute bottom-14 left-0 right-0 px-10 sm:bottom-16 sm:px-12">
                   <div className="grid grid-cols-2 gap-6">
                     <div className="flex flex-col items-center gap-2">
@@ -122,7 +115,6 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
                   </div>
                 </div>
 
-                {/* Home indicator */}
                 <div className="absolute bottom-2 left-1/2 h-1 w-28 -translate-x-1/2 rounded-full bg-white/30 sm:w-32" />
               </div>
             </div>

@@ -73,7 +73,6 @@ export function FeaturesSection() {
               }`}
               style={{ transitionDelay: `${200 + index * 150}ms` }}
             >
-              {/* Decorative illustration area */}
               <div className={`mb-6 flex h-36 items-center justify-center rounded-xl border ${feature.decorBorder} bg-gray-50/50 sm:h-40`}>
                 <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${feature.iconBg} sm:h-16 sm:w-16`}>
                   <feature.icon className={`h-7 w-7 ${feature.iconColor} sm:h-8 sm:w-8`} />

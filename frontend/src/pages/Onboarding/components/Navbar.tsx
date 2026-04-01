@@ -12,7 +12,6 @@ export function Navbar({ onCtaClick }: NavbarProps) {
   return (
     <nav className="ob-dark-bg sticky top-0 z-50 border-b border-white/5 backdrop-blur-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        {/* Logo */}
         <a href="/" className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600">
             <span className="text-lg font-bold text-white">X</span>
@@ -22,13 +21,11 @@ export function Navbar({ onCtaClick }: NavbarProps) {
           </span>
         </a>
 
-        {/* Pill Badge - Desktop */}
         <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-gray-300 lg:flex">
           AgentX does not require a tech team to work
           <Rocket className="h-4 w-4 text-orange-400" />
         </div>
 
-        {/* CTA - Desktop */}
         <Button
           onClick={onCtaClick}
           variant="outline"
@@ -37,7 +34,6 @@ export function Navbar({ onCtaClick }: NavbarProps) {
           Start Today - For Free
         </Button>
 
-        {/* Mobile menu button */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="text-white sm:hidden"
@@ -46,7 +42,6 @@ export function Navbar({ onCtaClick }: NavbarProps) {
         </button>
       </div>
 
-      {/* Mobile dropdown */}
       {mobileOpen && (
         <div className="border-t border-white/5 px-6 py-4 sm:hidden">
           <div className="mb-3 flex items-center gap-2 text-sm text-gray-400">

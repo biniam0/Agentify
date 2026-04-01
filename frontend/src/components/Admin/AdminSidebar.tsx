@@ -48,27 +48,27 @@ import {
 const mainNavItems = [
   {
     title: 'Clients Meetings',
-    url: '/admin/meetings',
+    url: '/app/admin/meetings',
     icon: Calendar,
   },
   {
     title: 'Clients Deals',
-    url: '/admin/deals',
+    url: '/app/admin/deals',
     icon: Briefcase,
   },
   {
     title: 'BarrierX Info',
-    url: '/admin/barrierx-info',
+    url: '/app/admin/barrierx-info',
     icon: Target,
   },
   {
     title: 'Investigations',
-    url: '/admin/agentx-investigations',
+    url: '/app/admin/agentx-investigations',
     icon: SearchCode,
   },
   {
     title: 'Workflows',
-    url: '/admin/workflows',
+    url: '/app/admin/workflows',
     icon: Zap,
   },
 ];
@@ -77,37 +77,37 @@ const mainNavItems = [
 const logsNavItems = [
   {
     title: 'Overview',
-    url: '/admin/logs',
+    url: '/app/admin/logs',
     icon: Activity,
   },
   {
     title: 'Calls',
-    url: '/admin/logs/calls',
+    url: '/app/admin/logs/calls',
     icon: Phone,
   },
   {
     title: 'SMS',
-    url: '/admin/logs/sms',
+    url: '/app/admin/logs/sms',
     icon: MessageSquare,
   },
   {
     title: 'Webhooks',
-    url: '/admin/logs/webhooks',
+    url: '/app/admin/logs/webhooks',
     icon: Webhook,
   },
   {
     title: 'CRM Actions',
-    url: '/admin/logs/crm-actions',
+    url: '/app/admin/logs/crm-actions',
     icon: FileText,
   },
   {
     title: 'Schedulers',
-    url: '/admin/logs/scheduler',
+    url: '/app/admin/logs/scheduler',
     icon: Timer,
   },
   {
     title: 'Errors',
-    url: '/admin/logs/errors',
+    url: '/app/admin/logs/errors',
     icon: AlertCircle,
   },
 ];
@@ -117,16 +117,16 @@ export function AdminSidebar() {
   const location = useLocation();
 
   const isActive = (url: string) => {
-    if (url === '/admin/meetings') {
-      return location.pathname === '/admin' || location.pathname === '/admin/meetings';
+    if (url === '/app/admin/meetings') {
+      return location.pathname === '/app/admin' || location.pathname === '/app/admin/meetings';
     }
-    if (url === '/admin/logs') {
-      return location.pathname === '/admin/logs';
+    if (url === '/app/admin/logs') {
+      return location.pathname === '/app/admin/logs';
     }
     return location.pathname === url;
   };
 
-  const isLogsActive = location.pathname.startsWith('/admin/logs');
+  const isLogsActive = location.pathname.startsWith('/app/admin/logs');
 
   return (
     <Sidebar collapsible="icon" className="border-r border-default">
@@ -136,7 +136,7 @@ export function AdminSidebar() {
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/app/admin')}
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
                 <svg
