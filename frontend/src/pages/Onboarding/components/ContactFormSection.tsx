@@ -18,9 +18,8 @@ export function ContactFormSection() {
       <div ref={ref} className="mx-auto max-w-7xl px-6">
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
           <div
-            className={`space-y-6 transition-all duration-700 ${
-              isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
-            }`}
+            className={`space-y-6 transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+              }`}
           >
             <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
               Interested?
@@ -40,14 +39,13 @@ export function ContactFormSection() {
           </div>
 
           <div
-            className={`space-y-5 transition-all delay-200 duration-700 ${
-              isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'
-            }`}
+            className={`space-y-5 transition-all delay-200 duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'
+              }`}
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-gray-300">
-                  First name<span className="text-red-400">*</span>
+                  First name<span className="pl-1 text-green-400">*</span>
                 </Label>
                 <Input
                   placeholder="Jane"
@@ -56,7 +54,7 @@ export function ContactFormSection() {
               </div>
               <div className="space-y-2">
                 <Label className="text-gray-300">
-                  Last name<span className="text-red-400">*</span>
+                  Last name<span className="pl-1 text-green-400">*</span>
                 </Label>
                 <Input
                   placeholder="Smith"
@@ -68,7 +66,7 @@ export function ContactFormSection() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-gray-300">
-                  Company name<span className="text-red-400">*</span>
+                  Company name<span className="pl-1 text-green-400">*</span>
                 </Label>
                 <Input
                   placeholder="AgentX"
@@ -77,7 +75,7 @@ export function ContactFormSection() {
               </div>
               <div className="space-y-2">
                 <Label className="text-gray-300">
-                  Email (only business email)<span className="text-red-400">*</span>
+                  Email (only business email)<span className="pl-1 text-green-400">*</span>
                 </Label>
                 <Input
                   type="email"
@@ -90,7 +88,7 @@ export function ContactFormSection() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-gray-300">
-                  Role<span className="text-red-400">*</span>
+                  Role<span className="pl-1 text-green-400">*</span>
                 </Label>
                 <Select>
                   <SelectTrigger className="h-10 border-gray-700 bg-gray-800/50 text-white">
@@ -108,7 +106,7 @@ export function ContactFormSection() {
               </div>
               <div className="space-y-2">
                 <Label className="text-gray-300">
-                  Industry<span className="text-red-400">*</span>
+                  Industry<span className="pl-1 text-green-400">*</span>
                 </Label>
                 <Select>
                   <SelectTrigger className="h-10 border-gray-700 bg-gray-800/50 text-white">
@@ -129,7 +127,7 @@ export function ContactFormSection() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-gray-300">
-                  What is your revenue target?<span className="text-red-400">*</span>
+                  What is your revenue target?<span className="pl-1 text-green-400">*</span>
                 </Label>
                 <Select>
                   <SelectTrigger className="h-10 border-gray-700 bg-gray-800/50 text-white">
@@ -147,7 +145,7 @@ export function ContactFormSection() {
               </div>
               <div className="space-y-2">
                 <Label className="text-gray-300">
-                  Number of sales?<span className="text-red-400">*</span>
+                  Number of sales?<span className="pl-1 text-green-400">*</span>
                 </Label>
                 <Select>
                   <SelectTrigger className="h-10 border-gray-700 bg-gray-800/50 text-white">
@@ -166,7 +164,7 @@ export function ContactFormSection() {
 
             <div className="space-y-2">
               <Label className="text-gray-300">
-                Are you the Economic Buyer<span className="text-red-400">*</span>
+                Are you the Economic Buyer<span className="pl-1 text-green-400">*</span>
               </Label>
               <Select>
                 <SelectTrigger className="h-10 border-gray-700 bg-gray-800/50 text-white">
@@ -183,7 +181,7 @@ export function ContactFormSection() {
             <div className="space-y-2">
               <Label className="text-gray-300">
                 Does your company operate in the Sales / GTM software industry?
-                <span className="text-red-400">*</span>
+                <span className="pl-1 text-green-400">*</span>
               </Label>
               <Select>
                 <SelectTrigger className="h-10 border-gray-700 bg-gray-800/50 text-white">
@@ -197,8 +195,8 @@ export function ContactFormSection() {
             </div>
 
             <Button
-              size="lg"
-              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 py-6 text-base font-semibold text-white hover:from-emerald-600 hover:to-teal-600"
+              size="default"
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 py-4 text-base font-semibold text-white hover:from-emerald-600 hover:to-teal-600"
             >
               Submit
             </Button>
