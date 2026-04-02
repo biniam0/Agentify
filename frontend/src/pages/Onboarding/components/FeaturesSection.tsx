@@ -45,16 +45,16 @@ export function FeaturesSection() {
   const { ref, isVisible } = useScrollAnimation(0.08)
 
   return (
-    <section className="bg-gray-50 py-20 md:py-28">
+    <section className="py-20 md:py-28">
       <div ref={ref} className="mx-auto max-w-7xl px-6">
         <div
-          className={`transition-all duration-700 ${
-            isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
-          }`}
+          className={`transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+            }`}
         >
           <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl md:text-5xl">
             Fast, secure,{' '}
-            <span className="ob-green-accent">setup without a tech teams</span>
+            <span className="text-[#00B596]">setup without a tech teams</span>
+
           </h2>
           <p className="mt-4 max-w-2xl text-base text-gray-500 sm:text-lg">
             AgentX starts working in minutes—automating admin, guiding reps, and
@@ -66,11 +66,10 @@ export function FeaturesSection() {
           {features.map((feature, index) => (
             <div
               key={feature.title}
-              className={`group rounded-2xl border border-gray-200 bg-white p-6 transition-all duration-500 hover:shadow-lg sm:p-8 ${
-                isVisible
+              className={`group rounded-2xl border border-gray-200 bg-white p-6 transition-all duration-500 hover:shadow-lg sm:p-8 ${isVisible
                   ? 'translate-y-0 opacity-100'
                   : 'translate-y-12 opacity-0'
-              }`}
+                }`}
               style={{ transitionDelay: `${200 + index * 150}ms` }}
             >
               <div className={`mb-6 flex h-36 items-center justify-center rounded-xl border ${feature.decorBorder} bg-gray-50/50 sm:h-40`}>
@@ -87,9 +86,9 @@ export function FeaturesSection() {
                 {feature.bullets.map((bullet, i) => (
                   <li
                     key={i}
-                    className="flex items-start gap-2.5 text-sm text-gray-600"
+                    className="flex items-start gap-2.5 text-sm text-gray-400"
                   >
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                    <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-gray-400" />
                     {bullet}
                   </li>
                 ))}
