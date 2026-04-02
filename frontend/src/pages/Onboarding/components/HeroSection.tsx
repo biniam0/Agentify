@@ -53,7 +53,7 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
 
             <div className="flex flex-wrap items-center gap-8 pt-8 sm:gap-12 opacity-50 hover:opacity-100 transition-opacity duration-500">
               <img src="/logos/hubspot.svg" alt="HubSpot" className="h-6 w-auto sm:h-7" />
-              <img src="/logos/salesforce.svg" alt="Salesforce" className="h-6 w-auto sm:h-7" />
+              <img src="/logos/salesforce-word.svg" alt="Salesforce" className="h-6 w-auto sm:h-7" />
               <img src="/logos/pipedrive.svg" alt="Pipedrive" className="h-6 w-auto sm:h-7" />
               <img src="/logos/attio.svg" alt="Attio" className="h-6 w-auto sm:h-7" />
             </div>

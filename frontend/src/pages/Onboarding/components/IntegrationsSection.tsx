@@ -1,38 +1,39 @@
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
+import { GeometricX } from './phone-slides/GeometricX'
 
-const orbitItems = [
-  { name: 'Calendar', color: '#4285F4', icon: '31', ring: 1, angle: 30 },
-  { name: 'Excel', color: '#217346', icon: 'X', ring: 1, angle: 90 },
-  { name: 'HubSpot', color: '#FF7A59', icon: 'H', ring: 2, angle: 60 },
-  { name: 'Gmail', color: '#EA4335', icon: 'M', ring: 2, angle: 120 },
-  { name: 'Slack', color: '#4A154B', icon: '#', ring: 2, angle: 180 },
-  { name: 'Google', color: '#34A853', icon: 'G', ring: 2, angle: 300 },
-  { name: 'ChatGPT', color: '#10A37F', icon: 'AI', ring: 2, angle: 240 },
-  { name: 'Salesforce', color: '#00A1E0', icon: 'SF', ring: 2, angle: 0 },
-  { name: 'G2', color: '#FF492C', icon: 'G2', ring: 3, angle: 210 },
-  { name: 'Jira', color: '#0052CC', icon: 'J', ring: 3, angle: 150 },
-  { name: 'LinkedIn', color: '#0A66C2', icon: 'in', ring: 3, angle: 250 },
-  { name: 'Attio', color: '#000', icon: 'A', ring: 3, angle: 330 },
-  { name: 'Zapier', color: '#FF4A00', icon: 'Z', ring: 3, angle: 30 },
-  { name: 'Notion', color: '#000', icon: 'N', ring: 3, angle: 290 },
-  { name: 'Microsoft', color: '#F25022', icon: 'MS', ring: 3, angle: 70 },
-  { name: 'Outlook', color: '#0078D4', icon: 'O', ring: 3, angle: 110 },
+const innerRingItems = [
+  { name: 'LinkedIn', icon: '/logos/linkedin.svg', angle: 0 },
+  { name: 'OpenAI', icon: '/logos/openai.svg', angle: 51 },
+  { name: 'Gmail', icon: '/logos/gmail.svg', angle: 103 },
+  { name: 'HubSpot', icon: '/logos/hubspot-icon.svg', angle: 154 },
+  { name: 'Perplexity', icon: '/logos/perplexity.svg', angle: 206 },
+  { name: 'DeepSeek', icon: '/logos/deepseek.svg', angle: 257 },
+  { name: 'Bolt', icon: '/logos/bolt.svg', angle: 309 },
 ]
 
-const ringRadii: Record<number, number> = { 1: 22, 2: 35, 3: 47 }
+const outerRingItems = [
+  { name: 'Google Calendar', icon: '/logos/google-calendar.svg', angle: 0 },
+  { name: 'Notion', icon: '/logos/notion.svg', angle: 40 },
+  { name: 'Microsoft', icon: '/logos/microsoft.svg', angle: 80 },
+  { name: 'n8n', icon: '/logos/n8n.svg', angle: 120 },
+  { name: 'Salesforce', icon: '/logos/salesforce.svg', angle: 160 },
+  { name: 'Google', icon: '/logos/google.svg', angle: 200 },
+  { name: 'Excel', icon: '/logos/excel.svg', angle: 240 },
+  { name: 'G2', icon: '/logos/g2.svg', angle: 280 },
+  { name: 'Slack', icon: '/logos/slack.svg', angle: 320 },
+]
 
 export function IntegrationsSection() {
   const { ref, isVisible } = useScrollAnimation(0.1)
 
   return (
-    <section className="bg-white py-20 md:py-28">
+    <section className="bg-white py-20 md:py-20 overflow-hidden">
       <div ref={ref} className="mx-auto max-w-7xl px-6 text-center">
         <div
-          className={`transition-all duration-700 ${
-            isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
-          }`}
+          className={`transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+            }`}
         >
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl md:text-5xl">
+          <h2 className="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl md:text-5xl">
             Connect Everything.
             <br />
             See Everything.
@@ -45,53 +46,149 @@ export function IntegrationsSection() {
         </div>
 
         <div
-          className={`relative mx-auto mt-12 h-[360px] w-[360px] transition-all delay-200 duration-1000 sm:mt-16 sm:h-[480px] sm:w-[480px] md:h-[560px] md:w-[560px] ${
-            isVisible ? 'scale-100 opacity-100' : 'scale-90 opacity-0'
-          }`}
+          className={`relative mx-auto mt-12 flex aspect-square w-full max-w-[400px] items-center justify-center transition-all delay-200 duration-1000 sm:mt-16 sm:max-w-[520px] md:max-w-[620px] ${isVisible ? 'scale-100 opacity-100' : 'scale-90 opacity-0'
+            }`}
         >
-          {[1, 2, 3].map((ring) => (
-            <div
-              key={ring}
-              className="absolute rounded-full border border-gray-200"
-              style={{
-                inset: `${(1 - ringRadii[ring] / 50) * 50}%`,
-              }}
-            />
-          ))}
+          {/* Outer Ring */}
+          <div
+            className="absolute flex h-full w-full items-center justify-center rounded-full border border-black/[0.06] animate-spin-slow"
+          >
+            {outerRingItems.map((item) => {
+              const rad = (item.angle * Math.PI) / 180
+              const x = 50 * Math.cos(rad)
+              const y = 50 * Math.sin(rad)
 
-          <div className="absolute inset-[36%] rounded-full bg-gradient-to-b from-emerald-50 via-emerald-50/60 to-transparent" />
-
-          <div className="absolute left-1/2 top-1/2 z-10 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl bg-white shadow-lg ring-1 ring-gray-100 sm:h-16 sm:w-16">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-600 sm:h-10 sm:w-10">
-              <span className="text-base font-bold text-white sm:text-lg">X</span>
-            </div>
+              return (
+                <div
+                  key={item.name}
+                  className="absolute"
+                  style={{
+                    left: `calc(50% + ${x}%)`,
+                    top: `calc(50% + ${y}%)`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                >
+                  <div
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white animate-spin-slow-reverse sm:h-14 sm:w-14"
+                    style={{
+                      boxShadow: 'rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.09) 0px 6px 6px 0px, rgba(0, 0, 0, 0.05) 0px 13px 8px 0px, rgba(0, 0, 0, 0.01) 0px 22px 9px 0px, rgba(0, 0, 0, 0) 0px 35px 10px 0px',
+                    }}
+                  >
+                    <img src={item.icon} alt={item.name} className="h-6 w-6 object-contain sm:h-7 sm:w-7" />
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
-          {orbitItems.map((item) => {
-            const radius = ringRadii[item.ring]
-            const rad = (item.angle * Math.PI) / 180
-            const x = 50 + radius * Math.cos(rad)
-            const y = 50 + radius * Math.sin(rad)
+          {/* Middle Ring (static, between outer and inner) */}
+          <div
+            className="absolute h-[80%] w-[80%] rounded-full"
+            style={{
+              boxShadow: 'inset 0 2px 12px rgba(0, 0, 0, 0.06), inset 0 0 4px rgba(0, 0, 0, 0.03)',
+              // background: 'rgba(0, 0, 0, 0.005)'
+            }}
+          />
 
-            return (
-              <div
-                key={`${item.name}-${item.angle}`}
-                className="absolute flex h-9 w-9 items-center justify-center rounded-lg bg-white shadow-md ring-1 ring-gray-100 transition-transform hover:scale-125 sm:h-10 sm:w-10"
-                style={{
-                  left: `${x}%`,
-                  top: `${y}%`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-              >
-                <span
-                  className="text-[10px] font-bold sm:text-xs"
-                  style={{ color: item.color }}
+          {/* Inner Ring */}
+          <div
+            className="absolute flex h-[63%] w-[63%] items-center justify-center rounded-full border border-black/[0.06] animate-spin-slow-reverse"
+          >
+            {innerRingItems.map((item) => {
+              const rad = (item.angle * Math.PI) / 180
+              const x = 50 * Math.cos(rad)
+              const y = 50 * Math.sin(rad)
+
+              return (
+                <div
+                  key={item.name}
+                  className="absolute"
+                  style={{
+                    left: `calc(50% + ${x}%)`,
+                    top: `calc(50% + ${y}%)`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
                 >
-                  {item.icon}
-                </span>
-              </div>
-            )
-          })}
+                  <div
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white animate-spin-slow sm:h-14 sm:w-14"
+                    style={{
+                      boxShadow: 'rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.09) 0px 6px 6px 0px, rgba(0, 0, 0, 0.05) 0px 13px 8px 0px, rgba(0, 0, 0, 0.01) 0px 22px 9px 0px, rgba(0, 0, 0, 0) 0px 35px 10px 0px',
+                    }}
+                  >
+                    <img src={item.icon} alt={item.name} className="h-6 w-6 object-contain sm:h-7 sm:w-7" />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Center Glow - large radial gradient */}
+          <div
+            className="absolute h-[55%] w-[55%] rounded-full"
+            style={{
+              background: 'radial-gradient(50% 50% at 50% 50%, rgba(20, 184, 166, 0.15) 0%, rgba(20, 184, 166, 0.08) 40%, rgba(20, 184, 166, 0.03) 70%, rgba(20, 184, 166, 0) 100%)',
+            }}
+          />
+
+          {/* Outermost center ring (with inner shadow) */}
+          <div
+            className="absolute h-[48%] w-[48%] rounded-full border border-black/[0.05]"
+            style={{
+              boxShadow: 'inset 0 2px 12px rgba(0, 0, 0, 0.04), inset 0 0 4px rgba(0, 0, 0, 0.02)',
+              background: 'rgba(255, 255, 255, 0.1)',
+            }}
+          />
+
+          {/* Middle center ring (with inner shadow) */}
+          <div
+            className="absolute h-[35%] w-[35%] rounded-full border border-black/[0.05]"
+            style={{
+              boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.05), inset 0 0 4px rgba(0, 0, 0, 0.02)',
+              background: 'rgba(255, 255, 255, 0.15)',
+            }}
+          />
+
+          {/* Inner center ring (with inner shadow) */}
+          <div
+            className="absolute h-[22%] w-[22%] rounded-full border border-black/[0.05]"
+            style={{
+              boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.06), inset 0 0 3px rgba(0, 0, 0, 0.03)',
+              background: 'rgba(255, 255, 255, 0.2)',
+            }}
+          />
+
+          {/* Center Logo with radial glow */}
+          <div
+            className="absolute z-10 flex h-[74px] w-[74px] items-center justify-center rounded-[23px] bg-white/60 backdrop-blur-md sm:h-[105px] sm:w-[105px] sm:rounded-[31px]"
+            style={{
+              boxShadow: 'rgba(0, 0, 0, 0.06) 0px 2px 4px 0px, rgba(0, 0, 0, 0.04) 0px 8px 8px 0px',
+            }}
+          >
+            {/* 6 radial gradient glow elements around this box */}
+            {[0, 60, 120, 180, 240, 300].map((angle) => {
+              const rad = (angle * Math.PI) / 180
+              const offset = 52
+              const x = offset * Math.cos(rad)
+              const y = offset * Math.sin(rad)
+              return (
+                <div
+                  key={angle}
+                  className="absolute h-[170px] w-[170px] -translate-x-1/2 -translate-y-1/2"
+                  style={{
+                    left: `calc(50% + ${x}px)`,
+                    top: `calc(50% + ${y}px)`,
+                    // Increased intensity: rgba(82, 183, 136, 0.6)
+                    background: 'radial-gradient(50% 50% at 50% 50%, rgba(82, 183, 136, 0.3 ) 0%, rgba(227, 148, 0, 0) 100%)',
+                  }}
+                />
+
+              )
+            })}
+
+            <div className="relative z-10 flex h-[68px] w-[68px] items-center justify-center rounded-[20px] border border-neutral-200 bg-white sm:h-[95px] sm:w-[95px] sm:rounded-[26px]">
+              <GeometricX className="h-7 w-auto sm:h-10" />
+            </div>
+          </div>
         </div>
       </div>
     </section>
