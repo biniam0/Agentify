@@ -58,48 +58,43 @@ export function PricingSection({ onGetInvited }: PricingSectionProps) {
   const { ref, isVisible } = useScrollAnimation(0.08)
 
   return (
-    <section className="bg-white py-20 md:py-28">
-      <div ref={ref} className="mx-auto max-w-7xl px-6">
+    <div className="mt-20 md:mt-32 w-full">
+      <div ref={ref} className="mx-auto max-w-5xl">
         <div
-          className={`text-center transition-all duration-700 ${
-            isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
-          }`}
+          className={`text-center transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+            }`}
         >
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl md:text-5xl">
+          <h2 className="text-6xl font-medium tracking-tight text-gray-900 sm:text-[50px] md:text-[60px]">
             Features
           </h2>
-          <p className="mt-3 text-base text-gray-500 sm:text-lg">
+
+          <p className="mt-4 text-sm text-gray-500 sm:text-base">
             Choose the subscription plan that suits your needs
           </p>
         </div>
 
-        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {plans.map((plan, index) => (
             <div
               key={plan.name}
-              className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-500 sm:p-8 ${
-                plan.highlighted
-                  ? 'border-emerald-200 shadow-lg'
-                  : 'border-gray-200'
-              } ${
-                isVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-12 opacity-0'
-              }`}
+              className={`relative flex flex-col rounded-3xl border border-gray-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] p-6 transition-all duration-500 sm:p-8 ${isVisible
+                ? 'translate-y-0 opacity-100'
+                : 'translate-y-12 opacity-0'
+                }`}
               style={{ transitionDelay: `${200 + index * 150}ms` }}
             >
-              <div className="mb-6">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-gray-900 sm:text-xl">
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-medium text-gray-900">
                     {plan.name}
                   </h3>
-                  {plan.badge && (
-                    <Badge className="bg-red-100 text-red-600 hover:bg-red-100">
-                      {plan.badge}
-                    </Badge>
-                  )}
+                  <p className="mt-2 text-sm text-gray-500">{plan.deals}</p>
                 </div>
-                <p className="mt-1 text-sm text-gray-500">{plan.deals}</p>
+                {plan.badge && (
+                  <span className="rounded-full bg-[#E2F5ED] px-3 py-1 text-xs font-medium text-[#1D8B71]">
+                    {plan.badge}
+                  </span>
+                )}
               </div>
 
               <div className="mb-6 flex items-center gap-3">
@@ -108,26 +103,28 @@ export function PricingSection({ onGetInvited }: PricingSectionProps) {
                   onCheckedChange={(checked) =>
                     setAnnualBilling((prev) => ({ ...prev, [index]: checked }))
                   }
+                  className="data-[state=checked]:bg-[#1D8B71]"
                 />
-                <span className="text-sm text-gray-600">Annual</span>
+                <span className="text-sm text-gray-500">Annual</span>
               </div>
+
+              <div className="mb-6 h-[1px] w-full bg-gray-200" />
 
               <Button
                 onClick={onGetInvited}
-                className={`mb-8 w-full ${
-                  plan.highlighted
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                    : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                }`}
+                className={`mb-8 w-full rounded-xl py-6 text-base font-medium ${plan.highlighted
+                  ? 'bg-[#1D8B71] text-white hover:bg-[#166F5A]'
+                  : 'bg-[#E2F5ED] text-[#1D8B71] hover:bg-[#D0EBE0]'
+                  }`}
               >
                 Get Invited
               </Button>
 
-              <ul className="space-y-3">
+              <ul className="space-y-4">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-center gap-3 text-sm">
-                    <Check className="h-4 w-4 shrink-0 text-emerald-500" />
-                    <span className="text-gray-700">{feature}</span>
+                    <Check className="h-4 w-4 shrink-0 text-[#53A17D]" strokeWidth={2.5} />
+                    <span className="text-gray-600">{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -135,6 +132,6 @@ export function PricingSection({ onGetInvited }: PricingSectionProps) {
           ))}
         </div>
       </div>
-    </section>
+    </div>
   )
 }

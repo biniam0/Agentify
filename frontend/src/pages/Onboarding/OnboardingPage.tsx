@@ -3,7 +3,6 @@ import { HeroSection } from './components/HeroSection'
 import { IntegrationsSection } from './components/IntegrationsSection'
 import { FeaturesSection } from './components/FeaturesSection'
 import { HowItWorksSection } from './components/HowItWorksSection'
-import { PricingSection } from './components/PricingSection'
 import { ContactFormSection } from './components/ContactFormSection'
 import { CtaBanner } from './components/CtaBanner'
 import { Footer } from './components/Footer'
@@ -19,8 +18,7 @@ export default function OnboardingPage() {
       <HeroSection onCtaClick={scrollToContact} />
       <IntegrationsSection />
       <FeaturesSection />
-      <HowItWorksSection />
-      <PricingSection onGetInvited={scrollToContact} />
+      <HowItWorksSection onGetInvited={scrollToContact} />
       <ContactFormSection />
       <CtaBanner onCtaClick={scrollToContact} />
       <Footer />

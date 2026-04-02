@@ -1,5 +1,10 @@
 import { useState } from 'react'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
+import { PricingSection } from './PricingSection'
+
+interface HowItWorksSectionProps {
+  onGetInvited: () => void
+}
 
 const steps = [
   {
@@ -25,7 +30,7 @@ const steps = [
   },
 ]
 
-export function HowItWorksSection() {
+export function HowItWorksSection({ onGetInvited }: HowItWorksSectionProps) {
   const [activeStep, setActiveStep] = useState(0)
   const { ref, isVisible } = useScrollAnimation(0.08)
 
@@ -96,7 +101,7 @@ export function HowItWorksSection() {
                     </div>
                   ) : (
                     <div className="flex h-full w-full items-center justify-center">
-                      <h3 className="text-xl font-medium text-white sm:text-2xl md:whitespace-nowrap">
+                      <h3 className="text-xl font-medium text-white sm:text-2xl md:-rotate-90 md:whitespace-nowrap">
                         {step.title}
                       </h3>
                     </div>
@@ -105,6 +110,9 @@ export function HowItWorksSection() {
               )
             })}
           </div>
+          
+          {/* Embedded Pricing Section */}
+          <PricingSection onGetInvited={onGetInvited} />
         </div>
       </div>
     </section>
