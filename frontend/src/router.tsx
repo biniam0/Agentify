@@ -33,16 +33,24 @@ import BarrierXInfo from './pages/Admin/BarrierXInfo';
 import ClientsDeals from './pages/Admin/ClientsDeals';
 import AgentXInvestigations from './pages/Admin/AgentXInvestigations';
 
+// Onboarding (landing page)
+import OnboardingPage from './pages/Onboarding/OnboardingPage';
+
 const router = createBrowserRouter([
+  // Public: Onboarding landing page at root
   {
     path: '/',
-    element: isAuthenticated() ? <Navigate to="/meetings" replace /> : <Navigate to="/login" replace />,
+    element: <OnboardingPage />,
+  },
+  // App routes
+  {
+    path: '/app',
+    element: isAuthenticated() ? <Navigate to="/app/meetings" replace /> : <Navigate to="/app/login" replace />,
   },
   {
-    path: '/login',
+    path: '/app/login',
     element: <LoginPage />,
   },
-  // All user routes share the same layout (header persists across navigation)
   {
     element: (
       <ProtectedRoute>
@@ -51,11 +59,11 @@ const router = createBrowserRouter([
     ),
     children: [
       {
-        path: '/meetings',
+        path: '/app/meetings',
         element: <MeetingsPage />,
       },
       {
-        path: '/logs',
+        path: '/app/logs',
         element: <UserLogsPage />,
         children: [
           {
@@ -77,7 +85,7 @@ const router = createBrowserRouter([
         ],
       },
       {
-        path: '/calls',
+        path: '/app/calls',
         element: <CallsLayout />,
         children: [
           {
@@ -94,14 +102,14 @@ const router = createBrowserRouter([
   },
   // V2 Routes (AgentX v2.0 - Admin only)
   {
-    path: '/v2',
+    path: '/app/v2',
     element: (
       <ProtectedRoute>
         <V2Layout />
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <Navigate to="/v2/calls" replace /> },
+      { index: true, element: <Navigate to="/app/v2/calls" replace /> },
       { path: 'calls', element: <V2DashboardPage /> },
       { path: 'info-gatherings', element: <V2DashboardPage /> },
       { path: 'clients-meetings', element: <V2DashboardPage /> },
@@ -112,7 +120,7 @@ const router = createBrowserRouter([
   },
   // Admin Routes
   {
-    path: '/admin',
+    path: '/app/admin',
     element: (
       <ProtectedRoute>
         <AdminLayout />
@@ -121,7 +129,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/admin/meetings" replace />,
+        element: <Navigate to="/app/admin/meetings" replace />,
       },
       {
         path: 'meetings',
@@ -183,9 +191,7 @@ const router = createBrowserRouter([
     path: '*',
     element: <Navigate to="/" replace />,
   },
-], {
-  basename: '/app'
-});
+]);
 
 export default router;
 

@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { cn } from "../../lib/utils"
+import { cn } from "@/lib/utils"
 
 export interface SwitchProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -42,4 +42,3 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
 Switch.displayName = "Switch"
 
 export { Switch }
-

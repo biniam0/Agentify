@@ -19,23 +19,22 @@ const UserLogsPage: React.FC = () => {
   const location = useLocation();
 
   const handleBackToMeetings = () => {
-    navigate('/meetings');
+    navigate('/app/meetings');
   };
 
   // Determine active section based on current path
   const isActive = (path: string) => {
-    if (path === '/logs') {
-      return location.pathname === '/logs';
+    if (path === '/app/logs') {
+      return location.pathname === '/app/logs';
     }
     return location.pathname.startsWith(path);
   };
 
-  // Sidebar navigation items
   const sidebarItems = [
-    { label: 'Overview', path: '/logs', icon: Activity },
-    { label: 'Calls', path: '/logs/calls', icon: Phone },
-    { label: 'Activity', path: '/logs/activity', icon: Activity },
-    { label: 'CRM Actions', path: '/logs/crm-actions', icon: FileText },
+    { label: 'Overview', path: '/app/logs', icon: Activity },
+    { label: 'Calls', path: '/app/logs/calls', icon: Phone },
+    { label: 'Activity', path: '/app/logs/activity', icon: Activity },
+    { label: 'CRM Actions', path: '/app/logs/crm-actions', icon: FileText },
   ];
 
   return (

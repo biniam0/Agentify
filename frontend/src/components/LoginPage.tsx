@@ -46,7 +46,7 @@ const LoginPage: React.FC = () => {
       if (response.success && response.token) {
         authService.setToken(response.token);
         authService.setUser(response.user);
-        navigate('/meetings');
+        navigate('/app/meetings');
       } else {
         setError('Login failed. Please try again.');
       }

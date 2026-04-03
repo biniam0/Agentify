@@ -34,7 +34,7 @@ const TopNav = () => {
 
   const handleLogout = () => {
     authService.logout();
-    navigate('/login');
+    navigate('/app/login');
   };
 
   return (
@@ -45,7 +45,7 @@ const TopNav = () => {
           <div className="flex items-center gap-6">
             <div
               className="flex items-center gap-1.5 cursor-pointer select-none"
-              onClick={() => navigate('/v2')}
+              onClick={() => navigate('/app/v2')}
             >
               <span className="text-xl font-bold tracking-tight text-gray-900 leading-none">
                 Agent
@@ -90,7 +90,7 @@ const TopNav = () => {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => navigate('/admin')}
+                    onClick={() => navigate('/app/admin')}
                     className="cursor-pointer"
                   >
                     <Settings className="mr-2 h-4 w-4" />

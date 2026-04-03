@@ -47,7 +47,7 @@ app.use('/api/workflows', workflowRoutes); // Text-to-workflow engine routes
 app.use('/api/external/v1/logs', externalLogsRoutes);
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 

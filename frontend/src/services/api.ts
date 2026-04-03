@@ -34,11 +34,11 @@ api.interceptors.response.use(
       status === 401 &&
       requestUrl &&
       !requestUrl.includes('/auth/login') &&
-      window.location.pathname !== '/login'
+      window.location.pathname !== '/app/login'
     ) {
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      window.location.href = '/app/login';
     }
 
     return Promise.reject(error);

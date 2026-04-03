@@ -78,8 +78,12 @@ export default {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
-  		keyframes: {
-  			'accordion-down': {
+		keyframes: {
+			'spin-slow': {
+				from: { transform: 'rotate(0deg)' },
+				to: { transform: 'rotate(360deg)' },
+			},
+			'accordion-down': {
   				from: {
   					height: '0'
   				},
@@ -96,8 +100,10 @@ export default {
   				}
   			}
   		},
-  		animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
+		animation: {
+			'spin-slow': 'spin-slow 20s linear infinite',
+			'spin-slow-reverse': 'spin-slow 20s linear infinite reverse',
+			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
   		}
   	}

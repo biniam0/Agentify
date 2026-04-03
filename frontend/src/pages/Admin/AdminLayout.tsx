@@ -42,12 +42,12 @@ const AdminLayout: React.FC = () => {
 
   // Redirect if not admin
   if (!isAdmin) {
-    return <Navigate to="/meetings" replace />;
+    return <Navigate to="/app/meetings" replace />;
   }
 
   const handleLogout = () => {
     authService.logout();
-    navigate('/login');
+    navigate('/app/login');
   };
 
   const toggleTheme = () => {
@@ -74,7 +74,7 @@ const AdminLayout: React.FC = () => {
             {/* Logo - Agent X Dashboard */}
             <div
               className="flex items-center gap-2 cursor-pointer"
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/app/admin')}
             >
               <span className="text-2xl font-bold leading-none tracking-tight text-heading dark:text-foreground">
                 Agent
