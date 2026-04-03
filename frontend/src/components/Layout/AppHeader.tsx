@@ -102,7 +102,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
   const handleLogout = () => {
     authService.logout();
-    navigate('/login');
+    navigate('/app/login');
   };
 
   return (
@@ -238,7 +238,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 {/* Admin Dashboard - Only show for admin users */}
                 {authService.isAdmin() && (
                   <DropdownMenuItem
-                    onClick={() => navigate('/admin')}
+                    onClick={() => navigate('/app/admin')}
                     className="cursor-pointer"
                   >
                     <Shield className="mr-2 h-4 w-4" />

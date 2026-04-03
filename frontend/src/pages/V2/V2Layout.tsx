@@ -4,7 +4,7 @@ import TopNav from './components/TopNav';
 
 const V2Layout = () => {
   if (!authService.isAdmin()) {
-    return <Navigate to="/meetings" replace />;
+    return <Navigate to="/app/meetings" replace />;
   }
 
   return (

@@ -82,6 +82,23 @@
     --app-brand-hover: 152 32% 43%;        /* slightly darker for hover */
     --app-brand-light: 152 32% 96%;        /* light tint */
     --app-brand-muted: 152 32% 67%;        /* muted tint */
+
+    /* Onboarding page variables */
+    --ob-dark-bg: 220 20% 10%;
+    --ob-dark-surface: 220 16% 14%;
+    --ob-dark-border: 220 12% 20%;
+    --ob-dark-text: 0 0% 100%;
+    --ob-dark-text-muted: 220 10% 60%;
+    --ob-green-accent: 160 84% 39%;
+    --ob-green-accent-hover: 160 84% 34%;
+    --ob-teal: 168 60% 40%;
+    --ob-teal-light: 168 40% 50%;
+    --ob-teal-surface: 165 45% 35%;
+    --ob-teal-deep: 168 50% 28%;
+    --ob-section-light: 210 40% 98%;
+    --ob-section-white: 0 0% 100%;
+    --ob-marble-bg: 140 20% 92%;
+    --ob-marble-accent: 150 15% 85%;
     
     /* Status Badge Colors */
     --status-success-bg: 142 76% 36%;
@@ -209,6 +226,10 @@
 @layer base {
   * {
     @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
@@ -384,6 +405,37 @@
   }
   .dark .text-accent-orange {
     color: hsl(25 95% 60%);      /* brighter for dark */
+  }
+
+  /* Onboarding page utilities */
+  .ob-grid-bg {
+    background-size: 100px 100px;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  }
+
+  .ob-dark-bg {
+    background-color: #0A0A0B; /* Match Framer dark background */
+  }
+
+  .ob-dark-surface {
+    background-color: hsl(var(--ob-dark-surface));
+  }
+
+  .ob-green-accent {
+    color: #00D287; /* Framer green */
+  }
+
+  .ob-bg-green-accent {
+    background-color: #00D287;
+  }
+
+  .ob-marble-bg {
+    background-color: hsl(var(--ob-marble-bg));
+    background-image:
+      radial-gradient(ellipse at 20% 50%, hsl(var(--ob-marble-accent)) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 30%, hsl(150 20% 88%) 0%, transparent 50%);
   }
 
   /* Glass Card Effect */

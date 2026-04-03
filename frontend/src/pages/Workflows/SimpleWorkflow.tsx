@@ -481,7 +481,7 @@ export default function SimpleWorkflow() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div className="space-y-2">
-              <h4 className="font-medium text-blue-900 dark:text-blue-200">🎯 Call Specific People or Deals</h4>
+              <h4 className="font-medium text-blue-900 dark:text-blue-200">Call Specific People or Deals</h4>
               <ul className="space-y-1 text-blue-700 dark:text-blue-400 list-disc pl-4">
                 <li>"Call <strong>Andreja</strong> about the <strong>Bosa Properties</strong> deal"</li>
                 <li>"Call <strong>Tamirat</strong> and ask about the <strong>BarrierX</strong> deal"</li>
@@ -489,7 +489,7 @@ export default function SimpleWorkflow() {
               </ul>
             </div>
             <div className="space-y-2">
-              <h4 className="font-medium text-blue-900 dark:text-blue-200">📊 Filter by Deal Stage</h4>
+              <h4 className="font-medium text-blue-900 dark:text-blue-200">Filter by Deal Stage</h4>
               <ul className="space-y-1 text-blue-700 dark:text-blue-400 list-disc pl-4">
                 <li>"Call all owners of <strong>Lost</strong> deals"</li>
                 <li>"Call everyone with deals in <strong>Negotiation</strong>"</li>
@@ -503,7 +503,7 @@ export default function SimpleWorkflow() {
             </div>
             <div className="relative flex justify-center">
               <span className="bg-blue-50 dark:bg-blue-950/20 px-3 text-xs text-blue-600 dark:text-blue-400">
-                💡 More prompt patterns will be supported soon
+                More prompt patterns will be supported soon
               </span>
             </div>
           </div>

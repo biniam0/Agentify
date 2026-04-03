@@ -10,20 +10,20 @@
 
 ---
 
-## 🎯 What is AgentX?
+## What is AgentX?
 
 AgentX automates sales meeting follow-ups using AI voice calls:
 
-- **📞 Pre-Meeting Calls (T-20 min)** - AI calls sales rep to review deal context, risks, and recommendations
-- **📞 Post-Meeting Calls (T+15 min)** - AI calls to capture meeting outcomes, next steps, and action items
-- **🤖 AI Voice Agents** - Natural conversations powered by ElevenLabs Conversational AI
-- **📊 CRM Integration** - Syncs with BarrierX for real-time deal, contact, and meeting data
-- **⚡ Automated Scheduling** - Runs every 3 minutes to trigger timely calls
-- **🎨 Modern UI** - Beautiful Spotify-inspired interface built with React & Shadcn UI
+- **Pre-Meeting Calls (T-20 min)** - AI calls sales rep to review deal context, risks, and recommendations
+- **Post-Meeting Calls (T+15 min)** - AI calls to capture meeting outcomes, next steps, and action items
+- **AI Voice Agents** - Natural conversations powered by ElevenLabs Conversational AI
+- **CRM Integration** - Syncs with BarrierX for real-time deal, contact, and meeting data
+- **Automated Scheduling** - Runs every 3 minutes to trigger timely calls
+- **Modern UI** - Beautiful Spotify-inspired interface built with React & Shadcn UI
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────┐
@@ -47,7 +47,7 @@ AgentX automates sales meeting follow-ups using AI voice calls:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 AgentX/
@@ -85,16 +85,16 @@ AgentX/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-### 📋 Prerequisites
+### Prerequisites
 
 - Node.js 18+
 - PostgreSQL database ([Neon](https://neon.tech/) recommended)
 - BarrierX API key
 - ElevenLabs API key (optional for testing)
 
-### ⚡ Installation
+### Installation
 
 Follow the **[detailed setup guide](./SETUP.md)** or use this quick start:
 
@@ -128,7 +128,7 @@ npm run dev
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 ### Backend Documentation
 
@@ -157,40 +157,40 @@ npm run dev
 
 ---
 
-## ✨ Features
+## Features
 
-### 🔐 Authentication & Authorization
+### Authentication & Authorization
 - JWT-based auth with 7-day token validity
 - BarrierX integration for CRM user management
 - Protected routes with middleware
 - Automatic token refresh
 
-### 📅 Meeting Management
+### Meeting Management
 - Real-time meeting sync from BarrierX
 - Deal context with contacts, risks, and recommendations
 - Meeting status tracking (scheduled, in-progress, completed)
 - Search and filter capabilities
 
-### 📞 Automated Calls
+### Automated Calls
 - **Pre-Meeting (T-20 min)**: Prepares sales rep with deal context
 - **Post-Meeting (T+30 min)**: Captures outcomes and next steps
 - ElevenLabs AI agents with natural conversation
 - Dynamic variables for personalized calls
 - Manual trigger option via dashboard
 
-### 🤖 AI Voice Agents
+### AI Voice Agents
 - Pre-call agent reviews risks and recommendations
 - Post-call agent captures meeting summary and action items
 - Server tools for CRM updates (create contacts, notes, deals)
 - Transcript storage and analysis
 
-### 📊 Smart Data Handling
+### Smart Data Handling
 - Real BarrierX API with automatic fallback
 - Dummy data generation for missing fields
 - Graceful error handling
 - Mock mode for development
 
-### 🎨 Modern UI
+### Modern UI
 - Spotify-inspired design with OKLCH colors
 - Responsive layout for all devices
 - Dark/light mode toggle
@@ -199,7 +199,7 @@ npm run dev
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend
 - **Runtime**: Node.js 18+
@@ -226,7 +226,7 @@ npm run dev
 
 ---
 
-## 🧪 Development
+## Development
 
 ### Environment Variables
 
@@ -286,7 +286,7 @@ npm run preview      # Preview production build
 
 ---
 
-## 📊 API Endpoints
+## API Endpoints
 
 ### Authentication
 - `POST /api/auth/login` - User login (returns AgentX JWT + BarrierX tokens)
@@ -309,7 +309,7 @@ npm run preview      # Preview production build
 
 ---
 
-## 🎯 Roadmap
+## Roadmap
 
 - [ ] Real-time notifications for call completion
 - [ ] Call transcript storage and search
@@ -322,7 +322,7 @@ npm run preview      # Preview production build
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please follow these steps:
 
@@ -334,13 +334,13 @@ Contributions are welcome! Please follow these steps:
 
 ---
 
-## 📝 License
+## License
 
 Proprietary - All rights reserved
 
 ---
 
-## 🙋 Support
+## Support
 
 For questions or issues:
 - Check the [SETUP.md](./SETUP.md) guide
@@ -349,8 +349,8 @@ For questions or issues:
 
 ---
 
-**Built with ❤️ by the AgentX Team**
+**Built by the AgentX Team**
 
-*Automating sales excellence, one call at a time.* 🚀
+*Automating sales excellence, one call at a time.*
 
 

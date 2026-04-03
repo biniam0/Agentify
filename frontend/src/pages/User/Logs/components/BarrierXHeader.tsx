@@ -55,7 +55,7 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
 
   const handleLogout = () => {
     authService.logout();
-    navigate('/login');
+    navigate('/app/login');
   };
 
   return (
@@ -64,7 +64,7 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
 
         <div
           className="flex items-center gap-2 cursor-pointer"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/app/meetings')}
         >
           <span className="text-3xl font-bold leading-none tracking-tight text-heading">
             Agent
@@ -159,7 +159,7 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
                 {/* Admin Dashboard - Only show for admin users */}
                 {authService.isAdmin() && (
                   <DropdownMenuItem
-                    onClick={() => navigate('/admin')}
+                    onClick={() => navigate('/app/admin')}
                     className="cursor-pointer"
                   >
                     <Shield className="mr-2 h-4 w-4" />
