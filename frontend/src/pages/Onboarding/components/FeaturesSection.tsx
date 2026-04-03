@@ -1,12 +1,8 @@
-import { Zap, CheckSquare, GitBranch } from 'lucide-react'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
 
 const features = [
   {
-    icon: Zap,
-    iconColor: 'text-blue-500',
-    iconBg: 'bg-blue-50',
-    decorBorder: 'border-blue-200',
+    image: '/images/spark.png',
     title: 'No more indecisive deals',
     bullets: [
       'AgentX captures notes, action items, and next steps and then updates HubSpot for you.',
@@ -16,10 +12,7 @@ const features = [
     ],
   },
   {
-    icon: CheckSquare,
-    iconColor: 'text-emerald-500',
-    iconBg: 'bg-emerald-50',
-    decorBorder: 'border-emerald-200',
+    image: '/images/checked.png',
     title: 'RevOps as-a-Service',
     bullets: [
       'Smart pre-/post-meeting prompts: confirm EB, risks, and clear next steps.',
@@ -28,10 +21,7 @@ const features = [
     ],
   },
   {
-    icon: GitBranch,
-    iconColor: 'text-teal-500',
-    iconBg: 'bg-teal-50',
-    decorBorder: 'border-teal-200',
+    image: '/images/infinity.png',
     title: 'Adaptive CRO Playbooks',
     bullets: [
       'AgentX flags risks and prescribes the next best action in real time.',
@@ -51,12 +41,11 @@ export function FeaturesSection() {
           className={`transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
             }`}
         >
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl md:text-5xl">
+          <h2 className="text-3xl font-medium tracking-tight text-gray-900 sm:text-4xl md:text-[44px] leading-tight">
             Fast, secure,{' '}
-            <span className="text-[#00B596]">setup without a tech teams</span>
-
+            <span className="text-[#1D8B71]">setup without a tech teams</span>
           </h2>
-          <p className="mt-4 max-w-2xl text-base text-gray-500 sm:text-lg">
+          <p className="mt-4 max-w-3xl text-base text-[#888888] sm:text-[17px]">
             AgentX starts working in minutes—automating admin, guiding reps, and
             keeping data compliant.
           </p>
@@ -66,33 +55,37 @@ export function FeaturesSection() {
           {features.map((feature, index) => (
             <div
               key={feature.title}
-              className={`group rounded-2xl border border-gray-200 bg-white p-6 transition-all duration-500 hover:shadow-lg sm:p-8 ${isVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-12 opacity-0'
+              className={`group flex flex-col overflow-hidden rounded-lg bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-500 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] ${isVisible
+                ? 'translate-y-0 opacity-100'
+                : 'translate-y-12 opacity-0'
                 }`}
               style={{ transitionDelay: `${200 + index * 150}ms` }}
             >
-              <div className={`mb-6 flex h-36 items-center justify-center rounded-xl border ${feature.decorBorder} bg-gray-50/50 sm:h-40`}>
-                <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${feature.iconBg} sm:h-16 sm:w-16`}>
-                  <feature.icon className={`h-7 w-7 ${feature.iconColor} sm:h-8 sm:w-8`} />
-                </div>
+              <div className="w-full">
+                <img
+                  src={feature.image}
+                  alt={feature.title}
+                  className="w-full h-auto object-cover"
+                />
               </div>
 
-              <h3 className="mb-4 text-lg font-bold text-gray-900 sm:text-xl">
-                {feature.title}
-              </h3>
+              <div className="flex flex-1 flex-col p-6 sm:p-8">
+                <h3 className="mb-5 text-lg font-medium text-gray-900 sm:text-[22px]">
+                  {feature.title}
+                </h3>
 
-              <ul className="space-y-3">
-                {feature.bullets.map((bullet, i) => (
-                  <li
-                    key={i}
-                    className="flex items-start gap-2.5 text-sm text-gray-400"
-                  >
-                    <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-gray-400" />
-                    {bullet}
-                  </li>
-                ))}
-              </ul>
+                <ul className="space-y-4">
+                  {feature.bullets.map((bullet, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 text-[14px] text-[#888888] leading-relaxed"
+                    >
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#888888]" />
+                      {bullet}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           ))}
         </div>

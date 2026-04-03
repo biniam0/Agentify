@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
 import { PricingSection } from './PricingSection'
 
@@ -34,6 +34,14 @@ export function HowItWorksSection({ onGetInvited }: HowItWorksSectionProps) {
   const [activeStep, setActiveStep] = useState(0)
   const { ref, isVisible } = useScrollAnimation(0.08)
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveStep((prev) => (prev + 1) % steps.length)
+    }, 5000)
+
+    return () => clearInterval(timer)
+  }, [activeStep])
+
   return (
     <section className="ob-dark-bg py-20 md:py-28">
       <div ref={ref} className="mx-auto max-w-7xl px-6">
@@ -60,7 +68,8 @@ export function HowItWorksSection({ onGetInvited }: HowItWorksSectionProps) {
                 <button
                   key={step.id}
                   onClick={() => setActiveStep(index)}
-                  className={`relative flex overflow-hidden rounded-2xl text-left transition-all duration-500 ${isActive
+                  onMouseEnter={() => setActiveStep(index)}
+                  className={`relative flex overflow-hidden rounded-3xl text-left transition-all duration-500 ${isActive
                     ? 'flex-[8] bg-[#4A8B6A] p-8 sm:p-10 md:p-12'
                     : 'flex-1 bg-[#85BCA0] p-6 hover:bg-[#72B090]'
                     }`}
@@ -80,12 +89,26 @@ export function HowItWorksSection({ onGetInvited }: HowItWorksSectionProps) {
 
                         {/* Dots */}
                         <div className="mt-8 flex gap-2">
+                          <style>{`
+                            @keyframes fillBar {
+                              from { width: 0%; }
+                              to { width: 100%; }
+                            }
+                          `}</style>
                           {steps.map((_, i) => (
                             <div
                               key={i}
-                              className={`h-1.5 rounded-full transition-all duration-300 ${activeStep === i ? 'w-8 bg-white' : 'w-4 bg-white/40'
-                                }`}
-                            />
+                              className={`relative h-1.5 overflow-hidden rounded-full transition-all duration-300 ${
+                                activeStep === i ? 'w-8 bg-white/40' : 'w-4 bg-white/40'
+                              }`}
+                            >
+                              {activeStep === i && (
+                                <div
+                                  className="absolute left-0 top-0 h-full bg-white"
+                                  style={{ animation: 'fillBar 5s linear forwards' }}
+                                />
+                              )}
+                            </div>
                           ))}
                         </div>
                       </div>

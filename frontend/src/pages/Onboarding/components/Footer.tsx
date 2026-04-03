@@ -3,7 +3,7 @@ import { GeometricX } from "./phone-slides/GeometricX";
 export function Footer() {
   return (
     <footer
-      className="ob-dark-bg relative py-16 md:py-20"
+      className="ob-dark-bg relative py-10 md:py-15"
 
     >
       <div className="mx-auto max-w-7xl px-6">

@@ -13,11 +13,11 @@ export function Navbar({ onCtaClick }: NavbarProps) {
     <nav className="ob-dark-bg sticky top-0 z-50 border-b border-white/5 backdrop-blur-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <a href="/" className="flex items-center gap-1.5">
-          <span className="text-4xl font-medium leading-none tracking-tight text-white">
+          <span className="text-5xl font-medium leading-none tracking-tight text-white">
             Agent
           </span>
           <svg
-            className="h-[1.5rem] w-auto mt-1.5"
+            className="h-[2rem] w-auto mt-1.5"
             viewBox="0 0 42 28"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -31,13 +31,16 @@ export function Navbar({ onCtaClick }: NavbarProps) {
           </svg>
         </a>
 
-        <Button
-          onClick={onCtaClick}
-          variant="outline"
-          className="hidden border-white/10 bg-transparent text-white hover:bg-white/5 hover:text-white sm:inline-flex rounded-md px-6 py-2 h-auto text-sm font-medium"
-        >
-          Start Today - For Free
-        </Button>
+        <div className="relative hidden sm:inline-flex h-10 overflow-hidden rounded-md p-[1px]">
+          <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,transparent_75%,#00E676_100%)]" />
+          <Button
+            onClick={onCtaClick}
+            variant="outline"
+            className="relative h-full w-full rounded-[5px] border-0 bg-[#0A0A0A] px-6 text-sm font-medium text-white hover:bg-[#1A1A1A] hover:text-white"
+          >
+            Start Today - For Free
+          </Button>
+        </div>
 
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
@@ -49,16 +52,19 @@ export function Navbar({ onCtaClick }: NavbarProps) {
 
       {mobileOpen && (
         <div className="border-t border-white/5 px-6 py-4 sm:hidden">
-          <Button
-            onClick={() => {
-              onCtaClick()
-              setMobileOpen(false)
-            }}
-            variant="outline"
-            className="w-full border-white/10 bg-transparent text-white hover:bg-white/5 hover:text-white rounded-md h-auto py-3"
-          >
-            Start Today - For Free
-          </Button>
+          <div className="relative w-full overflow-hidden rounded-md p-[1px]">
+            <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,transparent_75%,#00E676_100%)]" />
+            <Button
+              onClick={() => {
+                onCtaClick()
+                setMobileOpen(false)
+              }}
+              variant="outline"
+              className="relative h-full w-full rounded-[5px] border-0 bg-[#0A0A0A] py-3 text-sm font-medium text-white hover:bg-[#1A1A1A] hover:text-white"
+            >
+              Start Today - For Free
+            </Button>
+          </div>
         </div>
       )}
     </nav>

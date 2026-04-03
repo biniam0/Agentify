@@ -42,14 +42,17 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
               <strong className="text-white font-medium">execute</strong>, and start selling.
             </p>
 
-            <Button
-              onClick={onCtaClick}
-              size="lg"
-              className="rounded-md border border-white/10 bg-transparent px-8 py-6 text-base text-white hover:bg-white/5 relative overflow-hidden group"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              Start Today - For Free
-            </Button>
+            <div className="relative inline-flex overflow-hidden rounded-md p-[1px]">
+              <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,transparent_75%,#00E676_100%)]" />
+              <Button
+                onClick={onCtaClick}
+                size="lg"
+                className="relative rounded-[5px] border-0 bg-[#0A0A0A] px-8 py-6 text-base text-white hover:bg-white/5 overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                Start Today - For Free
+              </Button>
+            </div>
 
             <div className="flex flex-wrap items-center gap-8 pt-8 sm:gap-12 opacity-50 hover:opacity-100 transition-opacity duration-500">
               <img src="/logos/hubspot.svg" alt="HubSpot" className="h-6 w-auto sm:h-7" />
