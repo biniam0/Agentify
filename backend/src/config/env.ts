@@ -71,5 +71,9 @@ export const config = {
     webhookUrl: process.env.SLACK_WEBHOOK_URL || '',
     enabled: process.env.SLACK_ENABLED === 'true',
   },
+  docs: {
+    username: process.env.DOCS_USERNAME || 'admin',
+    password: process.env.DOCS_PASSWORD || '',
+  },
 };
 
