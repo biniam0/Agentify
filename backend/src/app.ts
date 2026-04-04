@@ -67,7 +67,7 @@ function getDocsTokenFromCookie(req: Request): string | undefined {
   return undefined;
 }
 
-app.post('/docs/auth', (req: Request, res: Response) => {
+app.post('/api/docs/auth', (req: Request, res: Response) => {
   const { email, passcode } = req.body;
   if (config.docs.password && email === config.docs.username && passcode === config.docs.password) {
     res.cookie('docs_token', generateDocsToken(), {
@@ -81,7 +81,7 @@ app.post('/docs/auth', (req: Request, res: Response) => {
   return res.status(401).json({ error: 'Invalid credentials' });
 });
 
-app.get('/docs/auth/check', (req: Request, res: Response) => {
+app.get('/api/docs/auth/check', (req: Request, res: Response) => {
   if (!config.docs.password) return res.json({ authenticated: true });
   const token = getDocsTokenFromCookie(req);
   res.json({ authenticated: !!token && token === generateDocsToken() });
