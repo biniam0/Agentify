@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom'
+import { isAuthenticated } from '@/services/authService'
 import { Navbar } from './components/Navbar'
 import { HeroSection } from './components/HeroSection'
 import { IntegrationsSection } from './components/IntegrationsSection'
@@ -7,20 +9,34 @@ import { ContactFormSection } from './components/ContactFormSection'
 import { CtaBanner } from './components/CtaBanner'
 import { Footer } from './components/Footer'
 
+const BARRIERX_SIGNUP_URL = 'https://platform.barrierx.ai/sign-up'
+
 export default function OnboardingPage() {
-  const scrollToContact = () => {
-    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+  const navigate = useNavigate()
+
+  const handleStartOnboarding = () => {
+    if (!isAuthenticated()) {
+      window.location.href = BARRIERX_SIGNUP_URL
+      return
+    }
+
+    const onboarded = localStorage.getItem('agentx_onboarded')
+    if (onboarded === 'true') {
+      navigate('/app/v2')
+    } else {
+      navigate('/app/onboarding')
+    }
   }
 
   return (
     <div className="min-h-screen">
-      <Navbar onCtaClick={scrollToContact} />
-      <HeroSection onCtaClick={scrollToContact} />
+      <Navbar onCtaClick={handleStartOnboarding} />
+      <HeroSection onCtaClick={handleStartOnboarding} />
       <IntegrationsSection />
       <FeaturesSection />
-      <HowItWorksSection onGetInvited={scrollToContact} />
+      <HowItWorksSection onGetInvited={handleStartOnboarding} />
       <ContactFormSection />
-      <CtaBanner onCtaClick={scrollToContact} />
+      <CtaBanner onCtaClick={handleStartOnboarding} />
       <Footer />
     </div>
   )

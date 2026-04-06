@@ -33,14 +33,24 @@ import BarrierXInfo from './pages/Admin/BarrierXInfo';
 import ClientsDeals from './pages/Admin/ClientsDeals';
 import AgentXInvestigations from './pages/Admin/AgentXInvestigations';
 
-// Onboarding (landing page)
+// Onboarding (landing page + wizard)
 import OnboardingPage from './pages/Onboarding/OnboardingPage';
+import OnboardingWizard from './pages/Onboarding/OnboardingWizard';
 
 const router = createBrowserRouter([
   // Public: Onboarding landing page at root
   {
     path: '/',
     element: <OnboardingPage />,
+  },
+  // Onboarding wizard (protected)
+  {
+    path: '/app/onboarding',
+    element: (
+      <ProtectedRoute>
+        <OnboardingWizard />
+      </ProtectedRoute>
+    ),
   },
   // App routes
   {

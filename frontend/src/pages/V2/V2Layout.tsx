@@ -7,6 +7,11 @@ const V2Layout = () => {
     return <Navigate to="/app/meetings" replace />;
   }
 
+  const onboarded = localStorage.getItem('agentx_onboarded');
+  if (onboarded !== 'true') {
+    return <Navigate to="/app/onboarding" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <TopNav />

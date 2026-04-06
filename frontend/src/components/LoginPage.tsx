@@ -46,7 +46,13 @@ const LoginPage: React.FC = () => {
       if (response.success && response.token) {
         authService.setToken(response.token);
         authService.setUser(response.user);
-        navigate('/app/meetings');
+
+        const onboarded = localStorage.getItem('agentx_onboarded');
+        if (onboarded === 'true') {
+          navigate('/app/v2');
+        } else {
+          navigate('/app/onboarding');
+        }
       } else {
         setError('Login failed. Please try again.');
       }
