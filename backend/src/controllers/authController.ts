@@ -107,8 +107,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         role: user.role,
         isAuth: user.isAuth,
         isEnabled: user.isEnabled,
+        onboardingCompleted: user.onboardingCompleted,
       },
-      // Include BarrierX response data
       barrierx: {
         accessToken: barrierxLoginResponse.accessToken,
         refreshToken: barrierxLoginResponse.refreshToken,
@@ -166,6 +166,7 @@ export const refreshToken = async (req: AuthRequest, res: Response): Promise<voi
         role: user.role,
         isAuth: user.isAuth,
         isEnabled: user.isEnabled,
+        onboardingCompleted: user.onboardingCompleted,
       },
       barrierx: {
         accessToken: barrierxRefreshResponse.accessToken,

@@ -266,11 +266,12 @@ export const getSubscription = async (req: AuthRequest, res: Response): Promise<
 export const saveOnboardingProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.userId;
-    const { phone, businessType, softwareCategory, averageSalesCycle, averageDealSize } = req.body;
+    const { name, phone, businessType, softwareCategory, averageSalesCycle, averageDealSize } = req.body;
 
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
+        ...(name && { name }),
         phone,
         businessType,
         softwareCategory,

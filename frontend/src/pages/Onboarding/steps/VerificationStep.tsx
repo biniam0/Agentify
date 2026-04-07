@@ -89,11 +89,10 @@ export default function VerificationStep() {
                     <div className="h-4 w-4 rounded-full border border-gray-200 dark:border-white/15 shrink-0" />
                   )}
                   <span
-                    className={`text-sm ${
-                      idx <= currentVerifyStep
-                        ? 'text-heading dark:text-foreground'
-                        : 'text-gray-400 dark:text-muted-foreground'
-                    }`}
+                    className={`text-sm ${idx <= currentVerifyStep
+                      ? 'text-heading dark:text-foreground'
+                      : 'text-gray-400 dark:text-muted-foreground'
+                      }`}
                   >
                     {step}
                   </span>
@@ -103,8 +102,8 @@ export default function VerificationStep() {
           </>
         ) : verified ? (
           <>
-            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-6">
-              <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+            <div className="h-16 w-16 rounded-full flex items-center justify-center mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 511.99 486.95"><path fill-rule="nonzero" d="M193.54 213.74l43.9 41.72 79.27-95.04 34.12 28.37-109.68 131.5-78.25-74.34 30.64-32.21zm62.22-179.38L335.12.04l43.58 74.11 84.4 18.89-8.3 85.52 57.19 64.91-57.04 64.37 8.12 86.11-83.92 18.53-44.06 74.47-78.86-34.36-79.36 34.31-43.58-74.1-84.4-18.89 8.3-85.52L0 243.48l57.04-64.37L48.92 93l83.92-18.53L176.9 0l78.86 34.36zm68.04.33l-68.13 29.46-67.51-29.42-37.77 63.84-71.99 15.89 6.96 73.88-48.85 55.13 49.04 55.66-7.12 73.4 72.41 16.2 37.35 63.53 68.13-29.46 67.51 29.42 37.77-63.84 71.99-15.89-6.96-73.88 48.85-55.13-49.04-55.66 7.12-73.4-72.41-16.2-37.35-63.53z" /></svg>
             </div>
             <h2 className="text-lg font-semibold text-heading dark:text-foreground">
               Payment verified

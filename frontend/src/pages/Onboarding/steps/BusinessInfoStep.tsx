@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
+import { saveOnboardingProfile } from '@/services/billingService';
 
 const BUSINESS_TYPES = [
   'B2B SaaS',
@@ -56,6 +58,29 @@ export default function BusinessInfoStep() {
   const { state, setBusinessInfo, setCurrentStep, canProceedToStep } = useOnboarding();
   const info = state.businessInfo;
   const isComplete = canProceedToStep(1);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleContinue = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      await saveOnboardingProfile({
+        name: info.name,
+        phone: info.phone,
+        businessType: info.businessType,
+        softwareCategory: info.softwareCategory,
+        averageSalesCycle: info.averageSalesCycle,
+        averageDealSize: info.averageDealSize,
+      });
+      setCurrentStep(1);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to save profile. Please try again.';
+      setError(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -165,14 +190,26 @@ export default function BusinessInfoStep() {
       </div>
 
       {/* Footer */}
+      {error && (
+        <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+      )}
       <div className="flex justify-end pt-4">
         <Button
-          onClick={() => setCurrentStep(1)}
-          disabled={!isComplete}
+          onClick={handleContinue}
+          disabled={!isComplete || saving}
           className="bg-brand hover:bg-brand-hover text-white font-medium px-6 h-11 gap-2"
         >
-          Continue
-          <ArrowRight className="h-4 w-4" />
+          {saving ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              Continue
+              <ArrowRight className="h-4 w-4" />
+            </>
+          )}
         </Button>
       </div>
     </div>

@@ -7,8 +7,8 @@ const V2Layout = () => {
     return <Navigate to="/app/meetings" replace />;
   }
 
-  const onboarded = localStorage.getItem('agentx_onboarded');
-  if (onboarded !== 'true') {
+  const user = authService.getUser();
+  if (!user?.onboardingCompleted) {
     return <Navigate to="/app/onboarding" replace />;
   }
 

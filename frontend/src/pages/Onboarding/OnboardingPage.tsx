@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { isAuthenticated } from '@/services/authService'
+import { isAuthenticated, getUser } from '@/services/authService'
 import { Navbar } from './components/Navbar'
 import { HeroSection } from './components/HeroSection'
 import { IntegrationsSection } from './components/IntegrationsSection'
@@ -20,8 +20,8 @@ export default function OnboardingPage() {
       return
     }
 
-    const onboarded = localStorage.getItem('agentx_onboarded')
-    if (onboarded === 'true') {
+    const user = getUser()
+    if (user?.onboardingCompleted) {
       navigate('/app/v2')
     } else {
       navigate('/app/onboarding')

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { getUser, setUser } from '../services/authService';
 
 export interface BusinessInfo {
   name: string;
@@ -175,7 +176,10 @@ export function OnboardingProvider({
 
   const completeOnboarding = useCallback(() => {
     update((prev) => {
-      localStorage.setItem('agentx_onboarded', 'true');
+      const cachedUser = getUser();
+      if (cachedUser) {
+        setUser({ ...cachedUser, onboardingCompleted: true });
+      }
       return { ...prev, completed: true };
     });
   }, [update]);

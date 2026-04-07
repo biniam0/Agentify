@@ -84,6 +84,7 @@ export const getSubscription = async (): Promise<SubscriptionResponse> => {
 };
 
 export const saveOnboardingProfile = async (data: {
+  name?: string;
   phone: string;
   businessType: string;
   softwareCategory: string;

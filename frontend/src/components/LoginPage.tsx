@@ -48,8 +48,7 @@ const LoginPage: React.FC = () => {
         authService.setToken(response.token);
         authService.setUser(response.user);
 
-        const onboarded = localStorage.getItem('agentx_onboarded');
-        if (onboarded === 'true') {
+        if (response.user.onboardingCompleted) {
           navigate('/app/v2');
         } else {
           navigate('/app/onboarding');

@@ -6,6 +6,7 @@ export interface User {
   avatar?: string;
   isAuth: boolean;
   isEnabled: boolean;
+  onboardingCompleted?: boolean;
 }
 
 export interface Contact {
