@@ -7,6 +7,9 @@ import BusinessInfoStep from './steps/BusinessInfoStep';
 import ConnectBarrierXStep from './steps/ConnectBarrierXStep';
 import ConnectHubSpotStep from './steps/ConnectHubSpotStep';
 import ChoosePlanStep from './steps/ChoosePlanStep';
+import CheckoutStep from './steps/CheckoutStep';
+import VerificationStep from './steps/VerificationStep';
+import ConfirmationStep from './steps/ConfirmationStep';
 
 const STEPS = [
   { id: 0, label: 'Tell us about your business', description: 'Help our AI understand your sales process' },
@@ -15,8 +18,25 @@ const STEPS = [
   { id: 3, label: 'Choose your plan', description: 'Select the plan that fits your team' },
 ];
 
+const PAYMENT_SUB_STEPS = [
+  { id: 'checkout' as const, label: 'Payment details' },
+  { id: 'verification' as const, label: 'Verification' },
+  { id: 'confirmation' as const, label: 'Confirmation' },
+];
+
 function StepContent() {
   const { state } = useOnboarding();
+
+  if (state.currentStep === 3 && state.paymentSubStep) {
+    switch (state.paymentSubStep) {
+      case 'checkout':
+        return <CheckoutStep />;
+      case 'verification':
+        return <VerificationStep />;
+      case 'confirmation':
+        return <ConfirmationStep />;
+    }
+  }
 
   switch (state.currentStep) {
     case 0:
@@ -79,61 +99,118 @@ function WizardInner() {
                 const isCompleted = canProceedToStep(step.id + 1);
                 const isClickable = step.id === 0 || canProceedToStep(step.id);
                 const isLast = index === STEPS.length - 1;
+                const showPaymentSubs = step.id === 3 && state.currentStep === 3 && state.paymentSubStep;
 
                 return (
-                  <div key={step.id} className="flex gap-3">
-                    {/* Circle + line column */}
-                    <div className="flex flex-col items-center">
+                  <div key={step.id}>
+                    <div className="flex gap-3">
+                      {/* Circle + line column */}
+                      <div className="flex flex-col items-center">
+                        <button
+                          onClick={() => isClickable && setCurrentStep(step.id)}
+                          disabled={!isClickable}
+                          className={`relative z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-[1.5px] transition-all duration-300 ${isCompleted
+                            ? 'border-brand bg-brand text-white'
+                            : isActive
+                              ? 'border-brand bg-white dark:bg-card shadow-[0_0_0_2px_rgba(29,139,113,0.10)]'
+                              : isClickable
+                                ? 'border-gray-300 dark:border-white/15 bg-white dark:bg-card'
+                                : 'border-gray-200 dark:border-white/15 bg-gray-50 dark:bg-card opacity-50 cursor-not-allowed'
+                            }`}
+                        >
+                          {isCompleted ? (
+                            <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                          ) : isActive ? (
+                            <div className="h-1.5 w-1.5 rounded-full bg-brand" />
+                          ) : (
+                            <div className="h-1 w-1 rounded-full bg-gray-300 dark:bg-white/20" />
+                          )}
+                        </button>
+
+                        {(!isLast || showPaymentSubs) && (
+                          <div
+                            className={`w-px flex-1 my-0.5 transition-colors duration-300 ${isCompleted ? 'bg-brand' : 'bg-gray-200 dark:bg-white/10'
+                              }`}
+                          />
+                        )}
+                      </div>
+
+                      {/* Label column */}
                       <button
                         onClick={() => isClickable && setCurrentStep(step.id)}
                         disabled={!isClickable}
-                        className={`relative z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-[1.5px] transition-all duration-300 ${isCompleted
-                          ? 'border-brand bg-brand text-white'
-                          : isActive
-                            ? 'border-brand bg-white dark:bg-card shadow-[0_0_0_2px_rgba(29,139,113,0.10)]'
-                            : isClickable
-                              ? 'border-gray-300 dark:border-white/15 bg-white dark:bg-card'
-                              : 'border-gray-200 dark:border-white/15 bg-gray-50 dark:bg-card opacity-50 cursor-not-allowed'
-                          }`}
+                        className={`text-left pb-6 pt-0.5 transition-opacity duration-200 ${!isClickable ? 'opacity-45 cursor-not-allowed' : ''
+                          } ${isLast && !showPaymentSubs ? 'pb-0' : ''}`}
                       >
-                        {isCompleted ? (
-                          <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                        ) : isActive ? (
-                          <div className="h-1.5 w-1.5 rounded-full bg-brand" />
-                        ) : (
-                          <div className="h-1 w-1 rounded-full bg-gray-300 dark:bg-white/20" />
-                        )}
-                      </button>
-
-                      {!isLast && (
-                        <div
-                          className={`w-px flex-1 my-0.5 transition-colors duration-300 ${isCompleted ? 'bg-brand' : 'bg-gray-200 dark:bg-white/10'
+                        <p
+                          className={`text-[13px] font-semibold leading-tight ${isActive
+                            ? 'text-[#1D8B71]'
+                            : isCompleted
+                              ? 'text-heading dark:text-foreground'
+                              : 'text-gray-500 dark:text-muted-foreground'
                             }`}
-                        />
-                      )}
+                        >
+                          {step.label}
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-muted-foreground mt-1 leading-relaxed">
+                          {step.description}
+                        </p>
+                      </button>
                     </div>
 
-                    {/* Label column */}
-                    <button
-                      onClick={() => isClickable && setCurrentStep(step.id)}
-                      disabled={!isClickable}
-                      className={`text-left pb-6 pt-0.5 transition-opacity duration-200 ${!isClickable ? 'opacity-45 cursor-not-allowed' : ''
-                        } ${isLast ? 'pb-0' : ''}`}
-                    >
-                      <p
-                        className={`text-[13px] font-semibold leading-tight ${isActive
-                          ? 'text-[#1D8B71]'
-                          : isCompleted
-                            ? 'text-heading dark:text-foreground'
-                            : 'text-gray-500 dark:text-muted-foreground'
-                          }`}
-                      >
-                        {step.label}
-                      </p>
-                      <p className="text-xs text-gray-400 dark:text-muted-foreground mt-1 leading-relaxed">
-                        {step.description}
-                      </p>
-                    </button>
+                    {/* Payment sub-steps */}
+                    {showPaymentSubs && (
+                      <div className="ml-[7px]">
+                        {PAYMENT_SUB_STEPS.map((sub, subIdx) => {
+                          const isSubActive = state.paymentSubStep === sub.id;
+                          const isSubLast = subIdx === PAYMENT_SUB_STEPS.length - 1;
+                          const subCompleted = (sub.id === 'checkout' && (state.paymentSubStep === 'verification' || state.paymentSubStep === 'confirmation'))
+                            || (sub.id === 'verification' && state.paymentSubStep === 'confirmation');
+
+                          return (
+                            <div key={sub.id} className="flex gap-3">
+                              <div className="flex flex-col items-center">
+                                <div
+                                  className={`flex h-3 w-3 shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
+                                    subCompleted
+                                      ? 'border-brand bg-brand text-white'
+                                      : isSubActive
+                                        ? 'border-brand bg-white dark:bg-card'
+                                        : 'border-gray-200 dark:border-white/15 bg-gray-50 dark:bg-card opacity-60'
+                                  }`}
+                                >
+                                  {subCompleted ? (
+                                    <Check className="h-2 w-2" strokeWidth={3} />
+                                  ) : isSubActive ? (
+                                    <div className="h-1 w-1 rounded-full bg-brand" />
+                                  ) : (
+                                    <div className="h-0.5 w-0.5 rounded-full bg-gray-300 dark:bg-white/20" />
+                                  )}
+                                </div>
+                                {!isSubLast && (
+                                  <div
+                                    className={`w-px flex-1 my-0.5 transition-colors duration-300 ${
+                                      subCompleted ? 'bg-brand' : 'bg-gray-200 dark:bg-white/10'
+                                    }`}
+                                  />
+                                )}
+                              </div>
+                              <p
+                                className={`text-[11px] font-medium pb-4 pt-0.5 ${
+                                  isSubActive
+                                    ? 'text-[#1D8B71]'
+                                    : subCompleted
+                                      ? 'text-heading dark:text-foreground'
+                                      : 'text-gray-400 dark:text-muted-foreground'
+                                } ${isSubLast ? 'pb-0' : ''}`}
+                              >
+                                {sub.label}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}

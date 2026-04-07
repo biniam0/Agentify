@@ -20,11 +20,68 @@ model User {
   isEnabled      Boolean  @default(true)
   role           UserRole @default(USER)
 
+  // Onboarding & profile fields
+  phone               String?
+  businessType        String?
+  softwareCategory    String?
+  averageSalesCycle   String?
+  averageDealSize     String?
+  onboardingCompleted Boolean @default(false)
+  selectedPlan        String?
+  stripeCustomerId    String? @unique
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  subscription Subscription?
+
   // ⚡ Composite index for scheduler query optimization
   @@index([isAuth, isEnabled])
+}
+
+model Subscription {
+  id String @id @default(uuid())
+
+  // Link to user via barrierxUserId
+  barrierxUserId String @unique
+  user           User   @relation(fields: [barrierxUserId], references: [barrierxUserId])
+
+  // Plan details
+  planId   String
+  planName String
+  interval BillingInterval @default(MONTHLY)
+
+  // Stripe IDs (populated when real Stripe is integrated)
+  stripeSubscriptionId String? @unique
+  stripeCustomerId     String?
+  stripePriceId        String?
+  stripePaymentIntentId String?
+
+  // Status
+  status SubscriptionStatus @default(INCOMPLETE)
+
+  // Period tracking
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  trialStart         DateTime?
+  trialEnd           DateTime?
+
+  // Cancellation
+  cancelAtPeriodEnd Boolean   @default(false)
+  canceledAt        DateTime?
+
+  // Mock payment tracking
+  mockSessionId       String? @unique
+  mockPaymentVerified Boolean @default(false)
+  mockPaymentMethod   String?
+  amount              Int?
+  currency            String  @default("usd")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([planId])
 }
 
 // ============================================
@@ -496,6 +553,21 @@ enum UserRole {
   USER
   ADMIN
   SUPER_ADMIN
+}
+
+enum SubscriptionStatus {
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
 }
 
 enum ActivityType {

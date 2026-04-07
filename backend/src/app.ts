@@ -10,6 +10,7 @@ import loggingRoutes from './routes/loggingRoutes';
 import dealRoutes from './routes/dealRoutes';
 import externalLogsRoutes from './routes/externalLogsRoutes';
 import workflowRoutes from './routes/workflowRoutes';
+import billingRoutes from './routes/billingRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { config } from './config/env';
 
@@ -44,6 +45,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/logs', loggingRoutes); // Admin-only logging dashboard routes
 app.use('/api/deals', dealRoutes); // Admin deal management routes
 app.use('/api/workflows', workflowRoutes); // Text-to-workflow engine routes
+app.use('/api/billing', billingRoutes); // Billing & subscription routes
 
 // External API routes (service-to-service)
 app.use('/api/external/v1/logs', externalLogsRoutes);

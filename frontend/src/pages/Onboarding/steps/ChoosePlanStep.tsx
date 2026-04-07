@@ -1,9 +1,8 @@
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Check, Sparkles } from 'lucide-react';
+import { ArrowLeft, Check, CreditCard } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const PLANS = [
   {
@@ -49,22 +48,21 @@ const PLANS = [
 ];
 
 export default function ChoosePlanStep() {
-  const { state, setSelectedPlan, completeOnboarding, setCurrentStep } = useOnboarding();
-  const [annualBilling, setAnnualBilling] = useState(false);
-  const [completing, setCompleting] = useState(false);
-  const navigate = useNavigate();
+  const { state, setSelectedPlan, setBillingInterval, setPaymentSubStep, setCurrentStep } = useOnboarding();
+  const [annualBilling, setAnnualBilling] = useState(state.billingInterval === 'ANNUAL');
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId);
   };
 
-  const handleComplete = async () => {
+  const handleToggleBilling = (checked: boolean) => {
+    setAnnualBilling(checked);
+    setBillingInterval(checked ? 'ANNUAL' : 'MONTHLY');
+  };
+
+  const handleProceedToCheckout = () => {
     if (!state.selectedPlan) return;
-    setCompleting(true);
-    // Simulate a brief delay for UX
-    await new Promise((r) => setTimeout(r, 800));
-    completeOnboarding();
-    navigate('/app/v2', { replace: true });
+    setPaymentSubStep('checkout');
   };
 
   return (
@@ -85,7 +83,7 @@ export default function ChoosePlanStep() {
         </span>
         <Switch
           checked={annualBilling}
-          onCheckedChange={setAnnualBilling}
+          onCheckedChange={handleToggleBilling}
           className="data-[state=checked]:bg-brand"
         />
         <span className={`text-sm ${annualBilling ? 'text-heading dark:text-foreground font-medium' : 'text-body dark:text-muted-foreground'}`}>
@@ -167,24 +165,12 @@ export default function ChoosePlanStep() {
           Back
         </Button>
         <Button
-          onClick={handleComplete}
-          disabled={!state.selectedPlan || completing}
+          onClick={handleProceedToCheckout}
+          disabled={!state.selectedPlan}
           className="bg-brand hover:bg-brand-hover text-white font-medium px-8 h-11 gap-2"
         >
-          {completing ? (
-            <span className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Setting up...
-            </span>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" />
-              Complete Setup
-            </>
-          )}
+          <CreditCard className="h-4 w-4" />
+          Proceed to Checkout
         </Button>
       </div>
     </div>

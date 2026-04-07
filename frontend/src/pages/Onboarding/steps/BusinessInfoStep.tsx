@@ -2,6 +2,7 @@ import { useOnboarding } from '@/contexts/OnboardingContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { PhoneInput } from '@/components/ui/phone-input';
 import {
   Select,
   SelectContent,
@@ -54,7 +55,6 @@ const DEAL_SIZES = [
 export default function BusinessInfoStep() {
   const { state, setBusinessInfo, setCurrentStep, canProceedToStep } = useOnboarding();
   const info = state.businessInfo;
-
   const isComplete = canProceedToStep(1);
 
   return (
@@ -69,7 +69,7 @@ export default function BusinessInfoStep() {
       </div>
 
       <div className="space-y-5">
-        {/* Name + Email row */}
+        {/* Name + Email */}
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-2">
             <Label className="text-body dark:text-foreground font-medium text-sm">Full Name</Label>
@@ -94,12 +94,10 @@ export default function BusinessInfoStep() {
         {/* Phone */}
         <div className="space-y-2">
           <Label className="text-body dark:text-foreground font-medium text-sm">Phone Number</Label>
-          <Input
+          <PhoneInput
             value={info.phone}
-            onChange={(e) => setBusinessInfo({ phone: e.target.value })}
-            placeholder="+1 (555) 000-0000"
-            type="tel"
-            className="h-11 border-default dark:border-border focus:border-[hsl(var(--app-brand))] focus:ring-[hsl(var(--app-brand))]/20"
+            onChange={(phone) => setBusinessInfo({ phone })}
+            defaultCountry="us"
           />
         </div>
 

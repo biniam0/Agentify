@@ -10,13 +10,30 @@ export interface BusinessInfo {
   averageDealSize: string;
 }
 
+export type PaymentSubStep = 'checkout' | 'verification' | 'confirmation';
+
+export interface CheckoutData {
+  sessionId: string;
+  customerId: string;
+  planName: string;
+  amount: number;
+  currency: string;
+  interval: string;
+}
+
 export interface OnboardingState {
   currentStep: number;
   businessInfo: BusinessInfo;
   barrierxConnected: boolean;
   hubspotConnected: boolean;
   selectedPlan: string | null;
+  billingInterval: 'MONTHLY' | 'ANNUAL';
   completed: boolean;
+
+  paymentSubStep: PaymentSubStep | null;
+  checkoutData: CheckoutData | null;
+  paymentVerified: boolean;
+  paymentConfirmed: boolean;
 }
 
 interface OnboardingContextValue {
@@ -26,6 +43,12 @@ interface OnboardingContextValue {
   setBarrierXConnected: (connected: boolean) => void;
   setHubSpotConnected: (connected: boolean) => void;
   setSelectedPlan: (plan: string) => void;
+  setBillingInterval: (interval: 'MONTHLY' | 'ANNUAL') => void;
+  setPaymentSubStep: (subStep: PaymentSubStep | null) => void;
+  setCheckoutData: (data: CheckoutData) => void;
+  startCheckoutVerification: (data: CheckoutData) => void;
+  setPaymentVerified: (verified: boolean) => void;
+  setPaymentConfirmed: (confirmed: boolean) => void;
   completeOnboarding: () => void;
   canProceedToStep: (step: number) => boolean;
 }
@@ -63,7 +86,12 @@ function getInitialState(userName?: string, userEmail?: string): OnboardingState
     barrierxConnected: false,
     hubspotConnected: false,
     selectedPlan: null,
+    billingInterval: 'MONTHLY',
     completed: false,
+    paymentSubStep: null,
+    checkoutData: null,
+    paymentVerified: false,
+    paymentConfirmed: false,
   };
 }
 
@@ -80,42 +108,77 @@ export function OnboardingProvider({
 }) {
   const [state, setState] = useState<OnboardingState>(() => getInitialState(userName, userEmail));
 
-  const persist = useCallback((next: OnboardingState) => {
-    setState(next);
-    saveState(next);
+  const update = useCallback((updater: (prev: OnboardingState) => OnboardingState) => {
+    setState((prev) => {
+      const next = updater(prev);
+      saveState(next);
+      return next;
+    });
   }, []);
 
   const setCurrentStep = useCallback(
-    (step: number) => persist({ ...state, currentStep: step }),
-    [state, persist],
+    (step: number) => update((prev) => ({ ...prev, currentStep: step })),
+    [update],
   );
 
   const setBusinessInfo = useCallback(
     (info: Partial<BusinessInfo>) =>
-      persist({ ...state, businessInfo: { ...state.businessInfo, ...info } }),
-    [state, persist],
+      update((prev) => ({ ...prev, businessInfo: { ...prev.businessInfo, ...info } })),
+    [update],
   );
 
   const setBarrierXConnected = useCallback(
-    (connected: boolean) => persist({ ...state, barrierxConnected: connected }),
-    [state, persist],
+    (connected: boolean) => update((prev) => ({ ...prev, barrierxConnected: connected })),
+    [update],
   );
 
   const setHubSpotConnected = useCallback(
-    (connected: boolean) => persist({ ...state, hubspotConnected: connected }),
-    [state, persist],
+    (connected: boolean) => update((prev) => ({ ...prev, hubspotConnected: connected })),
+    [update],
   );
 
   const setSelectedPlan = useCallback(
-    (plan: string) => persist({ ...state, selectedPlan: plan }),
-    [state, persist],
+    (plan: string) => update((prev) => ({ ...prev, selectedPlan: plan })),
+    [update],
+  );
+
+  const setBillingInterval = useCallback(
+    (interval: 'MONTHLY' | 'ANNUAL') => update((prev) => ({ ...prev, billingInterval: interval })),
+    [update],
+  );
+
+  const setPaymentSubStep = useCallback(
+    (subStep: PaymentSubStep | null) => update((prev) => ({ ...prev, paymentSubStep: subStep })),
+    [update],
+  );
+
+  const setCheckoutData = useCallback(
+    (data: CheckoutData) => update((prev) => ({ ...prev, checkoutData: data })),
+    [update],
+  );
+
+  const startCheckoutVerification = useCallback(
+    (data: CheckoutData) =>
+      update((prev) => ({ ...prev, checkoutData: data, paymentSubStep: 'verification' as const })),
+    [update],
+  );
+
+  const setPaymentVerified = useCallback(
+    (verified: boolean) => update((prev) => ({ ...prev, paymentVerified: verified })),
+    [update],
+  );
+
+  const setPaymentConfirmed = useCallback(
+    (confirmed: boolean) => update((prev) => ({ ...prev, paymentConfirmed: confirmed })),
+    [update],
   );
 
   const completeOnboarding = useCallback(() => {
-    const next = { ...state, completed: true };
-    persist(next);
-    localStorage.setItem('agentx_onboarded', 'true');
-  }, [state, persist]);
+    update((prev) => {
+      localStorage.setItem('agentx_onboarded', 'true');
+      return { ...prev, completed: true };
+    });
+  }, [update]);
 
   const canProceedToStep = useCallback(
     (step: number): boolean => {
@@ -140,6 +203,12 @@ export function OnboardingProvider({
         setBarrierXConnected,
         setHubSpotConnected,
         setSelectedPlan,
+        setBillingInterval,
+        setPaymentSubStep,
+        setCheckoutData,
+        startCheckoutVerification,
+        setPaymentVerified,
+        setPaymentConfirmed,
         completeOnboarding,
         canProceedToStep,
       }}
