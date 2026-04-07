@@ -6,7 +6,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
-import { AlertCircle, Eye, EyeOff, Shield } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { GeometricX } from '@/pages/Onboarding/components/phone-slides/GeometricX';
 
 /* ─── Inline SVG Components ─── */
 
@@ -64,7 +65,7 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-page dark:bg-background relative flex items-center justify-center p-4 overflow-hidden">
+    <div className="min-h-screen dark:bg-background relative flex items-center justify-center p-4 overflow-hidden">
       {/* ── Background Decorations ── */}
       {/* Top-right glow */}
       <div
@@ -113,8 +114,20 @@ const LoginPage: React.FC = () => {
                 Welcome back
               </h2>
               <p className="text-body dark:text-muted-foreground text-sm">
-                Sign in to your AgentX account to continue
+                Sign in with your BarrierX credentials to continue
               </p>
+            </div>
+
+            {/* BarrierX credential notice */}
+            <div className="mb-6 rounded-lg border border-[hsl(var(--app-brand))]/20 bg-[hsl(var(--app-brand))]/[0.04] dark:bg-[hsl(var(--app-brand))]/[0.06] px-4 py-3">
+              <div className="flex items-start gap-3">
+                <div className="text-[13px] leading-relaxed">
+                  <span className="text-heading dark:text-foreground font-medium whitespace-nowrap">
+                    Agent<span className="inline-block"><GeometricX className="h-2.5 w-auto" /></span> uses BarrierX for authentication.
+                  </span>
+                  <span className="text-body dark:text-muted-foreground"> Use your existing BarrierX account to sign in.</span>
+                </div>
+              </div>
             </div>
 
             {/* Form */}
@@ -188,7 +201,6 @@ const LoginPage: React.FC = () => {
 
             {/* Security badge inside card */}
             <div className="flex items-center justify-center gap-1.5 mt-6 pt-5 border-t border-subtle dark:border-border">
-              <Shield className="h-3.5 w-3.5 text-subtle dark:text-muted-foreground" />
               <span className="text-xs text-subtle dark:text-muted-foreground">
                 Secured with enterprise-grade encryption
               </span>
@@ -196,20 +208,32 @@ const LoginPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* ── Powered by BarrierX Footer ── */}
-        <div className="flex flex-col items-center mt-8 gap-3">
-          <span className="text-[0.65rem] text-subtle dark:text-muted-foreground tracking-[0.15em] uppercase font-medium">
-            Powered by
-          </span>
-          <div className="flex items-center gap-1">
-            <span className="text-2xl font-bold tracking-tight text-heading dark:text-foreground select-none leading-none">
-              Barrier
-            </span>
-            <AgentXIcon className="h-[1.4rem] w-auto" />
-          </div>
-          <p className="text-[0.7rem] text-subtle dark:text-muted-foreground text-center leading-relaxed">
-            Intelligent sales automation platform
+        {/* ── Registration CTA Footer ── */}
+        <div className="mt-8 text-center">
+          <p className="text-sm text-body dark:text-muted-foreground">
+            Don't have a BarrierX account?
           </p>
+          <a
+            href="https://platform.barrierx.ai/sign-up"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-brand hover:text-brand-hover transition-colors group"
+          >
+            Create your account on BarrierX
+            <ExternalLink className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+          </a>
+          <div className="flex items-center justify-center gap-2 mt-5">
+            <span className="text-[0.65rem] mt-1 text-subtle dark:text-muted-foreground tracking-[0.1em] uppercase font-medium leading-none">
+              Powered by
+            </span>
+
+            <div className="flex items-center gap-1">
+              <span className="text-lg font-bold tracking-tight text-heading dark:text-foreground leading-none">
+                Barrier
+              </span>
+              <AgentXIcon className="h-4 w-auto" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
