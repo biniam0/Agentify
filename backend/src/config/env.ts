@@ -75,5 +75,24 @@ export const config = {
     username: process.env.DOCS_USERNAME || 'admin',
     password: process.env.DOCS_PASSWORD || '',
   },
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    prices: {
+      pro: {
+        monthly: process.env.STRIPE_PRICE_PRO_MONTHLY || '',
+        annual: process.env.STRIPE_PRICE_PRO_ANNUAL || '',
+      },
+      business: {
+        monthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY || '',
+        annual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL || '',
+      },
+      enterprise: {
+        monthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || '',
+        annual: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || '',
+      },
+    },
+  },
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
 };
 

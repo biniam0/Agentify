@@ -11,10 +11,12 @@ interface PricingSectionProps {
 const plans = [
   {
     name: 'Pro Plan',
+    monthlyPrice: 300,
+    annualPrice: 3228,
     deals: '5 Deals monitoring',
     highlighted: false,
     features: [
-      '1 Seats included',
+      '1 Seat included',
       '90 Risk Indicators',
       '5 Recommendations per deal',
       '9 Barrier Categories',
@@ -22,6 +24,8 @@ const plans = [
   },
   {
     name: 'Business Plan',
+    monthlyPrice: 900,
+    annualPrice: 10428,
     deals: '30 Deals monitoring',
     highlighted: true,
     badge: 'Best value',
@@ -35,6 +39,8 @@ const plans = [
   },
   {
     name: 'Enterprise Plan',
+    monthlyPrice: 1200,
+    annualPrice: 13800,
     deals: 'Unlimited Deals monitoring',
     highlighted: false,
     features: [
@@ -94,6 +100,15 @@ export function PricingSection({ onGetInvited }: PricingSectionProps) {
                     {plan.badge}
                   </span>
                 )}
+              </div>
+
+              <div className="mb-4">
+                <span className="text-3xl font-bold text-gray-900">
+                  ${annualBilling[index] ? Math.round(plan.annualPrice / 12) : plan.monthlyPrice}
+                </span>
+                <span className="text-sm text-gray-500">
+                  /mo{annualBilling[index] ? ' (billed annually)' : ''}
+                </span>
               </div>
 
               <div className="mb-6 flex items-center gap-3">

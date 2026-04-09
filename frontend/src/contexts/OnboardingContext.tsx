@@ -11,17 +11,6 @@ export interface BusinessInfo {
   averageDealSize: string;
 }
 
-export type PaymentSubStep = 'checkout' | 'verification' | 'confirmation';
-
-export interface CheckoutData {
-  sessionId: string;
-  customerId: string;
-  planName: string;
-  amount: number;
-  currency: string;
-  interval: string;
-}
-
 export interface OnboardingState {
   currentStep: number;
   businessInfo: BusinessInfo;
@@ -30,11 +19,7 @@ export interface OnboardingState {
   selectedPlan: string | null;
   billingInterval: 'MONTHLY' | 'ANNUAL';
   completed: boolean;
-
-  paymentSubStep: PaymentSubStep | null;
-  checkoutData: CheckoutData | null;
-  paymentVerified: boolean;
-  paymentConfirmed: boolean;
+  checkoutLoading: boolean;
 }
 
 interface OnboardingContextValue {
@@ -45,11 +30,7 @@ interface OnboardingContextValue {
   setHubSpotConnected: (connected: boolean) => void;
   setSelectedPlan: (plan: string) => void;
   setBillingInterval: (interval: 'MONTHLY' | 'ANNUAL') => void;
-  setPaymentSubStep: (subStep: PaymentSubStep | null) => void;
-  setCheckoutData: (data: CheckoutData) => void;
-  startCheckoutVerification: (data: CheckoutData) => void;
-  setPaymentVerified: (verified: boolean) => void;
-  setPaymentConfirmed: (confirmed: boolean) => void;
+  setCheckoutLoading: (loading: boolean) => void;
   completeOnboarding: () => void;
   canProceedToStep: (step: number) => boolean;
 }
@@ -89,10 +70,7 @@ function getInitialState(userName?: string, userEmail?: string): OnboardingState
     selectedPlan: null,
     billingInterval: 'MONTHLY',
     completed: false,
-    paymentSubStep: null,
-    checkoutData: null,
-    paymentVerified: false,
-    paymentConfirmed: false,
+    checkoutLoading: false,
   };
 }
 
@@ -148,29 +126,8 @@ export function OnboardingProvider({
     [update],
   );
 
-  const setPaymentSubStep = useCallback(
-    (subStep: PaymentSubStep | null) => update((prev) => ({ ...prev, paymentSubStep: subStep })),
-    [update],
-  );
-
-  const setCheckoutData = useCallback(
-    (data: CheckoutData) => update((prev) => ({ ...prev, checkoutData: data })),
-    [update],
-  );
-
-  const startCheckoutVerification = useCallback(
-    (data: CheckoutData) =>
-      update((prev) => ({ ...prev, checkoutData: data, paymentSubStep: 'verification' as const })),
-    [update],
-  );
-
-  const setPaymentVerified = useCallback(
-    (verified: boolean) => update((prev) => ({ ...prev, paymentVerified: verified })),
-    [update],
-  );
-
-  const setPaymentConfirmed = useCallback(
-    (confirmed: boolean) => update((prev) => ({ ...prev, paymentConfirmed: confirmed })),
+  const setCheckoutLoading = useCallback(
+    (loading: boolean) => update((prev) => ({ ...prev, checkoutLoading: loading })),
     [update],
   );
 
@@ -208,11 +165,7 @@ export function OnboardingProvider({
         setHubSpotConnected,
         setSelectedPlan,
         setBillingInterval,
-        setPaymentSubStep,
-        setCheckoutData,
-        startCheckoutVerification,
-        setPaymentVerified,
-        setPaymentConfirmed,
+        setCheckoutLoading,
         completeOnboarding,
         canProceedToStep,
       }}

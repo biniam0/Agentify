@@ -1,13 +1,16 @@
+import { useState } from 'react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Check, CreditCard } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, Check, CreditCard, Loader2, ExternalLink } from 'lucide-react';
+import * as billingService from '@/services/billingService';
 
 const PLANS = [
   {
     id: 'pro',
     name: 'Pro Plan',
+    monthlyPrice: 300,
+    annualPrice: 3228,
     deals: '5 Deals monitoring',
     highlighted: false,
     features: [
@@ -20,6 +23,8 @@ const PLANS = [
   {
     id: 'business',
     name: 'Business Plan',
+    monthlyPrice: 900,
+    annualPrice: 10428,
     deals: '30 Deals monitoring',
     highlighted: true,
     badge: 'Best value',
@@ -34,6 +39,8 @@ const PLANS = [
   {
     id: 'enterprise',
     name: 'Enterprise Plan',
+    monthlyPrice: 1200,
+    annualPrice: 13800,
     deals: 'Unlimited Deals monitoring',
     highlighted: false,
     features: [
@@ -47,9 +54,19 @@ const PLANS = [
   },
 ];
 
+function formatPrice(cents: number, interval: 'MONTHLY' | 'ANNUAL'): string {
+  if (interval === 'ANNUAL') {
+    const monthly = cents / 12;
+    return `$${monthly.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  }
+  return `$${cents.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
 export default function ChoosePlanStep() {
-  const { state, setSelectedPlan, setBillingInterval, setPaymentSubStep, setCurrentStep } = useOnboarding();
+  const { state, setSelectedPlan, setBillingInterval, setCurrentStep } = useOnboarding();
   const [annualBilling, setAnnualBilling] = useState(state.billingInterval === 'ANNUAL');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId);
@@ -60,10 +77,30 @@ export default function ChoosePlanStep() {
     setBillingInterval(checked ? 'ANNUAL' : 'MONTHLY');
   };
 
-  const handleProceedToCheckout = () => {
+  const handleProceedToCheckout = async () => {
     if (!state.selectedPlan) return;
-    setPaymentSubStep('checkout');
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await billingService.createCheckout({
+        planId: state.selectedPlan,
+        interval: state.billingInterval,
+      });
+
+      if (response.checkoutUrl) {
+        window.location.href = response.checkoutUrl;
+      } else {
+        setError('Failed to create checkout session. Please try again.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to start checkout. Please try again.';
+      setError(msg);
+      setLoading(false);
+    }
   };
+
+  const interval = annualBilling ? 'ANNUAL' as const : 'MONTHLY' as const;
 
   return (
     <div className="space-y-8">
@@ -91,7 +128,7 @@ export default function ChoosePlanStep() {
         </span>
         {annualBilling && (
           <span className="text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">
-            Save 20%
+            Save up to 20%
           </span>
         )}
       </div>
@@ -100,6 +137,8 @@ export default function ChoosePlanStep() {
       <div className="grid gap-4 sm:grid-cols-3">
         {PLANS.map((plan) => {
           const isSelected = state.selectedPlan === plan.id;
+          const price = annualBilling ? plan.annualPrice : plan.monthlyPrice;
+          const displayPrice = formatPrice(price, interval);
 
           return (
             <button
@@ -113,14 +152,12 @@ export default function ChoosePlanStep() {
                   : 'border-subtle dark:border-border bg-elevated dark:bg-card hover:border-gray-300 dark:hover:border-white/20'
               }`}
             >
-              {/* Badge */}
               {plan.badge && (
                 <span className="absolute -top-2.5 right-4 rounded-full bg-brand px-3 py-0.5 text-[10px] font-semibold text-white uppercase tracking-wide">
                   {plan.badge}
                 </span>
               )}
 
-              {/* Selected indicator */}
               {isSelected && (
                 <div className="absolute top-3 right-3 h-6 w-6 rounded-full bg-brand flex items-center justify-center">
                   <Check className="h-3.5 w-3.5 text-white" />
@@ -132,6 +169,16 @@ export default function ChoosePlanStep() {
                   {plan.name}
                 </h3>
                 <p className="text-xs text-body dark:text-muted-foreground mt-1">{plan.deals}</p>
+              </div>
+
+              {/* Price */}
+              <div className="mb-4">
+                <span className="text-2xl font-bold text-heading dark:text-foreground">
+                  {displayPrice}
+                </span>
+                <span className="text-sm text-body dark:text-muted-foreground">
+                  /mo{annualBilling ? ' (billed annually)' : ''}
+                </span>
               </div>
 
               <div className="h-px bg-gray-100 dark:bg-white/10 mb-4" />
@@ -154,6 +201,12 @@ export default function ChoosePlanStep() {
         })}
       </div>
 
+      {error && (
+        <div className="rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-3">
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="flex justify-between items-center pt-4">
         <Button
@@ -166,11 +219,21 @@ export default function ChoosePlanStep() {
         </Button>
         <Button
           onClick={handleProceedToCheckout}
-          disabled={!state.selectedPlan}
+          disabled={!state.selectedPlan || loading}
           className="bg-brand hover:bg-brand-hover text-white font-medium px-8 h-11 gap-2"
         >
-          <CreditCard className="h-4 w-4" />
-          Proceed to Checkout
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Redirecting to Stripe...
+            </>
+          ) : (
+            <>
+              <CreditCard className="h-4 w-4" />
+              Proceed to Checkout
+              <ExternalLink className="h-3.5 w-3.5 opacity-60" />
+            </>
+          )}
         </Button>
       </div>
     </div>

@@ -34,7 +34,14 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
 }));
 
-app.use(express.json());
+// Skip JSON parsing for the Stripe webhook route (it needs the raw body)
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/billing/webhook') {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 app.use(express.urlencoded({ extended: true }));
 
 // Routes

@@ -7,44 +7,15 @@ export interface CreateCheckoutRequest {
 
 export interface CreateCheckoutResponse {
   success: boolean;
+  checkoutUrl: string;
   sessionId: string;
-  customerId: string;
+}
+
+export interface CheckoutStatusResponse {
+  success: boolean;
+  status: string;
   planId: string;
-  planName: string;
-  amount: number;
-  currency: string;
   interval: string;
-}
-
-export interface VerifyPaymentRequest {
-  sessionId: string;
-  paymentMethod?: string;
-}
-
-export interface VerifyPaymentResponse {
-  success: boolean;
-  verified: boolean;
-  sessionId: string;
-  paymentMethod: string;
-}
-
-export interface ConfirmPaymentRequest {
-  sessionId: string;
-}
-
-export interface ConfirmPaymentResponse {
-  success: boolean;
-  subscription: {
-    id: string;
-    planId: string;
-    planName: string;
-    status: string;
-    interval: string;
-    currentPeriodStart: string;
-    currentPeriodEnd: string;
-    amount: number;
-    currency: string;
-  };
 }
 
 export interface SubscriptionResponse {
@@ -68,13 +39,8 @@ export const createCheckout = async (data: CreateCheckoutRequest): Promise<Creat
   return response.data;
 };
 
-export const verifyPayment = async (data: VerifyPaymentRequest): Promise<VerifyPaymentResponse> => {
-  const response = await api.post<VerifyPaymentResponse>('/billing/verify-payment', data);
-  return response.data;
-};
-
-export const confirmPayment = async (data: ConfirmPaymentRequest): Promise<ConfirmPaymentResponse> => {
-  const response = await api.post<ConfirmPaymentResponse>('/billing/confirm-payment', data);
+export const getCheckoutStatus = async (sessionId: string): Promise<CheckoutStatusResponse> => {
+  const response = await api.get<CheckoutStatusResponse>(`/billing/checkout-status?session_id=${sessionId}`);
   return response.data;
 };
 
