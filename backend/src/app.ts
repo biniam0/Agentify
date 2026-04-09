@@ -1,5 +1,6 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
 import path from 'path';
 import authRoutes from './routes/authRoutes';
@@ -33,6 +34,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
 }));
+
+app.use(cookieParser());
 
 // Skip JSON parsing for the Stripe webhook route (it needs the raw body)
 app.use((req, res, next) => {

@@ -1,11 +1,27 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/database';
 import * as barrierxService from '../services/barrierxService';
-import { generateToken } from '../utils/jwt';
+import { generateAccessToken, generateRefreshTokenValue, REFRESH_TOKEN_MAX_AGE } from '../utils/jwt';
+import { setAuthCookies, clearAuthCookies } from '../utils/cookies';
 import { AuthRequest } from '../middlewares/auth';
 import { invalidateUserCache } from '../utils/userCache';
+
+async function issueTokens(res: Response, userId: string, email: string, role: string) {
+  const accessToken = generateAccessToken({ userId, email, role });
+  const refreshTokenValue = generateRefreshTokenValue();
+
+  await prisma.refreshToken.create({
+    data: {
+      token: refreshTokenValue,
+      userId,
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_MAX_AGE),
+    },
+  });
+
+  setAuthCookies(res, accessToken, refreshTokenValue);
+  return accessToken;
+}
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -16,7 +32,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Call BarrierX API to authenticate
     const barrierxLoginResponse = await barrierxService.login(email, password);
 
     if (!barrierxLoginResponse || !barrierxLoginResponse.ok) {
@@ -24,7 +39,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Decode JWT to extract user info (no signature verification needed, just reading data)
     const decoded = jwt.decode(barrierxLoginResponse.accessToken) as any;
     
     if (!decoded || !decoded.user_metadata) {
@@ -33,7 +47,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Extract user details from JWT
     const firstName = decoded.user_metadata.first_name || '';
     const lastName = decoded.user_metadata.last_name || '';
     const userName = `${firstName} ${lastName}`.trim() || email.split('@')[0];
@@ -48,20 +61,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       isEnabled: true,
     };
 
-    // Try to find user by barrierxUserId first, then by email
     let user = await prisma.user.findUnique({
       where: { barrierxUserId: barrierxLoginResponse.userId },
     });
 
     if (!user) {
-      // Check if user exists with this email
       user = await prisma.user.findUnique({
         where: { email: barrierxUser.email },
       });
     }
 
     if (user) {
-      // User exists - update their information
       user = await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -73,11 +83,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           isEnabled: barrierxUser.isEnabled,
         },
       });
-      
-      // ⚡ Invalidate cache after update
       invalidateUserCache(user.id);
     } else {
-      // User doesn't exist - create new user
       user = await prisma.user.create({
         data: {
           name: barrierxUser.name,
@@ -90,16 +97,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       });
     }
 
-    // Generate JWT token (or use BarrierX accessToken)
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    });
+    await issueTokens(res, user.id, user.email, user.role);
 
     res.json({
       success: true,
-      token,
       user: {
         id: user.id,
         name: user.name,
@@ -108,12 +109,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         isAuth: user.isAuth,
         isEnabled: user.isEnabled,
         onboardingCompleted: user.onboardingCompleted,
-      },
-      barrierx: {
-        accessToken: barrierxLoginResponse.accessToken,
-        refreshToken: barrierxLoginResponse.refreshToken,
-        expiresAt: barrierxLoginResponse.expiresAt,
-        tenants: barrierxLoginResponse.tenants,
       },
     });
   } catch (error) {
@@ -122,43 +117,44 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const refreshToken = async (req: AuthRequest, res: Response): Promise<void> => {
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { refreshToken } = req.body;
+    const incomingToken = req.cookies?.refresh_token;
 
-    if (!refreshToken) {
-      res.status(400).json({ error: 'Refresh token is required' });
+    if (!incomingToken) {
+      res.status(401).json({ error: 'No refresh token' });
       return;
     }
 
-    // Call BarrierX refresh endpoint
-    const barrierxRefreshResponse = await barrierxService.refreshAccessToken(refreshToken);
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token: incomingToken },
+      include: { user: true },
+    });
 
-    if (!barrierxRefreshResponse || !barrierxRefreshResponse.ok) {
+    if (!storedToken || storedToken.revoked || storedToken.expiresAt < new Date()) {
+      if (storedToken && !storedToken.revoked) {
+        // Token is expired — revoke it and all tokens for this user (possible theft)
+        await prisma.refreshToken.updateMany({
+          where: { userId: storedToken.userId },
+          data: { revoked: true },
+        });
+      }
+      clearAuthCookies(res);
       res.status(401).json({ error: 'Invalid or expired refresh token' });
       return;
     }
 
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { barrierxUserId: barrierxRefreshResponse.userId },
+    // Rotate: revoke old token, issue new pair
+    await prisma.refreshToken.update({
+      where: { id: storedToken.id },
+      data: { revoked: true },
     });
 
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    // Generate new JWT for your backend (optional - could reuse existing)
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    });
+    const { user } = storedToken;
+    await issueTokens(res, user.id, user.email, user.role);
 
     res.json({
       success: true,
-      token,
       user: {
         id: user.id,
         name: user.name,
@@ -168,16 +164,39 @@ export const refreshToken = async (req: AuthRequest, res: Response): Promise<voi
         isEnabled: user.isEnabled,
         onboardingCompleted: user.onboardingCompleted,
       },
-      barrierx: {
-        accessToken: barrierxRefreshResponse.accessToken,
-        refreshToken: barrierxRefreshResponse.refreshToken,
-        expiresAt: barrierxRefreshResponse.expiresAt,
-        tenants: barrierxRefreshResponse.tenants,
-      },
     });
   } catch (error) {
     console.error('Token refresh error:', error);
+    clearAuthCookies(res);
     res.status(500).json({ error: 'Token refresh failed' });
+  }
+};
+
+export const logout = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const incomingToken = req.cookies?.refresh_token;
+
+    if (incomingToken) {
+      await prisma.refreshToken.updateMany({
+        where: { token: incomingToken },
+        data: { revoked: true },
+      });
+    }
+
+    // Revoke all tokens for this user if authenticated
+    if (req.user?.userId) {
+      await prisma.refreshToken.updateMany({
+        where: { userId: req.user.userId, revoked: false },
+        data: { revoked: true },
+      });
+    }
+
+    clearAuthCookies(res);
+    res.json({ success: true, message: 'Logged out' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    clearAuthCookies(res);
+    res.json({ success: true, message: 'Logged out' });
   }
 };
 

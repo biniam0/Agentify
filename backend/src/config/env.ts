@@ -9,8 +9,10 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || 'default-secret-change-in-production',
   admin: {
     // When true, admin-only guards (e.g., requireAdmin) are bypassed.
-    // Useful for early UI development; DO NOT use in production.
-    disableAdminGuard: process.env.DISABLE_ADMIN_GUARD === 'true',
+    // Only allowed in development; silently ignored in production.
+    disableAdminGuard:
+      process.env.DISABLE_ADMIN_GUARD === 'true' &&
+      (process.env.NODE_ENV || 'development') !== 'production',
   },
   // CORS configuration
   allowedOrigins: process.env.ALLOWED_ORIGINS
