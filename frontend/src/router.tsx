@@ -1,8 +1,9 @@
+import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
 import MeetingsPage from './components/MeetingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
-import { isAuthenticated } from './services/authService';
+import * as authService from './services/authService';
 import UserLayout from './layouts/UserLayout';
 import CallsLayout from './layouts/CallsLayout';
 import UserLogsPage from './pages/User/Logs/UserLogsPage';
@@ -37,13 +38,52 @@ import AgentXInvestigations from './pages/Admin/AgentXInvestigations';
 import OnboardingPage from './pages/Onboarding/OnboardingPage';
 import OnboardingWizard from './pages/Onboarding/OnboardingWizard';
 
+/**
+ * Redirects authenticated users away from the login page.
+ * Evaluated on every render (not stale like a top-level function call).
+ */
+const GuestOnly: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  if (authService.isAuthenticated()) {
+    const user = authService.getUser();
+    if (user?.onboardingCompleted) {
+      return <Navigate to="/app/v2" replace />;
+    }
+    return <Navigate to="/app/onboarding" replace />;
+  }
+  return <>{children}</>;
+};
+
+/**
+ * Requires SUPER_ADMIN role. Redirects others to /app/v2.
+ */
+const SuperAdminOnly: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  if (!authService.isSuperAdmin()) {
+    return <Navigate to="/app/v2" replace />;
+  }
+  return <>{children}</>;
+};
+
+/**
+ * Evaluated on every render to redirect /app to the right place.
+ */
+const AppRedirect = () => {
+  if (authService.isAuthenticated()) {
+    const user = authService.getUser();
+    if (user?.onboardingCompleted) {
+      return <Navigate to="/app/v2" replace />;
+    }
+    return <Navigate to="/app/onboarding" replace />;
+  }
+  return <Navigate to="/app/login" replace />;
+};
+
 const router = createBrowserRouter([
   // Public: Onboarding landing page at root
   {
     path: '/',
     element: <OnboardingPage />,
   },
-  // Onboarding wizard (protected)
+  // Onboarding wizard (protected — must be logged in)
   {
     path: '/app/onboarding',
     element: (
@@ -52,14 +92,19 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
-  // App routes
+  // App root — dynamic redirect evaluated on every render
   {
     path: '/app',
-    element: isAuthenticated() ? <Navigate to="/app/meetings" replace /> : <Navigate to="/app/login" replace />,
+    element: <AppRedirect />,
   },
+  // Login — redirects away if already authenticated
   {
     path: '/app/login',
-    element: <LoginPage />,
+    element: (
+      <GuestOnly>
+        <LoginPage />
+      </GuestOnly>
+    ),
   },
   {
     element: (
@@ -110,7 +155,7 @@ const router = createBrowserRouter([
       },
     ],
   },
-  // V2 Routes (AgentX v2.0 - Admin only)
+  // V2 Routes (AgentX v2.0 — Admin only, must be onboarded)
   {
     path: '/app/v2',
     element: (
@@ -128,12 +173,14 @@ const router = createBrowserRouter([
       { path: 'crm-actions', element: <V2DashboardPage /> },
     ],
   },
-  // Admin Routes
+  // Admin Routes (SUPER_ADMIN only)
   {
     path: '/app/admin',
     element: (
       <ProtectedRoute>
-        <AdminLayout />
+        <SuperAdminOnly>
+          <AdminLayout />
+        </SuperAdminOnly>
       </ProtectedRoute>
     ),
     children: [

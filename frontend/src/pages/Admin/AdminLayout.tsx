@@ -26,8 +26,7 @@ const AdminLayout: React.FC = () => {
   const user = authService.getUser();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
-  // Check if user is admin using role-based authentication
-  const isAdmin = authService.isAdmin();
+  const isSuperAdmin = authService.isSuperAdmin();
 
   useEffect(() => {
     // Load saved theme
@@ -40,9 +39,8 @@ const AdminLayout: React.FC = () => {
     }
   }, []);
 
-  // Redirect if not admin
-  if (!isAdmin) {
-    return <Navigate to="/app/meetings" replace />;
+  if (!isSuperAdmin) {
+    return <Navigate to="/app/v2" replace />;
   }
 
   const handleLogout = () => {

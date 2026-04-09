@@ -37,6 +37,11 @@ export const isAdmin = (): boolean => {
   return user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 };
 
+export const isSuperAdmin = (): boolean => {
+  const user = getUser();
+  return user?.role === 'SUPER_ADMIN';
+};
+
 export const getAuthHeader = (): { Authorization: string } | Record<string, never> => {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};

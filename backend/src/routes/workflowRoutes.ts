@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { authenticate } from '../middlewares/auth';
-import { requireAdmin } from '../middlewares/adminAuth';
+import { requireSuperAdmin } from '../middlewares/adminAuth';
 import * as workflowController from '../controllers/workflowController';
 import { authenticateService } from '../middlewares/serviceAuth';
 
