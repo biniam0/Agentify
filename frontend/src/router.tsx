@@ -1,9 +1,10 @@
-import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
 import MeetingsPage from './components/MeetingsPage';
-import ProtectedRoute from './components/ProtectedRoute';
-import * as authService from './services/authService';
+import AuthGuard from './components/guards/AuthGuard';
+import GuestGuard from './components/guards/GuestGuard';
+import RoleGuard from './components/guards/RoleGuard';
+import OnboardingGuard from './components/guards/OnboardingGuard';
 import UserLayout from './layouts/UserLayout';
 import CallsLayout from './layouts/CallsLayout';
 import UserLogsPage from './pages/User/Logs/UserLogsPage';
@@ -38,41 +39,17 @@ import AgentXInvestigations from './pages/Admin/AgentXInvestigations';
 import OnboardingPage from './pages/Onboarding/OnboardingPage';
 import OnboardingWizard from './pages/Onboarding/OnboardingWizard';
 
-/**
- * Redirects authenticated users away from the login page.
- * Evaluated on every render (not stale like a top-level function call).
- */
-const GuestOnly: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  if (authService.isAuthenticated()) {
-    const user = authService.getUser();
-    if (user?.onboardingCompleted) {
-      return <Navigate to="/app/v2" replace />;
-    }
-    return <Navigate to="/app/onboarding" replace />;
-  }
-  return <>{children}</>;
-};
+// Lazy evaluated redirect — uses AuthContext via guards
+import { useAuth } from './contexts/AuthContext';
+import { AuthLoading } from './components/guards/AuthGuard';
 
-/**
- * Requires SUPER_ADMIN role. Redirects others to /app/v2.
- */
-const SuperAdminOnly: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  if (!authService.isSuperAdmin()) {
-    return <Navigate to="/app/v2" replace />;
-  }
-  return <>{children}</>;
-};
-
-/**
- * Evaluated on every render to redirect /app to the right place.
- */
 const AppRedirect = () => {
-  if (authService.isAuthenticated()) {
-    const user = authService.getUser();
-    if (user?.onboardingCompleted) {
-      return <Navigate to="/app/v2" replace />;
-    }
-    return <Navigate to="/app/onboarding" replace />;
+  const { isAuthenticated, loading, user } = useAuth();
+  if (loading) return <AuthLoading />;
+  if (isAuthenticated) {
+    return user?.onboardingCompleted
+      ? <Navigate to="/app/v2" replace />
+      : <Navigate to="/app/onboarding" replace />;
   }
   return <Navigate to="/app/login" replace />;
 };
@@ -83,16 +60,16 @@ const router = createBrowserRouter([
     path: '/',
     element: <OnboardingPage />,
   },
-  // Onboarding wizard (protected — must be logged in)
+  // Onboarding wizard (must be logged in)
   {
     path: '/app/onboarding',
     element: (
-      <ProtectedRoute>
+      <AuthGuard>
         <OnboardingWizard />
-      </ProtectedRoute>
+      </AuthGuard>
     ),
   },
-  // App root — dynamic redirect evaluated on every render
+  // App root — dynamic redirect
   {
     path: '/app',
     element: <AppRedirect />,
@@ -101,16 +78,17 @@ const router = createBrowserRouter([
   {
     path: '/app/login',
     element: (
-      <GuestOnly>
+      <GuestGuard>
         <LoginPage />
-      </GuestOnly>
+      </GuestGuard>
     ),
   },
+  // Regular user routes
   {
     element: (
-      <ProtectedRoute>
+      <AuthGuard>
         <UserLayout />
-      </ProtectedRoute>
+      </AuthGuard>
     ),
     children: [
       {
@@ -121,47 +99,33 @@ const router = createBrowserRouter([
         path: '/app/logs',
         element: <UserLogsPage />,
         children: [
-          {
-            index: true,
-            element: <UserLogsOverview />,
-          },
-          {
-            path: 'calls',
-            element: <UserCallsLog />,
-          },
-          {
-            path: 'activity',
-            element: <UserActivityLog />,
-          },
-          {
-            path: 'crm-actions',
-            element: <UserCrmActionsLog />,
-          },
+          { index: true, element: <UserLogsOverview /> },
+          { path: 'calls', element: <UserCallsLog /> },
+          { path: 'activity', element: <UserActivityLog /> },
+          { path: 'crm-actions', element: <UserCrmActionsLog /> },
         ],
       },
       {
         path: '/app/calls',
         element: <CallsLayout />,
         children: [
-          {
-            index: true,
-            element: <UserCallsLog />,
-          },
-          {
-            path: 'analytics',
-            element: <UserCallAnalytics />,
-          },
+          { index: true, element: <UserCallsLog /> },
+          { path: 'analytics', element: <UserCallAnalytics /> },
         ],
       },
     ],
   },
-  // V2 Routes (AgentX v2.0 — Admin only, must be onboarded)
+  // V2 Routes — ADMIN or SUPER_ADMIN, must be onboarded
   {
     path: '/app/v2',
     element: (
-      <ProtectedRoute>
-        <V2Layout />
-      </ProtectedRoute>
+      <AuthGuard>
+        <RoleGuard roles={['ADMIN', 'SUPER_ADMIN']} fallback="/app/meetings">
+          <OnboardingGuard>
+            <V2Layout />
+          </OnboardingGuard>
+        </RoleGuard>
+      </AuthGuard>
     ),
     children: [
       { index: true, element: <Navigate to="/app/v2/calls" replace /> },
@@ -173,73 +137,34 @@ const router = createBrowserRouter([
       { path: 'crm-actions', element: <V2DashboardPage /> },
     ],
   },
-  // Admin Routes (SUPER_ADMIN only)
+  // Admin Routes — SUPER_ADMIN only
   {
     path: '/app/admin',
     element: (
-      <ProtectedRoute>
-        <SuperAdminOnly>
+      <AuthGuard>
+        <RoleGuard roles={['SUPER_ADMIN']}>
           <AdminLayout />
-        </SuperAdminOnly>
-      </ProtectedRoute>
+        </RoleGuard>
+      </AuthGuard>
     ),
     children: [
-      {
-        index: true,
-        element: <Navigate to="/app/admin/meetings" replace />,
-      },
-      {
-        path: 'meetings',
-        element: <MeetingsPage />,
-      },
-      {
-        path: 'deals',
-        element: <ClientsDeals />,
-      },
-      {
-        path: 'barrierx-info',
-        element: <BarrierXInfo />,
-      },
-      {
-        path: 'agentx-investigations',
-        element: <AgentXInvestigations />,
-      },
-      {
-        path: 'workflows',
-        element: <SimpleWorkflow />,
-      },
+      { index: true, element: <Navigate to="/app/admin/meetings" replace /> },
+      { path: 'meetings', element: <MeetingsPage /> },
+      { path: 'deals', element: <ClientsDeals /> },
+      { path: 'barrierx-info', element: <BarrierXInfo /> },
+      { path: 'agentx-investigations', element: <AgentXInvestigations /> },
+      { path: 'workflows', element: <SimpleWorkflow /> },
       {
         path: 'logs',
         element: <LogsLayout />,
         children: [
-          {
-            index: true,
-            element: <LogsOverview />,
-          },
-          {
-            path: 'calls',
-            element: <CallsLog />,
-          },
-          {
-            path: 'sms',
-            element: <SmsLog />,
-          },
-          {
-            path: 'webhooks',
-            element: <WebhooksLog />,
-          },
-          {
-            path: 'crm-actions',
-            element: <CrmActionsLog />,
-          },
-          {
-            path: 'scheduler',
-            element: <SchedulerLog />,
-          },
-          {
-            path: 'errors',
-            element: <ErrorsLog />,
-          },
+          { index: true, element: <LogsOverview /> },
+          { path: 'calls', element: <CallsLog /> },
+          { path: 'sms', element: <SmsLog /> },
+          { path: 'webhooks', element: <WebhooksLog /> },
+          { path: 'crm-actions', element: <CrmActionsLog /> },
+          { path: 'scheduler', element: <SchedulerLog /> },
+          { path: 'errors', element: <ErrorsLog /> },
         ],
       },
     ],

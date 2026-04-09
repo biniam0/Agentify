@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as authService from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -35,6 +36,7 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const { login: authLogin } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,8 +47,11 @@ const LoginPage: React.FC = () => {
       const response = await authService.login(email, password);
 
       if (response.success && response.token) {
-        authService.setToken(response.token);
-        authService.setUser(response.user);
+        authLogin(
+          response.token,
+          response.user,
+          response.barrierx?.refreshToken
+        );
 
         if (response.user.onboardingCompleted) {
           navigate('/app/v2');

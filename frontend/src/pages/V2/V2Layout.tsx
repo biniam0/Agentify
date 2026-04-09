@@ -1,17 +1,7 @@
-import { Navigate, Outlet } from 'react-router-dom';
-import * as authService from '@/services/authService';
+import { Outlet } from 'react-router-dom';
 import TopNav from './components/TopNav';
 
 const V2Layout = () => {
-  if (!authService.isAdmin()) {
-    return <Navigate to="/app/meetings" replace />;
-  }
-
-  const user = authService.getUser();
-  if (!user?.onboardingCompleted) {
-    return <Navigate to="/app/onboarding" replace />;
-  }
-
   return (
     <div className="min-h-screen bg-white">
       <TopNav />

@@ -1,12 +1,7 @@
-/**
- * Admin Layout - BarrierX style header with collapsible sidebar
- * Only accessible by tamiratkebede120@gmail.com
- */
-
 import { LogOut, Settings, Calendar, Moon, Sun } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { Navigate, Outlet, useNavigate } from 'react-router-dom';
-import * as authService from '../../services/authService';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,13 +18,10 @@ import { AdminSidebar } from '@/components/Admin/AdminSidebar';
 
 const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
-  const user = authService.getUser();
+  const { user, logout } = useAuth();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
-  const isSuperAdmin = authService.isSuperAdmin();
-
   useEffect(() => {
-    // Load saved theme
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     if (savedTheme) {
       setTheme(savedTheme);
@@ -39,12 +31,8 @@ const AdminLayout: React.FC = () => {
     }
   }, []);
 
-  if (!isSuperAdmin) {
-    return <Navigate to="/app/v2" replace />;
-  }
-
   const handleLogout = () => {
-    authService.logout();
+    logout();
     navigate('/app/login');
   };
 

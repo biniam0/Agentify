@@ -1,6 +1,6 @@
-import { Search, Settings, Bell } from 'lucide-react';
+import { Search, Settings, Bell, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import * as authService from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -10,7 +10,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut } from 'lucide-react';
 
 const AgentXLogo = () => (
   <svg
@@ -30,10 +29,10 @@ const AgentXLogo = () => (
 
 const TopNav = () => {
   const navigate = useNavigate();
-  const user = authService.getUser();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    authService.logout();
+    logout();
     navigate('/app/login');
   };
 
