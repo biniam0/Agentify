@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -10,14 +11,14 @@ import * as authService from '@/services/authService';
 
 export default function ConnectBarrierXStep() {
   const { state, setBarrierXConnected, setCurrentStep } = useOnboarding();
+  const { isAuthenticated, user, login: authLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const isAlreadyConnected = authService.isAuthenticated();
-  const isConnected = state.barrierxConnected || isAlreadyConnected;
+  const isConnected = state.barrierxConnected || isAuthenticated;
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,9 +28,8 @@ export default function ConnectBarrierXStep() {
     try {
       const response = await authService.login(email, password);
 
-      if (response.success && response.token) {
-        authService.setToken(response.token);
-        authService.setUser(response.user);
+      if (response.success && response.user) {
+        authLogin(response.user);
         setBarrierXConnected(true);
       } else {
         setError('Connection failed. Please check your credentials.');
@@ -72,8 +72,8 @@ export default function ConnectBarrierXStep() {
             <div>
               <p className="font-semibold text-green-800 dark:text-green-300">BarrierX Connected</p>
               <p className="text-sm text-green-600 dark:text-green-400 mt-0.5">
-                {authService.getUser()?.email
-                  ? `Connected as ${authService.getUser()?.email}`
+                {user?.email
+                  ? `Connected as ${user.email}`
                   : 'Your BarrierX account is linked to AgentX'}
               </p>
             </div>
@@ -82,7 +82,7 @@ export default function ConnectBarrierXStep() {
       ) : (
         <>
           {/* Already logged in shortcut */}
-          {isAlreadyConnected && (
+          {isAuthenticated && (
             <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 cursor-pointer hover:shadow-md transition-shadow"
               onClick={handleAlreadyConnected}
             >
@@ -108,7 +108,7 @@ export default function ConnectBarrierXStep() {
             </Card>
           )}
 
-          {!isAlreadyConnected && (
+          {!isAuthenticated && (
             <div className="text-center text-sm text-subtle dark:text-muted-foreground">
               or sign in with your BarrierX credentials
             </div>

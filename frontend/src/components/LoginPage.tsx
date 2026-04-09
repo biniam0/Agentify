@@ -46,12 +46,8 @@ const LoginPage: React.FC = () => {
     try {
       const response = await authService.login(email, password);
 
-      if (response.success && response.token) {
-        authLogin(
-          response.token,
-          response.user,
-          response.barrierx?.refreshToken
-        );
+      if (response.success && response.user) {
+        authLogin(response.user);
 
         if (response.user.onboardingCompleted) {
           navigate('/app/v2');

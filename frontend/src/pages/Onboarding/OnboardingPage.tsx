@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom'
-import { isAuthenticated, getUser } from '@/services/authService'
 import { Navbar } from './components/Navbar'
 import { HeroSection } from './components/HeroSection'
 import { IntegrationsSection } from './components/IntegrationsSection'
@@ -9,23 +8,11 @@ import { ContactFormSection } from './components/ContactFormSection'
 import { CtaBanner } from './components/CtaBanner'
 import { Footer } from './components/Footer'
 
-const BARRIERX_SIGNUP_URL = 'https://platform.barrierx.ai/sign-up'
-
 export default function OnboardingPage() {
   const navigate = useNavigate()
 
   const handleStartOnboarding = () => {
-    if (!isAuthenticated()) {
-      window.location.href = BARRIERX_SIGNUP_URL
-      return
-    }
-
-    const user = getUser()
-    if (user?.onboardingCompleted) {
-      navigate('/app/v2')
-    } else {
-      navigate('/app/onboarding')
-    }
+    navigate('/app/login')
   }
 
   return (

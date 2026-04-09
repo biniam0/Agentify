@@ -1,7 +1,6 @@
 import { Play, Plus, Info, Target, XCircle, Clock, Loader2, Square, X, Sparkles } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { API_BASE_URL } from '@/config/api';
-import { getAuthHeader } from '@/services/authService';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import type { WorkflowExecStatus } from './AddWorkflowModal';
@@ -197,7 +196,8 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
   const fetchJobStatus = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/zero-score-status`, {
-        headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
       if (!response.ok) return;
       const data = await response.json();
@@ -309,7 +309,8 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
     try {
       const response = await fetch(`${API_BASE_URL}${TRIGGER_ENDPOINTS[type]}`, {
         method: 'POST',
-        headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
       if (!response.ok) {
         const error = await response.json();
@@ -339,7 +340,8 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
     try {
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/stop-zero-score`, {
         method: 'POST',
-        headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
       if (!response.ok) {
         setJobStatus(prev => prev ? { ...prev, isRunning: true } : null);

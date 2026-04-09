@@ -6,14 +6,6 @@ export const login = async (email: string, password: string): Promise<LoginRespo
   return response.data;
 };
 
-export const setToken = (token: string): void => {
-  localStorage.setItem('authToken', token);
-};
-
-export const getToken = (): string | null => {
-  return localStorage.getItem('authToken');
-};
-
 export const setUser = (user: User): void => {
   localStorage.setItem('user', JSON.stringify(user));
 };
@@ -23,13 +15,13 @@ export const getUser = (): User | null => {
   return userStr ? JSON.parse(userStr) : null;
 };
 
-export const logout = (): void => {
-  localStorage.removeItem('authToken');
+export const logout = async (): Promise<void> => {
+  try {
+    await api.post('/auth/logout');
+  } catch {
+    // Best-effort
+  }
   localStorage.removeItem('user');
-};
-
-export const isAuthenticated = (): boolean => {
-  return !!getToken();
 };
 
 export const isAdmin = (): boolean => {
@@ -40,9 +32,4 @@ export const isAdmin = (): boolean => {
 export const isSuperAdmin = (): boolean => {
   const user = getUser();
   return user?.role === 'SUPER_ADMIN';
-};
-
-export const getAuthHeader = (): { Authorization: string } | Record<string, never> => {
-  const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
 };

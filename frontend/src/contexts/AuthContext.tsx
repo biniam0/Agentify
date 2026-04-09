@@ -9,7 +9,7 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (token: string, user: User, barrierxRefreshToken?: string) => void;
+  login: (user: User) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -34,29 +34,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState({ user, loading: false, isAuthenticated: !!user });
   };
 
-  const login = useCallback((token: string, user: User, barrierxRefreshToken?: string) => {
-    localStorage.setItem('authToken', token);
+  const login = useCallback((user: User) => {
     localStorage.setItem('user', JSON.stringify(user));
-    if (barrierxRefreshToken) {
-      localStorage.setItem('barrierxRefreshToken', barrierxRefreshToken);
-    }
     setAuth(user);
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('authToken');
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Best-effort — server clears cookies even if this fails
+    }
     localStorage.removeItem('user');
-    localStorage.removeItem('barrierxRefreshToken');
     setAuth(null);
   }, []);
 
   const validateSession = useCallback(async () => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      setAuth(null);
-      return;
-    }
-
     if (validatingRef.current) return;
     validatingRef.current = true;
 
@@ -67,14 +60,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(serverUser));
         setAuth(serverUser);
       } else {
-        logout();
+        localStorage.removeItem('user');
+        setAuth(null);
       }
     } catch {
-      logout();
+      localStorage.removeItem('user');
+      setAuth(null);
     } finally {
       validatingRef.current = false;
     }
-  }, [logout]);
+  }, []);
 
   const refreshUser = useCallback(async () => {
     await validateSession();
@@ -85,14 +80,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [validateSession]);
 
   useEffect(() => {
-    const onFocus = () => {
-      if (localStorage.getItem('authToken')) {
-        validateSession();
-      }
-    };
+    const onFocus = () => validateSession();
 
     const onStorage = (e: StorageEvent) => {
-      if (e.key === 'authToken' && !e.newValue) {
+      if (e.key === 'user' && !e.newValue) {
         setAuth(null);
       }
     };

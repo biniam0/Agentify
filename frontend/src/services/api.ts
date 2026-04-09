@@ -3,47 +3,34 @@ import { API_BASE_URL } from '../config/api';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor to add token
-api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('authToken');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
 let isRefreshing = false;
 let failedQueue: Array<{
-  resolve: (token: string) => void;
+  resolve: () => void;
   reject: (error: unknown) => void;
 }> = [];
 
-const processQueue = (error: unknown, token: string | null) => {
+const processQueue = (error: unknown) => {
   failedQueue.forEach((p) => {
     if (error) p.reject(error);
-    else p.resolve(token!);
+    else p.resolve();
   });
   failedQueue = [];
 };
 
 const clearAuthAndRedirect = () => {
-  localStorage.removeItem('authToken');
+  const hadUser = !!localStorage.getItem('user');
   localStorage.removeItem('user');
-  localStorage.removeItem('barrierxRefreshToken');
-  if (window.location.pathname !== '/app/login') {
+  if (hadUser && window.location.pathname !== '/app/login') {
     window.location.href = '/app/login';
   }
 };
 
-// Response interceptor with token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -51,34 +38,23 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const requestUrl = originalRequest?.url || '';
 
-    // Skip refresh logic for auth endpoints
-    if (
+    const skipRefresh =
       status !== 401 ||
       !originalRequest ||
       originalRequest._retry ||
       requestUrl.includes('/auth/login') ||
-      requestUrl.includes('/auth/refresh')
-    ) {
-      if (status === 401 && requestUrl.includes('/auth/refresh')) {
-        clearAuthAndRedirect();
-      }
-      return Promise.reject(error);
-    }
+      requestUrl.includes('/auth/refresh') ||
+      requestUrl.includes('/auth/logout') ||
+      requestUrl.includes('/user/me');
 
-    // Try to refresh the token
-    const barrierxRefreshToken = localStorage.getItem('barrierxRefreshToken');
-    if (!barrierxRefreshToken) {
-      clearAuthAndRedirect();
+    if (skipRefresh) {
       return Promise.reject(error);
     }
 
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({
-          resolve: (newToken: string) => {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            resolve(api(originalRequest));
-          },
+          resolve: () => resolve(api(originalRequest)),
           reject,
         });
       });
@@ -88,25 +64,19 @@ api.interceptors.response.use(
     originalRequest._retry = true;
 
     try {
-      const res = await api.post('/auth/refresh', { refreshToken: barrierxRefreshToken });
+      const res = await api.post('/auth/refresh');
 
-      if (res.data?.success && res.data.token) {
-        const newToken = res.data.token;
-        localStorage.setItem('authToken', newToken);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
-
-        if (res.data.barrierx?.refreshToken) {
-          localStorage.setItem('barrierxRefreshToken', res.data.barrierx.refreshToken);
+      if (res.data?.success) {
+        if (res.data.user) {
+          localStorage.setItem('user', JSON.stringify(res.data.user));
         }
-
-        processQueue(null, newToken);
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        processQueue(null);
         return api(originalRequest);
       }
 
       throw new Error('Refresh response invalid');
     } catch (refreshError) {
-      processQueue(refreshError, null);
+      processQueue(refreshError);
       clearAuthAndRedirect();
       return Promise.reject(refreshError);
     } finally {

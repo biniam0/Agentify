@@ -72,7 +72,7 @@ export interface BarrierXData {
 
 export interface LoginResponse {
   success: boolean;
-  token: string;
+  token?: string;
   user: User;
   barrierx?: BarrierXData;
 }

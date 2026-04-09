@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
-import * as authService from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 import { Check } from 'lucide-react';
 import BusinessInfoStep from './steps/BusinessInfoStep';
 import ConnectBarrierXStep from './steps/ConnectBarrierXStep';
@@ -202,7 +202,7 @@ function WizardInner() {
 }
 
 export default function OnboardingWizard() {
-  const user = authService.getUser();
+  const { user } = useAuth();
 
   return (
     <OnboardingProvider userName={user?.name} userEmail={user?.email}>

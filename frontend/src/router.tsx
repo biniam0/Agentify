@@ -5,6 +5,7 @@ import AuthGuard from './components/guards/AuthGuard';
 import GuestGuard from './components/guards/GuestGuard';
 import RoleGuard from './components/guards/RoleGuard';
 import OnboardingGuard from './components/guards/OnboardingGuard';
+import NotOnboardedGuard from './components/guards/NotOnboardedGuard';
 import UserLayout from './layouts/UserLayout';
 import CallsLayout from './layouts/CallsLayout';
 import UserLogsPage from './pages/User/Logs/UserLogsPage';
@@ -60,12 +61,14 @@ const router = createBrowserRouter([
     path: '/',
     element: <OnboardingPage />,
   },
-  // Onboarding wizard (must be logged in)
+  // Onboarding wizard (must be logged in, must NOT be already onboarded)
   {
     path: '/app/onboarding',
     element: (
       <AuthGuard>
-        <OnboardingWizard />
+        <NotOnboardedGuard>
+          <OnboardingWizard />
+        </NotOnboardedGuard>
       </AuthGuard>
     ),
   },
