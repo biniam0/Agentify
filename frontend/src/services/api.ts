@@ -44,8 +44,7 @@ api.interceptors.response.use(
       originalRequest._retry ||
       requestUrl.includes('/auth/login') ||
       requestUrl.includes('/auth/refresh') ||
-      requestUrl.includes('/auth/logout') ||
-      requestUrl.includes('/user/me');
+      requestUrl.includes('/auth/logout');
 
     if (skipRefresh) {
       return Promise.reject(error);

@@ -21,6 +21,9 @@ import SimpleWorkflow from './pages/Workflows/SimpleWorkflow';
 // V2 imports
 import V2Layout from './pages/V2/V2Layout';
 import V2DashboardPage from './pages/V2/V2DashboardPage';
+import V2SettingsPage from './pages/V2/Settings/V2SettingsPage';
+import UserGeneral from './pages/V2/Settings/components/UserGeneral';
+import UsersManagement from './pages/V2/Settings/components/UsersManagement';
 
 // Admin imports
 import AdminLayout from './pages/Admin/AdminLayout';
@@ -138,6 +141,14 @@ const router = createBrowserRouter([
       { path: 'clients-deals', element: <V2DashboardPage /> },
       { path: 'sms-sent', element: <V2DashboardPage /> },
       { path: 'crm-actions', element: <V2DashboardPage /> },
+      {
+        path: 'settings',
+        element: <V2SettingsPage />,
+        children: [
+          { index: true, element: <UserGeneral /> },
+          { path: 'users', element: <UsersManagement /> },
+        ],
+      },
     ],
   },
   // Admin Routes — SUPER_ADMIN only

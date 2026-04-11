@@ -9,7 +9,7 @@ export interface JwtPayload {
 }
 
 export const generateAccessToken = (payload: JwtPayload): string => {
-  return jwt.sign(payload, config.jwtSecret, { expiresIn: '15m' });
+  return jwt.sign(payload, config.jwtSecret, { expiresIn: '7d' });
 };
 
 export const generateRefreshTokenValue = (): string => {

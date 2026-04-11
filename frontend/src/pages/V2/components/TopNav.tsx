@@ -58,7 +58,10 @@ const TopNav = () => {
             <button className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors">
               <Search className="h-[18px] w-[18px] text-gray-500" />
             </button>
-            <button className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <button
+              className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors"
+              onClick={() => navigate('/app/v2/settings')}
+            >
               <Settings className="h-[18px] w-[18px] text-gray-500" />
             </button>
             <button className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors relative">
@@ -87,14 +90,18 @@ const TopNav = () => {
                       </p>
                     </div>
                   </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => navigate('/app/admin')}
-                    className="cursor-pointer"
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Admin Panel
-                  </DropdownMenuItem>
+                  {user?.role === 'SUPER_ADMIN' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => navigate('/app/admin')}
+                        className="cursor-pointer"
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        Admin Panel
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}
