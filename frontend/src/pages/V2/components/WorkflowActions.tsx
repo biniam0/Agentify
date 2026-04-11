@@ -1,4 +1,4 @@
-import { Play, Plus, Info, Target, XCircle, Clock, Loader2, Square, X, Sparkles } from 'lucide-react';
+import { Play, Plus, Info, Target, XCircle, AlertTriangle, Clock, Loader2, Square, X, Sparkles } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { API_BASE_URL } from '@/config/api';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ export interface JobStatus {
   completedCalls: number;
   failedCalls: number;
   lastError: string | null;
+  lastWarning: string | null;
   recentOutput: string[];
   dbStats: {
     pending: number;
@@ -184,6 +185,7 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
           completedCalls: 0,
           failedCalls: 0,
           lastError: null,
+          lastWarning: null,
           recentOutput: [],
           dbStats: { pending: 0, inProgress: 0, completed: 0, failed: 0, total: 0 },
         }
@@ -302,6 +304,7 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
       completedCalls: 0,
       failedCalls: 0,
       lastError: null,
+      lastWarning: null,
       recentOutput: [],
       dbStats: prev?.dbStats || { pending: 0, inProgress: 0, completed: 0, failed: 0, total: 0 },
     }));
@@ -313,10 +316,15 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
         headers: { 'Content-Type': 'application/json' },
       });
       if (!response.ok) {
-        const error = await response.json();
+        const data = await response.json();
         clearPersistedJob();
-        setJobStatus(prev => prev ? { ...prev, isRunning: false, lastError: error.message } : null);
-        toast.error('Failed to start calls', { description: error.message });
+        if (data.warning) {
+          setJobStatus(prev => prev ? { ...prev, isRunning: false, lastWarning: data.message, lastError: null } : null);
+          toast.warning('Outside calling hours', { description: data.message });
+        } else {
+          setJobStatus(prev => prev ? { ...prev, isRunning: false, lastError: data.message, lastWarning: null } : null);
+          toast.error('Failed to start calls', { description: data.message });
+        }
       } else {
         const label = GATHERING_CARDS.find(c => c.id === type)?.title || type;
         toast.success(`${label} started!`);
@@ -365,6 +373,7 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
   };
 
   const showError = jobStatus?.lastError && !jobStatus.isRunning && !dismissedError;
+  const showWarning = jobStatus?.lastWarning && !jobStatus.isRunning && !dismissedError;
 
   return (
     <div className="mb-8">
@@ -434,6 +443,22 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
               <Square className="h-3.5 w-3.5" />
             )}
             Stop All
+          </button>
+        </div>
+      )}
+
+      {/* Persistent Warning Banner (calling hours) */}
+      {showWarning && (
+        <div className="mb-4 flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2 text-sm">
+            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+            <span className="text-amber-800">{jobStatus!.lastWarning}</span>
+          </div>
+          <button
+            onClick={() => setDismissedError(true)}
+            className="p-1 rounded-md hover:bg-amber-100 transition-colors"
+          >
+            <X className="h-3.5 w-3.5 text-amber-400" />
           </button>
         </div>
       )}
