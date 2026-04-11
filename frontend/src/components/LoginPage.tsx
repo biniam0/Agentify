@@ -91,7 +91,7 @@ const LoginPage: React.FC = () => {
           {/* ── AgentX Logo + Tagline ── */}
           <div className="flex flex-col items-center mb-10">
             <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-[2.5rem] font-extrabold leading-none tracking-tight text-heading dark:text-foreground select-none">
+              <span className="text-[2.5rem] font-bold leading-none tracking-tight text-heading dark:text-foreground select-none">
                 Agent
               </span>
               <AgentXIcon className="h-[2.2rem] w-auto" />
@@ -109,7 +109,7 @@ const LoginPage: React.FC = () => {
             <CardContent className="px-8 pt-8 pb-8">
               {/* Header */}
               <div className="text-center mb-7">
-                <h2 className="text-2xl font-bold text-heading dark:text-foreground mb-1.5">
+                <h2 className="text-2xl font-semibold text-heading dark:text-foreground mb-1.5">
                   Welcome back
                 </h2>
                 <p className="text-body dark:text-muted-foreground text-sm">
@@ -181,7 +181,7 @@ const LoginPage: React.FC = () => {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 bg-brand hover:bg-brand-hover text-white font-semibold transition-all shadow-sm hover:shadow-md"
+                  className="w-full h-11 bg-brand hover:bg-brand-hover text-white font-medium transition-all shadow-sm hover:shadow-md"
                   size="lg"
                 >
                   {loading ? (
@@ -216,7 +216,7 @@ const LoginPage: React.FC = () => {
               href="https://platform.barrierx.ai/sign-up"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-brand hover:text-brand-hover transition-colors group"
+              className="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-brand hover:text-brand-hover transition-colors group"
             >
               Create your account on BarrierX
               <ExternalLink className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -251,7 +251,7 @@ const LoginPage: React.FC = () => {
             {/* Title + Description */}
             <div className="mb-8">
               <h2
-                className="text-[2.5rem] xl:text-[3rem] font-semibold leading-tight mb-3"
+                className="text-[2.5rem] xl:text-[3rem] font-medium leading-tight mb-3"
                 style={{ color: '#05603A' }}
               >
                 Your AI Sales Meeting Assistant
@@ -365,7 +365,7 @@ const LoginPage: React.FC = () => {
                   ))}
                 </div>
                 {/* Quote */}
-                <p className="text-base font-semibold leading-relaxed mb-4" style={{ color: '#05603A' }}>
+                <p className="text-base font-medium leading-relaxed mb-4" style={{ color: '#05603A' }}>
                   "Since we started using AgentX, our reps save 5+ hours per week on meeting prep and follow-ups. It's like having a personal coach for every rep — without the overhead."
                 </p>
                 {/* Footer */}
