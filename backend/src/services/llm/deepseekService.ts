@@ -3,7 +3,7 @@
  * Phase 1: Foundation - LLM integration for text-to-workflow parsing
  */
 
-import { deepseek } from '@ai-sdk/deepseek';
+import { createDeepSeek } from '@ai-sdk/deepseek';
 import { generateText, generateObject } from 'ai';
 import { config } from '../../config/env';
 import { z } from 'zod';
@@ -12,20 +12,13 @@ import { z } from 'zod';
 // DEEPSEEK CLIENT CONFIGURATION
 // ============================================
 
-/**
- * Get configured DeepSeek language model
- * Uses deepseek-chat by default (fast, cost-effective)
- * Can switch to deepseek-reasoner for complex reasoning tasks
- */
+const deepseekProvider = createDeepSeek({
+  apiKey: config.deepseek.apiKey,
+});
+
 export const getDeepSeekModel = (modelType: 'chat' | 'reasoner' = 'chat') => {
   const modelName = modelType === 'reasoner' ? 'deepseek-reasoner' : 'deepseek-chat';
-  
-  // DeepSeek provider initialization
-  // Note: The Vercel AI SDK DeepSeek provider might not accept options in the factory function
-  // depending on the exact version. If this fails, we might need to rely on env vars.
-  process.env.DEEPSEEK_API_KEY = config.deepseek.apiKey;
-  
-  return deepseek(modelName);
+  return deepseekProvider(modelName);
 };
 
 // ============================================
