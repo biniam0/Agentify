@@ -27,7 +27,7 @@ const DangerZone = () => {
 
       <div className="space-y-6 lg:col-span-2">
         <Card>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="flex items-center justify-between gap-4 max-lg:flex-col">
               <div className="space-y-1">
                 <h3 className="text-sm font-medium">Delete account</h3>
@@ -45,14 +45,14 @@ const DangerZone = () => {
                     Delete
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md pt-10 text-center">
                   <DialogHeader className="space-y-2">
-                    <DialogTitle>Delete account</DialogTitle>
+                    <DialogTitle className="text-center text-xl">Delete account</DialogTitle>
                     <div className="text-muted-foreground text-sm">
                       Delete your account permanently. This action will remove all your data and cannot be undone.
                     </div>
                   </DialogHeader>
-                  <DialogFooter className="mt-4 gap-4 sm:justify-end">
+                  <DialogFooter className="mt-6 gap-2 sm:justify-center">
                     <DialogClose asChild>
                       <Button variant="outline">Cancel</Button>
                     </DialogClose>

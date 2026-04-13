@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Trash2Icon, UsersIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trash2Icon, UsersIcon, AlertCircle } from 'lucide-react';
+import api from '@/services/api';
 
 import {
   Table,
@@ -9,9 +10,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogClose,
@@ -22,89 +24,79 @@ import {
 } from '@/components/ui/dialog';
 
 interface TenantMember {
-  user_id: string;
+  id: string;
+  name: string;
   email: string;
-  full_name: string;
   role: string;
-  phone: string;
-  profile_image_url: string;
-  joined_at: string;
+  roleIdx: number;
+  firstName: string;
+  lastName: string;
 }
-
-const placeholderMembers: TenantMember[] = [
-  {
-    user_id: '1',
-    email: 'sarah@acme.com',
-    full_name: 'Sarah Johnson',
-    role: 'admin',
-    phone: '+1-555-0101',
-    profile_image_url: '',
-    joined_at: '2025-01-15T10:30:00Z',
-  },
-  {
-    user_id: '2',
-    email: 'mike@acme.com',
-    full_name: 'Mike Chen',
-    role: 'user',
-    phone: '+1-555-0102',
-    profile_image_url: '',
-    joined_at: '2025-02-20T14:00:00Z',
-  },
-  {
-    user_id: '3',
-    email: 'emma@acme.com',
-    full_name: 'Emma Williams',
-    role: 'user',
-    phone: '+1-555-0103',
-    profile_image_url: '',
-    joined_at: '2025-03-10T09:15:00Z',
-  },
-  {
-    user_id: '4',
-    email: 'alex@acme.com',
-    full_name: 'Alex Rivera',
-    role: 'admin',
-    phone: '+1-555-0104',
-    profile_image_url: '',
-    joined_at: '2025-04-05T16:45:00Z',
-  },
-  {
-    user_id: '5',
-    email: 'priya@acme.com',
-    full_name: 'Priya Patel',
-    role: 'user',
-    phone: '+1-555-0105',
-    profile_image_url: '',
-    joined_at: '2025-05-22T11:30:00Z',
-  },
-];
 
 const roleBadgeVariant = (role: string) => {
   switch (role.toLowerCase()) {
-    case 'admin':
-    case 'super_admin':
+    case 'owner':
       return 'default';
+    case 'admin':
+      return 'success';
     default:
       return 'secondary';
   }
 };
 
-const formatDate = (iso: string) => {
-  return new Date(iso).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-};
-
 const UsersManagement = () => {
-  const [members, setMembers] = useState<TenantMember[]>(placeholderMembers);
+  const [members, setMembers] = useState<TenantMember[]>([]);
+  const [tenantName, setTenantName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TenantMember | null>(null);
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await api.get('/user/tenant-members');
+        if (res.data?.success) {
+          setMembers(res.data.members || []);
+          setTenantName(res.data.tenantName || '');
+        } else {
+          setError('Failed to load team members');
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.error || 'Failed to load team members');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMembers();
+  }, []);
 
   const handleDelete = () => {
     if (!deleteTarget) return;
-    setMembers((prev) => prev.filter((m) => m.user_id !== deleteTarget.user_id));
+    setMembers((prev) => prev.filter((m) => m.id !== deleteTarget.id));
     setDeleteTarget(null);
+  };
+
+  const getInitials = (member: TenantMember) => {
+    if (member.firstName && member.lastName) {
+      return `${member.firstName[0]}${member.lastName[0]}`;
+    }
+    if (member.name) {
+      return member.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .slice(0, 2);
+    }
+    return member.email[0]?.toUpperCase() || '?';
+  };
+
+  const getDisplayName = (member: TenantMember) => {
+    if (member.name) return member.name;
+    if (member.firstName || member.lastName) return `${member.firstName} ${member.lastName}`.trim();
+    return member.email.split('@')[0];
   };
 
   return (
@@ -112,12 +104,40 @@ const UsersManagement = () => {
       <div className="flex flex-col space-y-1">
         <h3 className="font-semibold">Team Members</h3>
         <p className="text-muted-foreground text-sm">
-          View and manage users in your organization. Delete users who no longer need access.
+          View and manage users in your organization.{tenantName ? ` (${tenantName})` : ''}
         </p>
       </div>
 
       <div className="space-y-6 lg:col-span-2">
-        {members.length === 0 ? (
+        {loading ? (
+          <div className="rounded-lg border">
+            <div className="p-4 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+            <AlertCircle className="mb-3 h-10 w-10 text-destructive/50" />
+            <p className="text-sm font-medium text-muted-foreground">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : members.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
             <UsersIcon className="mb-3 h-10 w-10 text-muted-foreground/50" />
             <p className="text-sm font-medium text-muted-foreground">No team members found</p>
@@ -129,42 +149,29 @@ const UsersManagement = () => {
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-4">User</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead className="hidden md:table-cell">Phone</TableHead>
-                  <TableHead className="hidden sm:table-cell">Joined</TableHead>
                   <TableHead className="w-[70px] text-right pr-4" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {members.map((member) => (
-                  <TableRow key={member.user_id}>
+                  <TableRow key={member.id}>
                     <TableCell className="pl-4">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={member.profile_image_url} />
                           <AvatarFallback className="bg-gray-800 text-white text-xs font-medium">
-                            {member.full_name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')
-                              .slice(0, 2)}
+                            {getInitials(member)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{member.full_name}</p>
+                          <p className="text-sm font-medium truncate">{getDisplayName(member)}</p>
                           <p className="text-xs text-muted-foreground truncate">{member.email}</p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={roleBadgeVariant(member.role)} className="capitalize">
-                        {member.role.replace('_', ' ')}
+                        {member.role}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {member.phone || '—'}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                      {formatDate(member.joined_at)}
                     </TableCell>
                     <TableCell className="text-right pr-4">
                       <Button
@@ -174,7 +181,7 @@ const UsersManagement = () => {
                         onClick={() => setDeleteTarget(member)}
                       >
                         <Trash2Icon className="h-4 w-4" />
-                        <span className="sr-only">Delete {member.full_name}</span>
+                        <span className="sr-only">Delete {getDisplayName(member)}</span>
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -183,9 +190,11 @@ const UsersManagement = () => {
             </Table>
           </div>
         )}
-        <p className="text-xs text-muted-foreground">
-          Showing {members.length} member{members.length !== 1 ? 's' : ''} in your organization.
-        </p>
+        {!loading && !error && (
+          <p className="text-xs text-muted-foreground">
+            Showing {members.length} member{members.length !== 1 ? 's' : ''} in your organization.
+          </p>
+        )}
       </div>
 
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
@@ -193,7 +202,7 @@ const UsersManagement = () => {
           <DialogHeader className="space-y-2">
             <DialogTitle>Remove team member</DialogTitle>
             <div className="text-muted-foreground text-sm">
-              Are you sure you want to remove <span className="font-medium text-foreground">{deleteTarget?.full_name}</span> ({deleteTarget?.email}) from the organization? This action cannot be undone.
+              Are you sure you want to remove <span className="font-medium text-foreground">{deleteTarget ? getDisplayName(deleteTarget) : ''}</span> ({deleteTarget?.email}) from the organization? This action cannot be undone.
             </div>
           </DialogHeader>
           <DialogFooter className="mt-4 gap-4 sm:justify-end">
