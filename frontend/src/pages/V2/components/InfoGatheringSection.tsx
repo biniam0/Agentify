@@ -7,7 +7,6 @@ import DealsSearchBar from './DealsSearchBar';
 import DealsFilterTabs from './DealsFilterTabs';
 import InfoGatheringTable from './InfoGatheringTable';
 import { API_BASE_URL } from '@/config/api';
-import { getAuthHeader } from '@/services/authService';
 import type { BarrierXInfoRecord } from './InfoGatheringTable';
 
 interface InfoGatheringSectionProps {
@@ -33,8 +32,8 @@ const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectio
       });
 
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info?${params}`, {
+        credentials: 'include',
         headers: {
-          ...getAuthHeader(),
           'Content-Type': 'application/json',
         },
       });

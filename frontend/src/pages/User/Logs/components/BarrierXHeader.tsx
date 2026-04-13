@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import * as authService from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NavigationItem {
   label: string;
@@ -32,7 +32,7 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = authService.getUser();
+  const { user, logout } = useAuth();
   const [theme, setTheme] = React.useState<'light' | 'dark'>('light');
 
   React.useEffect(() => {
@@ -54,7 +54,7 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
   };
 
   const handleLogout = () => {
-    authService.logout();
+    logout();
     navigate('/app/login');
   };
 
@@ -157,7 +157,7 @@ export const BarrierXHeader: React.FC<BarrierXHeaderProps> = ({
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {/* Admin Dashboard - Only show for admin users */}
-                {authService.isAdmin() && (
+                {user && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') && (
                   <DropdownMenuItem
                     onClick={() => navigate('/app/admin')}
                     className="cursor-pointer"

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import * as authService from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 import HeroSection from './components/HeroSection';
 import TopTabs, { type TopTabId } from './components/TopTabs';
 import AlertBanner from './components/AlertBanner';
@@ -39,7 +39,7 @@ const V2DashboardPage = () => {
   const [activeWorkflowExec, setActiveWorkflowExec] = useState<WorkflowExecStatus | null>(null);
   const [wfExecRefreshKey, setWfExecRefreshKey] = useState(0);
   const [jobRunning, setJobRunning] = useState(false);
-  const user = authService.getUser();
+  const { user } = useAuth();
 
   const handleJobStatusChange = useCallback((status: JobStatus | null) => {
     setJobRunning(!!status?.isRunning);

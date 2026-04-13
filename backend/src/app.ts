@@ -1,5 +1,6 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
 import path from 'path';
 import authRoutes from './routes/authRoutes';
@@ -10,6 +11,7 @@ import loggingRoutes from './routes/loggingRoutes';
 import dealRoutes from './routes/dealRoutes';
 import externalLogsRoutes from './routes/externalLogsRoutes';
 import workflowRoutes from './routes/workflowRoutes';
+import billingRoutes from './routes/billingRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { config } from './config/env';
 
@@ -33,7 +35,16 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
 }));
 
-app.use(express.json());
+app.use(cookieParser());
+
+// Skip JSON parsing for the Stripe webhook route (it needs the raw body)
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/billing/webhook') {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
@@ -44,6 +55,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/logs', loggingRoutes); // Admin-only logging dashboard routes
 app.use('/api/deals', dealRoutes); // Admin deal management routes
 app.use('/api/workflows', workflowRoutes); // Text-to-workflow engine routes
+app.use('/api/billing', billingRoutes); // Billing & subscription routes
 
 // External API routes (service-to-service)
 app.use('/api/external/v1/logs', externalLogsRoutes);

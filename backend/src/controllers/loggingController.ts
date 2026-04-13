@@ -931,8 +931,9 @@ export const triggerZeroScoreCalls = async (req: AuthRequest, res: Response): Pr
     const result = await infoGatheringService.startZeroScoreGathering(triggeredBy);
 
     if (!result.success) {
-      res.status(409).json({
+      res.status(result.warning ? 422 : 409).json({
         success: false,
+        warning: result.warning || false,
         error: result.error,
         message: result.error,
       });
@@ -969,8 +970,9 @@ export const triggerLostDealCalls = async (req: AuthRequest, res: Response): Pro
     const result = await infoGatheringService.startLostDealGathering(triggeredBy);
 
     if (!result.success) {
-      res.status(409).json({
+      res.status(result.warning ? 422 : 409).json({
         success: false,
+        warning: result.warning || false,
         error: result.error,
         message: result.error,
       });
@@ -1088,8 +1090,9 @@ export const triggerInactivityCalls = async (req: AuthRequest, res: Response): P
     const result = await infoGatheringService.startInactivityGathering(triggeredBy);
 
     if (!result.success) {
-      res.status(409).json({
+      res.status(result.warning ? 422 : 409).json({
         success: false,
+        warning: result.warning || false,
         error: result.error,
         message: result.error,
       });

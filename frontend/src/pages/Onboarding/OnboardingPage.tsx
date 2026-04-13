@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
 import { HeroSection } from './components/HeroSection'
 import { IntegrationsSection } from './components/IntegrationsSection'
@@ -8,19 +9,21 @@ import { CtaBanner } from './components/CtaBanner'
 import { Footer } from './components/Footer'
 
 export default function OnboardingPage() {
-  const scrollToContact = () => {
-    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+  const navigate = useNavigate()
+
+  const handleStartOnboarding = () => {
+    navigate('/app/login')
   }
 
   return (
     <div className="min-h-screen">
-      <Navbar onCtaClick={scrollToContact} />
-      <HeroSection onCtaClick={scrollToContact} />
+      <Navbar onCtaClick={handleStartOnboarding} />
+      <HeroSection onCtaClick={handleStartOnboarding} />
       <IntegrationsSection />
       <FeaturesSection />
-      <HowItWorksSection onGetInvited={scrollToContact} />
+      <HowItWorksSection onGetInvited={handleStartOnboarding} />
       <ContactFormSection />
-      <CtaBanner onCtaClick={scrollToContact} />
+      <CtaBanner onCtaClick={handleStartOnboarding} />
       <Footer />
     </div>
   )

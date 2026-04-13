@@ -16,7 +16,7 @@ import {
   LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import * as authService from '../../services/authService';
+import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -98,10 +98,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   additionalDropdownItems,
 }) => {
   const navigate = useNavigate();
-  const user = authService.getUser();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    authService.logout();
+    logout();
     navigate('/app/login');
   };
 
@@ -236,7 +236,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <DropdownMenuSeparator />
                 {additionalDropdownItems}
                 {/* Admin Dashboard - Only show for admin users */}
-                {authService.isAdmin() && (
+                {user && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') && (
                   <DropdownMenuItem
                     onClick={() => navigate('/app/admin')}
                     className="cursor-pointer"

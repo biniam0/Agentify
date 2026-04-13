@@ -6,6 +6,7 @@ export interface User {
   avatar?: string;
   isAuth: boolean;
   isEnabled: boolean;
+  onboardingCompleted?: boolean;
 }
 
 export interface Contact {
@@ -71,7 +72,7 @@ export interface BarrierXData {
 
 export interface LoginResponse {
   success: boolean;
-  token: string;
+  token?: string;
   user: User;
   barrierx?: BarrierXData;
 }

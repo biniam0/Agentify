@@ -54,10 +54,10 @@ export function ChatSlide() {
               </div>
               <div className="flex items-center gap-0.5">
                 {[...Array(30)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="w-[2px] rounded-full bg-[#53A17D]/40" 
-                    style={{ height: `${Math.max(4, Math.random() * 20)}px` }} 
+                  <div
+                    key={i}
+                    className="w-[2px] rounded-full bg-[#53A17D]/40"
+                    style={{ height: `${Math.max(4, Math.random() * 20)}px` }}
                   />
                 ))}
               </div>
@@ -79,10 +79,10 @@ export function ChatSlide() {
               </div>
               <div className="flex items-center gap-0.5">
                 {[...Array(30)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="w-[2px] rounded-full bg-[#53A17D]/40" 
-                    style={{ height: `${Math.max(4, Math.random() * 20)}px` }} 
+                  <div
+                    key={i}
+                    className="w-[2px] rounded-full bg-[#53A17D]/40"
+                    style={{ height: `${Math.max(4, Math.random() * 20)}px` }}
                   />
                 ))}
               </div>
