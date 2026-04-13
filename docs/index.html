@@ -1,31 +1,277 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AgentX Logs API</title>
+  <title>AgentX API Docs</title>
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
   <style>
-    html { box-sizing: border-box; overflow-y: scroll; }
-    *, *::before, *::after { box-sizing: inherit; }
-    body { margin: 0; background: #fafafa; }
-    .topbar { display: none; }
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      min-height: 100vh;
+    }
+
+    /* ---------- Login ---------- */
+    .login-overlay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 400px;
+      background: #111113;
+      border: 1px solid #23232b;
+      border-radius: 14px;
+      padding: 36px 32px 32px;
+    }
+
+    .login-card h1 {
+      font-size: 19px;
+      font-weight: 600;
+      color: #ececf0;
+      margin-bottom: 28px;
+      letter-spacing: -0.01em;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13.5px;
+      font-weight: 400;
+      color: #8a8a96;
+      margin-bottom: 7px;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #09090b;
+      border: 1px solid #23232b;
+      border-radius: 8px;
+      color: #e5e5e5;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .field input:focus {
+      border-color: #444;
+    }
+
+    .field input::placeholder {
+      color: #444;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-wrap input {
+      padding-right: 40px;
+    }
+
+    .eye-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #555;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      transition: color 0.15s;
+    }
+
+    .eye-toggle:hover {
+      color: #888;
+    }
+
+    .eye-toggle svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      background: #000;
+      border: 1px solid #23232b;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .login-btn:hover {
+      background: #161618;
+    }
+
+    .login-btn:active {
+      background: #000;
+    }
+
+    .login-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .error-msg {
+      color: #f87171;
+      font-size: 13px;
+      margin-top: 14px;
+      text-align: center;
+      display: none;
+    }
+
+    /* ---------- Swagger ---------- */
+    .swagger-wrap {
+      display: none;
+    }
+
+    .swagger-wrap .topbar {
+      display: none;
+    }
+
+    .swagger-wrap .swagger-ui .info {
+      margin: 20px 0;
+    }
   </style>
 </head>
+
 <body>
-  <div id="swagger-ui"></div>
+
+  <!-- Login Gate -->
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-card">
+      <h1>AgentX Docs Access</h1>
+      <form id="login-form" autocomplete="off">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" id="email" name="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="passcode">Passcode</label>
+          <div class="input-wrap">
+            <input type="password" id="passcode" name="passcode" required>
+            <button type="button" class="eye-toggle" id="eye-toggle" aria-label="Toggle password visibility">
+              <svg id="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg id="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="login-btn" id="login-btn">Enter</button>
+        <p class="error-msg" id="error-msg">Invalid credentials</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Swagger UI (hidden until authenticated) -->
+  <div class="swagger-wrap" id="swagger-wrap">
+    <div id="swagger-ui"></div>
+  </div>
+
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
   <script>
-    SwaggerUIBundle({
-      url: "/docs/openapi.yaml",
-      dom_id: "#swagger-ui",
-      deepLinking: true,
-      presets: [
-        SwaggerUIBundle.presets.apis,
-        SwaggerUIBundle.SwaggerUIStandalonePreset
-      ],
-      layout: "BaseLayout"
+    document.getElementById('eye-toggle').addEventListener('click', () => {
+      const input   = document.getElementById('passcode');
+      const open    = document.getElementById('eye-open');
+      const closed  = document.getElementById('eye-closed');
+      const visible = input.type === 'text';
+      input.type         = visible ? 'password' : 'text';
+      open.style.display = visible ? 'block' : 'none';
+      closed.style.display = visible ? 'none' : 'block';
+    });
+
+    const loginOverlay = document.getElementById('login-overlay');
+    const swaggerWrap = document.getElementById('swagger-wrap');
+    const loginForm = document.getElementById('login-form');
+    const loginBtn = document.getElementById('login-btn');
+    const errorMsg = document.getElementById('error-msg');
+
+    function showSwagger() {
+      loginOverlay.style.display = 'none';
+      swaggerWrap.style.display = 'block';
+      document.body.style.background = '#fafafa';
+
+      SwaggerUIBundle({
+        url: './openapi.yaml',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIBundle.SwaggerUIStandalonePreset
+        ],
+        layout: 'BaseLayout'
+      });
+    }
+
+    fetch('/api/docs/auth/check')
+      .then(r => r.json())
+      .then(d => { if (d.authenticated) showSwagger(); })
+      .catch(() => { });
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.style.display = 'none';
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Verifying\u2026';
+
+      try {
+        const res = await fetch('/api/docs/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            passcode: document.getElementById('passcode').value
+          })
+        });
+
+        if (res.ok) {
+          showSwagger();
+        } else {
+          errorMsg.style.display = 'block';
+        }
+      } catch {
+        errorMsg.textContent = 'Connection error';
+        errorMsg.style.display = 'block';
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Enter';
+      }
     });
   </script>
 </body>
+
 </html>

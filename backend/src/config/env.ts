@@ -9,8 +9,10 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || 'default-secret-change-in-production',
   admin: {
     // When true, admin-only guards (e.g., requireAdmin) are bypassed.
-    // Useful for early UI development; DO NOT use in production.
-    disableAdminGuard: process.env.DISABLE_ADMIN_GUARD === 'true',
+    // Only allowed in development; silently ignored in production.
+    disableAdminGuard:
+      process.env.DISABLE_ADMIN_GUARD === 'true' &&
+      (process.env.NODE_ENV || 'development') !== 'production',
   },
   // CORS configuration
   allowedOrigins: process.env.ALLOWED_ORIGINS
@@ -71,5 +73,28 @@ export const config = {
     webhookUrl: process.env.SLACK_WEBHOOK_URL || '',
     enabled: process.env.SLACK_ENABLED === 'true',
   },
+  docs: {
+    username: process.env.DOCS_USERNAME || 'admin',
+    password: process.env.DOCS_PASSWORD || '',
+  },
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    prices: {
+      pro: {
+        monthly: process.env.STRIPE_PRICE_PRO_MONTHLY || '',
+        annual: process.env.STRIPE_PRICE_PRO_ANNUAL || '',
+      },
+      business: {
+        monthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY || '',
+        annual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL || '',
+      },
+      enterprise: {
+        monthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || '',
+        annual: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || '',
+      },
+    },
+  },
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
 };
 

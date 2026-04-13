@@ -46,7 +46,6 @@ import {
   SelectValue,
 } from '../../components/ui/select';
 import { API_BASE_URL } from '../../config/api';
-import { getAuthHeader } from '../../services/authService';
 
 interface BarrierXInfoRecord {
   id: string;
@@ -164,8 +163,8 @@ const BarrierXInfo: React.FC = () => {
       }
 
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info?${params}`, {
+        credentials: 'include',
         headers: {
-          ...getAuthHeader(),
           'Content-Type': 'application/json',
         },
       });
@@ -186,8 +185,8 @@ const BarrierXInfo: React.FC = () => {
   const fetchJobStatus = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/zero-score-status`, {
+        credentials: 'include',
         headers: {
-          ...getAuthHeader(),
           'Content-Type': 'application/json',
         },
       });
@@ -224,8 +223,8 @@ const BarrierXInfo: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/trigger-zero-score`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          ...getAuthHeader(),
           'Content-Type': 'application/json',
         },
       });
@@ -268,8 +267,8 @@ const BarrierXInfo: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/trigger-lost-deal`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          ...getAuthHeader(),
           'Content-Type': 'application/json',
         },
       });
@@ -312,8 +311,8 @@ const BarrierXInfo: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/trigger-inactivity`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          ...getAuthHeader(),
           'Content-Type': 'application/json',
         },
       });
@@ -345,8 +344,8 @@ const BarrierXInfo: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/stop-zero-score`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          ...getAuthHeader(),
           'Content-Type': 'application/json',
         },
       });
@@ -391,7 +390,7 @@ const BarrierXInfo: React.FC = () => {
       }
 
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/export?${params}`, {
-        headers: getAuthHeader(),
+        credentials: 'include',
       });
 
       if (!response.ok) throw new Error('Failed to export');

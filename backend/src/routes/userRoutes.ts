@@ -13,5 +13,8 @@ router.get('/me', userController.getCurrentUser);
 // Toggle automation enabled/disabled
 router.patch('/toggle-enabled', userController.toggleEnabled);
 
+// Get tenant members from BarrierX
+router.get('/tenant-members', userController.getTenantMembers);
+
 export default router;
 

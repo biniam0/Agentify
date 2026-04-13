@@ -7,15 +7,14 @@
 
 import { Router } from 'express';
 import { authenticate } from '../middlewares/auth';
-import { requireAdmin } from '../middlewares/adminAuth';
+import { requireSuperAdmin } from '../middlewares/adminAuth';
 import * as loggingController from '../controllers/loggingController';
 import { config } from '../config/env';
 
 const router = Router();
 
-// All admin logging routes require authentication AND admin access
-// Dev toggle: allow bypassing admin guard for UI development.
-const adminProtected = config.admin.disableAdminGuard ? [authenticate] : [authenticate, requireAdmin];
+// All admin logging routes require authentication AND super-admin access
+const adminProtected = config.admin.disableAdminGuard ? [authenticate] : [authenticate, requireSuperAdmin];
 
 // ============================================
 // ADMIN ROUTES (UNCHANGED - ALL USERS' DATA)

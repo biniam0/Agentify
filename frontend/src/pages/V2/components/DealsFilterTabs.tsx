@@ -22,7 +22,7 @@ const DealsFilterTabs = () => {
       {FILTER_TABS.map((tab) => (
         <button
           key={tab.id}
-          onClick={() => navigate(`/v2/${tab.id}`)}
+          onClick={() => navigate(`/app/v2/${tab.id}`)}
           className={cn(
             'px-4 py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap',
             activeTab === tab.id

@@ -79,6 +79,105 @@ export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFu
 };
 
 /**
+ * Middleware to require SUPER_ADMIN access.
+ * Use after authenticate middleware.
+ */
+export const requireSuperAdmin = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (config.admin.disableAdminGuard) {
+      next();
+      return;
+    }
+
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required'
+      });
+      return;
+    }
+
+    if (req.user.role !== 'SUPER_ADMIN') {
+      console.log(`⚠️  Unauthorized super-admin access attempt by: ${req.user.email} (role: ${req.user.role})`);
+
+      await loggingService.logError({
+        errorType: 'AUTHORIZATION_ERROR',
+        severity: 'HIGH',
+        source: 'adminAuth',
+        message: `Unauthorized super-admin access attempt - insufficient role`,
+        userId: req.user.userId,
+        endpoint: req.path,
+        method: req.method,
+        requestData: {
+          userEmail: req.user.email,
+          userRole: req.user.role,
+          requiredRole: 'SUPER_ADMIN',
+          ip: req.ip,
+          userAgent: req.get('user-agent'),
+        },
+      });
+
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Super admin role required'
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    console.error('❌ Super admin auth middleware error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to verify super admin access'
+    });
+  }
+};
+
+/**
+ * Middleware to require completed onboarding.
+ * Use after authenticate middleware.
+ */
+export const requireOnboarded = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required'
+      });
+      return;
+    }
+
+    const { default: prisma } = await import('../config/database');
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { onboardingCompleted: true },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    if (!user.onboardingCompleted) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Onboarding not completed'
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    console.error('❌ Onboarding check middleware error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to verify onboarding status'
+    });
+  }
+};
+
+/**
  * Check if a user role is an admin (helper function)
  */
 export const isAdmin = (role: string): boolean => {

@@ -752,13 +752,13 @@ async function processDeals(
 /**
  * Start zero score info gathering
  */
-export async function startZeroScoreGathering(triggeredBy: string): Promise<{ success: boolean; error?: string }> {
+export async function startZeroScoreGathering(triggeredBy: string): Promise<{ success: boolean; warning?: boolean; error?: string }> {
   if (jobState.isRunning) {
     return { success: false, error: 'A job is already running' };
   }
 
   if (!isWithinCallingHours()) {
-    return { success: false, error: `Calls are only allowed between ${CALLING_HOUR_START}:00 and ${CALLING_HOUR_END}:00 UTC. Current UTC time: ${new Date().toISOString().slice(11, 16)}` };
+    return { success: false, warning: true, error: `Calls can only be placed between ${CALLING_HOUR_START}:00 and ${CALLING_HOUR_END}:00 UTC. Current UTC time: ${new Date().toISOString().slice(11, 16)}.` };
   }
 
   if (!config.barrierx.apiKey) {
@@ -807,13 +807,13 @@ export async function startZeroScoreGathering(triggeredBy: string): Promise<{ su
 /**
  * Start lost deal questionnaire
  */
-export async function startLostDealGathering(triggeredBy: string): Promise<{ success: boolean; error?: string }> {
+export async function startLostDealGathering(triggeredBy: string): Promise<{ success: boolean; warning?: boolean; error?: string }> {
   if (jobState.isRunning) {
     return { success: false, error: 'A job is already running' };
   }
 
   if (!isWithinCallingHours()) {
-    return { success: false, error: `Calls are only allowed between ${CALLING_HOUR_START}:00 and ${CALLING_HOUR_END}:00 UTC. Current UTC time: ${new Date().toISOString().slice(11, 16)}` };
+    return { success: false, warning: true, error: `Calls can only be placed between ${CALLING_HOUR_START}:00 and ${CALLING_HOUR_END}:00 UTC. Current UTC time: ${new Date().toISOString().slice(11, 16)}.` };
   }
 
   if (!config.barrierx.apiKey) {
@@ -862,13 +862,13 @@ export async function startLostDealGathering(triggeredBy: string): Promise<{ suc
 /**
  * Start inactivity check
  */
-export async function startInactivityGathering(triggeredBy: string): Promise<{ success: boolean; error?: string }> {
+export async function startInactivityGathering(triggeredBy: string): Promise<{ success: boolean; warning?: boolean; error?: string }> {
   if (jobState.isRunning) {
     return { success: false, error: 'A job is already running' };
   }
 
   if (!isWithinCallingHours()) {
-    return { success: false, error: `Calls are only allowed between ${CALLING_HOUR_START}:00 and ${CALLING_HOUR_END}:00 UTC. Current UTC time: ${new Date().toISOString().slice(11, 16)}` };
+    return { success: false, warning: true, error: `Calls can only be placed between ${CALLING_HOUR_START}:00 and ${CALLING_HOUR_END}:00 UTC. Current UTC time: ${new Date().toISOString().slice(11, 16)}.` };
   }
 
   if (!config.barrierx.apiKey) {
