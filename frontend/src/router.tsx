@@ -151,12 +151,12 @@ const router = createBrowserRouter([
       },
     ],
   },
-  // Admin Routes — SUPER_ADMIN only
+  // Admin Routes — ADMIN or SUPER_ADMIN
   {
     path: '/app/admin',
     element: (
       <AuthGuard>
-        <RoleGuard roles={['SUPER_ADMIN']}>
+        <RoleGuard roles={['ADMIN', 'SUPER_ADMIN']} fallback="/app/meetings">
           <AdminLayout />
         </RoleGuard>
       </AuthGuard>
