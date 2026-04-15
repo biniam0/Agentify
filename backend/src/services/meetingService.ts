@@ -1,9 +1,29 @@
 // Meeting service for triggering ElevenLabs calls
 import axios from 'axios';
 import { config } from '../config/env';
-import { formatMeetingTime } from '../utils/riskGenerator';
 import * as barrierxService from './barrierxService';
 import { Contact } from './barrierxService';
+
+// ============================================
+// HELPERS
+// ============================================
+
+/**
+ * Format meeting time for dynamic variables, converted to the owner's timezone.
+ * Falls back to server timezone if no timezone is provided.
+ */
+const formatMeetingTime = (isoTimestamp: string, timezone?: string): string => {
+  const date = new Date(isoTimestamp);
+  return date.toLocaleString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    ...(timezone && { timeZone: timezone }),
+  });
+};
 
 // ============================================
 // CONSTANTS
@@ -140,11 +160,11 @@ function buildRisksString(recs: Recommendation[], useMock: boolean): string {
  */
 function buildRisksFullString(recs: Recommendation[], useMock: boolean): string {
   if (useMock) {
-    return MOCK_RISKS.map((r, i) => 
+    return MOCK_RISKS.map((r, i) =>
       `Risk ${i + 1} [${r.severity}]: ${r.title}\nDetails: ${r.risk}`
     ).join('\n\n');
   }
-  return recs.map((rec, i) => 
+  return recs.map((rec, i) =>
     `Risk ${i + 1} [${rec.severity}]: ${rec.title}\nDetails: ${rec.risk}`
   ).join('\n\n');
 }
@@ -164,11 +184,11 @@ function buildActionsString(recs: Recommendation[], useMock: boolean): string {
  */
 function buildRecommendationsFullString(recs: Recommendation[], useMock: boolean): string {
   if (useMock) {
-    return MOCK_ACTIONS.map((r, i) => 
+    return MOCK_ACTIONS.map((r, i) =>
       `Action ${i + 1} [${r.severity}]: ${r.title}\nContext: ${r.note}`
     ).join('\n\n');
   }
-  return recs.map((rec, i) => 
+  return recs.map((rec, i) =>
     `Action ${i + 1} [${rec.severity}]: ${rec.title}\nContext: ${rec.note || 'No additional context available'}`
   ).join('\n\n');
 }
@@ -298,7 +318,7 @@ export const triggerPreMeetingCall = async (payload: PreCallPayload): Promise<an
       // Meeting context
       customer_name: customer?.name || dealData.company || 'the prospect',
       company_name: dealData.company || 'their company',
-      meeting_time: formatMeetingTime(meetingData.startTime),
+      meeting_time: formatMeetingTime(meetingData.startTime, dealData.owner?.timezone),
       meeting_title: meetingData.title || 'Upcoming Meeting',
 
       // Deal context
