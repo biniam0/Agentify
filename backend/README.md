@@ -394,13 +394,13 @@ The backend provides detailed logging:
  Transforming 4 deals for user userId
    No contacts for deal 123, generating dummy data
    No meetings for deal 123, generating dummy data
-   Using default phone for owner: +251914373107
+   Using default phone for owner: +1234567890
  Successfully fetched 4 deals for user userId
 
- Manual PRE-CALL trigger by Tamirat Kebede
+ Manual PRE-CALL trigger by John Doe
  Meeting: Product Demo Call
  Deal: Enterprise Deal
- Calling owner at: +251914373107
+ Calling owner at: +1234567890
  ElevenLabs call initiated successfully
 ```
 
@@ -430,7 +430,7 @@ The backend provides detailed logging:
 
 ### "No owner phone number found"
 - Owner phone missing from BarrierX API
-- Default phone `+251914373107` is used as fallback
+- Default phone from config is used as fallback
 
 ### "Database connection error"
 - Verify `DATABASE_URL` in `.env`
