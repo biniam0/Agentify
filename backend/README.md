@@ -123,7 +123,7 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
-  "email": "tamiratkebede120@gmail.com",
+  "email": "your_email",
   "password": "your_password"
 }
 ```
@@ -374,7 +374,7 @@ For development without real API calls:
 USE_MOCK_BARRIERX=true
 ```
 
-- Uses `mockUsers.json` data
+- Uses generated dummy data for testing
 - No rate limits
 - Fast development
 - Automatic fallback on API errors (dev mode only)
