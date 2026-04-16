@@ -8,12 +8,14 @@ import DealsFilterTabs from './DealsFilterTabs';
 import ClientsDealsTable from './ClientsDealsTable';
 import * as dealService from '@/services/dealService';
 import type { Deal } from '@/services/dealService';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface ClientsDealsSectionProps {
   onViewDetails: (deal: Deal) => void;
 }
 
 const ClientsDealsSection = ({ onViewDetails }: ClientsDealsSectionProps) => {
+  const { tenantSlug } = useTenant();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,7 +23,7 @@ const ClientsDealsSection = ({ onViewDetails }: ClientsDealsSectionProps) => {
   const fetchDeals = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await dealService.getAdminDeals();
+      const response = await dealService.getAdminDeals(tenantSlug || undefined);
       setDeals(response.deals || []);
     } catch (error: any) {
       console.error('Failed to fetch deals:', error);
@@ -29,7 +31,7 @@ const ClientsDealsSection = ({ onViewDetails }: ClientsDealsSectionProps) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantSlug]);
 
   useEffect(() => {
     fetchDeals();

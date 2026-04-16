@@ -4,6 +4,7 @@ import { API_BASE_URL } from '@/config/api';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import type { WorkflowExecStatus } from './AddWorkflowModal';
+import { useTenant } from '@/contexts/TenantContext';
 import { getPersistedWorkflowExec, clearWorkflowExec } from './AddWorkflowModal';
 
 export interface JobStatus {
@@ -166,6 +167,7 @@ interface WorkflowActionsProps {
 }
 
 const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec, workflowExecRefreshKey }: WorkflowActionsProps) => {
+  const { tenantSlug } = useTenant();
   const [showTooltip, setShowTooltip] = useState(false);
   const [triggeringType, setTriggeringType] = useState<GatheringType | null>(null);
   const [isStopping, setIsStopping] = useState(false);
@@ -197,7 +199,10 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
 
   const fetchJobStatus = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/zero-score-status`, {
+      const statusParams = new URLSearchParams();
+      if (tenantSlug) statusParams.set('tenantSlug', tenantSlug);
+      const statusQuery = statusParams.toString();
+      const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/zero-score-status${statusQuery ? `?${statusQuery}` : ''}`, {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -213,7 +218,7 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
     } catch {
       // silently fail — keep localStorage-backed state
     }
-  }, []);
+  }, [tenantSlug]);
 
   useEffect(() => {
     fetchJobStatus().finally(() => setInitialLoading(false));
@@ -310,7 +315,10 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
     }));
 
     try {
-      const response = await fetch(`${API_BASE_URL}${TRIGGER_ENDPOINTS[type]}`, {
+      const triggerParams = new URLSearchParams();
+      if (tenantSlug) triggerParams.set('tenantSlug', tenantSlug);
+      const triggerQuery = triggerParams.toString();
+      const response = await fetch(`${API_BASE_URL}${TRIGGER_ENDPOINTS[type]}${triggerQuery ? `?${triggerQuery}` : ''}`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -346,7 +354,10 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
     clearPersistedJob();
 
     try {
-      const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/stop-zero-score`, {
+      const stopParams = new URLSearchParams();
+      if (tenantSlug) stopParams.set('tenantSlug', tenantSlug);
+      const stopQuery = stopParams.toString();
+      const response = await fetch(`${API_BASE_URL}/logs/barrierx-info/stop-zero-score${stopQuery ? `?${stopQuery}` : ''}`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

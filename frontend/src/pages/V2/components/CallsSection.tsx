@@ -8,6 +8,7 @@ import DealsFilterTabs from './DealsFilterTabs';
 import CallsTable from './CallsTable';
 import * as loggingService from '@/services/loggingService';
 import type { CallLog } from '@/services/loggingService';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface CallsSectionProps {
   onViewDetails: (log: CallLog) => void;
@@ -16,6 +17,7 @@ interface CallsSectionProps {
 const ITEMS_PER_PAGE = 10;
 
 const CallsSection = ({ onViewDetails }: CallsSectionProps) => {
+  const { tenantSlug } = useTenant();
   const [logs, setLogs] = useState<CallLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -26,6 +28,7 @@ const CallsSection = ({ onViewDetails }: CallsSectionProps) => {
     try {
       setLoading(true);
       const response = await loggingService.getCallLogs({
+        tenantSlug: tenantSlug || undefined,
         limit: ITEMS_PER_PAGE,
         offset: page * ITEMS_PER_PAGE,
       });
@@ -40,7 +43,7 @@ const CallsSection = ({ onViewDetails }: CallsSectionProps) => {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, tenantSlug]);
 
   useEffect(() => {
     fetchLogs();
