@@ -143,13 +143,18 @@ export const getAdminDeals = async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
-    console.log(`   ✅ Found ${deals.length} deals across ${response.data.tenants.length} tenants`);
+    const { tenantSlug: filterTenantSlug } = req.query;
+    const filteredDeals = filterTenantSlug
+      ? deals.filter(d => d.tenantSlug === filterTenantSlug)
+      : deals;
+
+    console.log(`   ✅ Found ${deals.length} deals across ${response.data.tenants.length} tenants${filterTenantSlug ? ` (filtered to ${filteredDeals.length} for tenant: ${filterTenantSlug})` : ''}`);
 
     res.json({
       ok: true,
-      deals,
-      total: deals.length,
-      tenantCount: response.data.tenants.length,
+      deals: filteredDeals,
+      total: filteredDeals.length,
+      tenantCount: filterTenantSlug ? 1 : response.data.tenants.length,
     });
   } catch (error: any) {
     console.error('❌ Get admin deals error:', error);

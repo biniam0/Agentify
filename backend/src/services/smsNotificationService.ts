@@ -420,7 +420,6 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
     // Mark as notified to prevent duplicates
     await markAsNotified(meetingId, meetingStartTime, message.sid);
 
-    // Log to database
     await loggingService.logSmsNotification({
       messageSid: message.sid,
       status: 'SENT',
@@ -430,6 +429,7 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
       userId: userId || 'unknown',
       barrierxUserId,
       hubspotOwnerId,
+      tenantSlug,
       userName: ownerName,
       userEmail,
       ownerName,
@@ -448,7 +448,6 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
   } catch (error: any) {
     console.error(`       ❌ SMS sending failed:`, error.message);
 
-    // Log failed SMS to database
     await loggingService.logSmsNotification({
       status: 'FAILED',
       toPhone: ownerPhone,
@@ -456,6 +455,7 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
       userId: userId || 'unknown',
       barrierxUserId,
       hubspotOwnerId,
+      tenantSlug,
       userName: ownerName,
       userEmail,
       ownerName,

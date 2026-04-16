@@ -163,6 +163,7 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
         userId: userId,
         userName: dbUser.name,
         userEmail: dbUser.email,
+        tenantSlug: dbUser.tenantSlug,
         dealId: deal.id,
         dealName: deal.name,
         meetingId: meeting.id,
@@ -177,13 +178,13 @@ export const triggerPreMeetingCall = async (req: AuthRequest, res: Response): Pr
         dynamicVariables: result.dynamicVariables,
       });
 
-      // Log activity
       await loggingService.logActivity({
         activityType: 'PRE_CALL_TRIGGER',
         status: 'SUCCESS',
         userId: userId,
         userName: dbUser.name,
         userEmail: dbUser.email,
+        tenantSlug: dbUser.tenantSlug,
         dealId: deal.id,
         dealName: deal.name,
         meetingId: meeting.id,
@@ -326,6 +327,7 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
         userId: userId,
         userName: dbUser.name,
         userEmail: dbUser.email,
+        tenantSlug: dbUser.tenantSlug,
         dealId: deal.id,
         dealName: deal.name,
         meetingId: meeting.id,
@@ -340,13 +342,13 @@ export const triggerPostMeetingCall = async (req: AuthRequest, res: Response): P
         dynamicVariables: result.dynamicVariables,
       });
 
-      // Log activity
       await loggingService.logActivity({
         activityType: 'POST_CALL_TRIGGER',
         status: 'SUCCESS',
         userId: userId,
         userName: dbUser.name,
         userEmail: dbUser.email,
+        tenantSlug: dbUser.tenantSlug,
         dealId: deal.id,
         dealName: deal.name,
         meetingId: meeting.id,
@@ -457,15 +459,19 @@ export const getAdminMeetings = async (req: AuthRequest, res: Response): Promise
       });
     });
 
-    // ✅ ADMIN FETCH LOGGING END
+    const { tenantSlug: filterTenantSlug } = req.query;
+    const filteredMeetings = filterTenantSlug
+      ? allMeetings.filter((m: any) => m.ownerTenantSlug === filterTenantSlug)
+      : allMeetings;
+
     console.log('👑 =============================================');
     console.log(`👑 ADMIN DASHBOARD: Fetch completed in ${duration}s`);
-    console.log(`👑 Results: ${allMeetings.length} meetings from ${totalDeals} deals across ${allUsersDealsMap.size} users`);
+    console.log(`👑 Results: ${allMeetings.length} meetings from ${totalDeals} deals across ${allUsersDealsMap.size} users${filterTenantSlug ? ` (filtered to ${filteredMeetings.length} for tenant: ${filterTenantSlug})` : ''}`);
     console.log('👑 =============================================\n');
 
     res.json({
       success: true,
-      meetings: allMeetings,
+      meetings: filteredMeetings,
       totalUsers: allUsersDealsMap.size,
     });
   } catch (error) {
@@ -552,6 +558,7 @@ export const adminTriggerPreMeetingCall = async (req: AuthRequest, res: Response
         userId: adminUser.id,
         userName: adminUser.name,
         userEmail: adminUser.email,
+        tenantSlug: deal.tenantSlug,
         dealId: deal.id,
         dealName: deal.name,
         meetingId: meeting.id,
@@ -669,6 +676,7 @@ export const adminTriggerPostMeetingCall = async (req: AuthRequest, res: Respons
         userId: adminUser.id,
         userName: adminUser.name,
         userEmail: adminUser.email,
+        tenantSlug: deal.tenantSlug,
         dealId: deal.id,
         dealName: deal.name,
         meetingId: meeting.id,
