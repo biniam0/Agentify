@@ -944,7 +944,13 @@ export const triggerZeroScoreCalls = async (req: AuthRequest, res: Response): Pr
     console.log(`⏰ Time: ${new Date().toISOString()}`);
     console.log(`👤 Triggered by: ${triggeredBy}`);
 
-    const result = await infoGatheringService.startZeroScoreGathering(triggeredBy);
+    const tenantSlug = (req.body?.tenantSlug || req.user?.tenantSlug) as string | undefined;
+    if (!tenantSlug) {
+      res.status(400).json({ success: false, error: 'tenantSlug is required' });
+      return;
+    }
+
+    const result = await infoGatheringService.startZeroScoreGathering(triggeredBy, tenantSlug);
 
     if (!result.success) {
       res.status(result.warning ? 422 : 409).json({
@@ -983,7 +989,13 @@ export const triggerLostDealCalls = async (req: AuthRequest, res: Response): Pro
     console.log(`⏰ Time: ${new Date().toISOString()}`);
     console.log(`👤 Triggered by: ${triggeredBy}`);
 
-    const result = await infoGatheringService.startLostDealGathering(triggeredBy);
+    const tenantSlug = (req.body?.tenantSlug || req.user?.tenantSlug) as string | undefined;
+    if (!tenantSlug) {
+      res.status(400).json({ success: false, error: 'tenantSlug is required' });
+      return;
+    }
+
+    const result = await infoGatheringService.startLostDealGathering(triggeredBy, tenantSlug);
 
     if (!result.success) {
       res.status(result.warning ? 422 : 409).json({
@@ -1103,7 +1115,13 @@ export const triggerInactivityCalls = async (req: AuthRequest, res: Response): P
     console.log(`⏰ Time: ${new Date().toISOString()}`);
     console.log(`👤 Triggered by: ${triggeredBy}`);
 
-    const result = await infoGatheringService.startInactivityGathering(triggeredBy);
+    const tenantSlug = (req.body?.tenantSlug || req.user?.tenantSlug) as string | undefined;
+    if (!tenantSlug) {
+      res.status(400).json({ success: false, error: 'tenantSlug is required' });
+      return;
+    }
+
+    const result = await infoGatheringService.startInactivityGathering(triggeredBy, tenantSlug);
 
     if (!result.success) {
       res.status(result.warning ? 422 : 409).json({
