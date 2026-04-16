@@ -95,13 +95,19 @@ export const getAllSmsNotifications = async (): Promise<Array<{
         try {
           const record = JSON.parse(jsonData) as SmsNotificationRecord;
           // Parse key: agentx:sms:{meetingId}:{startTime}
-          const parts = key.split(':');
-          if (parts.length >= 4) {
-            results.push({
-              meetingId: parts[2],
-              startTime: parts[3],
-              record,
-            });
+          // startTime is ISO 8601 (e.g. 2026-04-16T12:30:45.123Z) which contains colons,
+          // so rejoin everything after the third colon to get the full timestamp.
+          const prefix = 'agentx:sms:';
+          if (key.startsWith(prefix)) {
+            const rest = key.slice(prefix.length);
+            const colonIdx = rest.indexOf(':');
+            if (colonIdx !== -1) {
+              results.push({
+                meetingId: rest.slice(0, colonIdx),
+                startTime: rest.slice(colonIdx + 1),
+                record,
+              });
+            }
           }
         } catch {
           console.error(`⚠️  Failed to parse SMS notification record: ${key}`);
