@@ -6,8 +6,11 @@ export const getMeetings = async (): Promise<MeetingsResponse> => {
   return response.data;
 };
 
-export const getAdminMeetings = async (): Promise<MeetingsResponse> => {
-  const response = await api.get<MeetingsResponse>('/meetings/admin');
+export const getAdminMeetings = async (tenantSlug?: string): Promise<MeetingsResponse> => {
+  const params = new URLSearchParams();
+  if (tenantSlug) params.append('tenantSlug', tenantSlug);
+  const query = params.toString();
+  const response = await api.get<MeetingsResponse>(`/meetings/admin${query ? `?${query}` : ''}`);
   return response.data;
 };
 

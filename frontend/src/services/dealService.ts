@@ -54,8 +54,11 @@ export interface TriggerInfoCallResponse {
 /**
  * Get all deals from BarrierX bulk API (admin only)
  */
-export const getAdminDeals = async (): Promise<DealsResponse> => {
-  const response = await api.get<DealsResponse>('/deals/admin');
+export const getAdminDeals = async (tenantSlug?: string): Promise<DealsResponse> => {
+  const params = new URLSearchParams();
+  if (tenantSlug) params.append('tenantSlug', tenantSlug);
+  const query = params.toString();
+  const response = await api.get<DealsResponse>(`/deals/admin${query ? `?${query}` : ''}`);
   return response.data;
 };
 
