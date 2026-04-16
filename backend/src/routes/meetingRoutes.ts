@@ -12,6 +12,9 @@ router.get('/', meetingController.getMeetings);
 router.post('/trigger/pre-call', meetingController.triggerPreMeetingCall);
 router.post('/trigger/post-call', meetingController.triggerPostMeetingCall);
 
+// Tenant-scoped endpoints (V2 dashboard, ADMIN or SUPER_ADMIN)
+router.get('/tenant', requireAdmin, meetingController.getTenantMeetings);
+
 // Admin endpoints (ADMIN or SUPER_ADMIN)
 router.get('/admin', requireAdmin, meetingController.getAdminMeetings);
 router.post('/admin/trigger/pre-call', requireAdmin, meetingController.adminTriggerPreMeetingCall);

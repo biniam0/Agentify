@@ -7,14 +7,12 @@ import DealsFilterTabs from './DealsFilterTabs';
 import ClientsMeetingsTable from './ClientsMeetingsTable';
 import * as meetingService from '@/services/meetingService';
 import type { Meeting } from '@/types';
-import { useTenant } from '@/contexts/TenantContext';
 
 interface ClientsMeetingsSectionProps {
   onViewDetails: (meeting: Meeting) => void;
 }
 
 const ClientsMeetingsSection = ({ onViewDetails }: ClientsMeetingsSectionProps) => {
-  const { tenantSlug } = useTenant();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,7 +20,7 @@ const ClientsMeetingsSection = ({ onViewDetails }: ClientsMeetingsSectionProps) 
   const fetchMeetings = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await meetingService.getAdminMeetings(tenantSlug || undefined);
+      const response = await meetingService.getTenantMeetings();
       setMeetings(response.meetings || []);
     } catch (error: any) {
       console.error('Failed to fetch meetings:', error);
@@ -30,7 +28,7 @@ const ClientsMeetingsSection = ({ onViewDetails }: ClientsMeetingsSectionProps) 
     } finally {
       setLoading(false);
     }
-  }, [tenantSlug]);
+  }, []);
 
   useEffect(() => {
     fetchMeetings();

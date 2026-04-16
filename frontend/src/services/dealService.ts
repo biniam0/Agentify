@@ -63,6 +63,14 @@ export const getAdminDeals = async (tenantSlug?: string): Promise<DealsResponse>
 };
 
 /**
+ * Get deals for the authenticated user's tenant (V2 dashboard)
+ */
+export const getTenantDeals = async (): Promise<DealsResponse> => {
+  const response = await api.get<DealsResponse>('/deals/tenant');
+  return response.data;
+};
+
+/**
  * Trigger info gathering call for a specific deal (admin only)
  */
 export const triggerInfoGatheringCall = async (

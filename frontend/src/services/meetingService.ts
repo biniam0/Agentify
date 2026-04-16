@@ -14,6 +14,11 @@ export const getAdminMeetings = async (tenantSlug?: string): Promise<MeetingsRes
   return response.data;
 };
 
+export const getTenantMeetings = async (): Promise<MeetingsResponse> => {
+  const response = await api.get<MeetingsResponse>('/meetings/tenant');
+  return response.data;
+};
+
 export const triggerPreCall = async (
   meetingId: string,
   dealId: string

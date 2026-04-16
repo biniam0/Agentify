@@ -165,6 +165,71 @@ export const getAdminDeals = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
+const BARRIERX_TENANT_DEALS_API = (slug: string) =>
+  `${config.barrierx.baseUrl}/api/external/tenants/${slug}/deals`;
+
+/**
+ * Get deals for the authenticated user's tenant via per-tenant BarrierX API
+ */
+export const getTenantDeals = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const tenantSlug = req.user?.tenantSlug;
+
+    if (!tenantSlug) {
+      res.status(400).json({ error: 'No tenant associated with this user' });
+      return;
+    }
+
+    console.log(`📊 V2: Fetching deals for tenant: ${tenantSlug}`);
+
+    const url = BARRIERX_TENANT_DEALS_API(tenantSlug);
+    const response = await axios.get(url, {
+      headers: {
+        'Authorization': `Bearer ${config.barrierx.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const rawDeals: any[] = response.data.deals || [];
+
+    const deals = rawDeals.map((deal: any) => ({
+      id: deal.id,
+      dealName: deal.dealName,
+      company: deal.company,
+      pipelineName: deal.pipelineName,
+      stage: deal.stage,
+      amount: deal.amount,
+      owner: deal.owner,
+      riskScores: deal.userDealRiskScores,
+      createdAt: deal.createdAt,
+      updatedAt: deal.updatedAt,
+      closeDate: deal.closeDate,
+      summary: deal.summary,
+      meetings: deal.meetings,
+      contacts: deal.contacts,
+      recommendations: deal.recommendations,
+      tenantId: tenantSlug,
+      tenantSlug,
+      tenantName: tenantSlug,
+    }));
+
+    console.log(`   ✅ Found ${deals.length} deals for tenant: ${tenantSlug}`);
+
+    res.json({
+      ok: true,
+      deals,
+      total: deals.length,
+      tenantCount: 1,
+    });
+  } catch (error: any) {
+    console.error(`❌ Get tenant deals error:`, error.message);
+    res.status(500).json({
+      error: 'Failed to fetch tenant deals',
+      message: error.message,
+    });
+  }
+};
+
 /**
  * Trigger info gathering call for a single deal
  */

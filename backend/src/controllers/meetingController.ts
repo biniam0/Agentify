@@ -1,5 +1,7 @@
 import { Response } from 'express';
+import axios from 'axios';
 import { AuthRequest } from '../middlewares/auth';
+import { config } from '../config/env';
 import prisma from '../config/database';
 import * as barrierxService from '../services/barrierxService';
 import * as meetingService from '../services/meetingService';
@@ -477,6 +479,81 @@ export const getAdminMeetings = async (req: AuthRequest, res: Response): Promise
   } catch (error) {
     console.error('👑 ❌ ADMIN DASHBOARD: Failed to fetch meetings:', error);
     res.status(500).json({ error: 'Failed to fetch admin meetings' });
+  }
+};
+
+/**
+ * Get meetings for the authenticated user's tenant via per-tenant BarrierX API
+ */
+export const getTenantMeetings = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const tenantSlug = req.user?.tenantSlug;
+
+    if (!tenantSlug) {
+      res.status(400).json({ error: 'No tenant associated with this user' });
+      return;
+    }
+
+    console.log(`📅 V2: Fetching meetings for tenant: ${tenantSlug}`);
+    const startTime = Date.now();
+
+    const url = `${config.barrierx.baseUrl}/api/external/tenants/${tenantSlug}/deals`;
+    const response = await axios.get(url, {
+      headers: {
+        'Authorization': `Bearer ${config.barrierx.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const rawDeals: any[] = response.data.deals || [];
+    const meetings: any[] = [];
+
+    for (const deal of rawDeals) {
+      if (!deal.meetings || deal.meetings.length === 0) continue;
+
+      for (const meeting of deal.meetings) {
+        meetings.push({
+          id: meeting.id,
+          title: meeting.title || '',
+          startTime: meeting.startTime,
+          endTime: meeting.endTime,
+          duration: meeting.duration,
+          body: meeting.body,
+          status: 'scheduled',
+          agenda: meeting.body || '',
+          participants: deal.contacts || [],
+          dealId: deal.id,
+          dealName: deal.dealName,
+          dealAmount: deal.amount,
+          dealStage: deal.stage,
+          dealCompany: deal.company,
+          dealSummary: deal.summary,
+          dealRisks: deal.userDealRiskScores,
+          dealCloseDate: deal.closeDate,
+          contact: deal.contacts?.[0] || null,
+          owner: deal.owner ? {
+            name: deal.owner.name,
+            phone: deal.owner.phone,
+            email: deal.owner.email || '',
+          } : null,
+          ownerBarrierxUserId: null,
+          ownerHubspotId: deal.owner?.hubspotId || null,
+          ownerTenantSlug: tenantSlug,
+        });
+      }
+    }
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`   ✅ Found ${meetings.length} meetings from ${rawDeals.length} deals for tenant: ${tenantSlug} (${duration}s)`);
+
+    res.json({
+      success: true,
+      meetings,
+      totalUsers: 1,
+    });
+  } catch (error: any) {
+    console.error(`❌ Get tenant meetings error:`, error.message);
+    res.status(500).json({ error: 'Failed to fetch tenant meetings' });
   }
 };
 
