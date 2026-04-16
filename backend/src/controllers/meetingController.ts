@@ -459,7 +459,7 @@ export const getAdminMeetings = async (req: AuthRequest, res: Response): Promise
       });
     });
 
-    const { tenantSlug: filterTenantSlug } = req.query;
+    const filterTenantSlug = req.query.tenantSlug as string | undefined;
     const filteredMeetings = filterTenantSlug
       ? allMeetings.filter((m: any) => m.ownerTenantSlug === filterTenantSlug)
       : allMeetings;

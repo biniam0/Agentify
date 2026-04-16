@@ -143,7 +143,7 @@ export const getAdminDeals = async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
-    const { tenantSlug: filterTenantSlug } = req.query;
+    const filterTenantSlug = req.query.tenantSlug as string | undefined;
     const filteredDeals = filterTenantSlug
       ? deals.filter(d => d.tenantSlug === filterTenantSlug)
       : deals;
