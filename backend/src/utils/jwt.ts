@@ -6,6 +6,8 @@ export interface JwtPayload {
   userId: string;
   email: string;
   role: string;
+  tenantSlug: string;
+  barrierxUserId: string;
 }
 
 export const generateAccessToken = (payload: JwtPayload): string => {

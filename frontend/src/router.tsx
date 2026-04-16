@@ -121,12 +121,12 @@ const router = createBrowserRouter([
       },
     ],
   },
-  // V2 Routes — ADMIN or SUPER_ADMIN, must be onboarded
+  // V2 Routes — ADMIN only, must be onboarded
   {
     path: '/app/v2',
     element: (
       <AuthGuard>
-        <RoleGuard roles={['ADMIN', 'SUPER_ADMIN']} fallback="/app/meetings">
+        <RoleGuard roles={['ADMIN']} fallback="/app/meetings">
           <OnboardingGuard>
             <V2Layout />
           </OnboardingGuard>

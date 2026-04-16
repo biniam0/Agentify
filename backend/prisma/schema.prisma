@@ -117,6 +117,10 @@ model ActivityLog {
   barrierxUserId String? // BarrierX platform UUID
   hubspotOwnerId String? // HubSpot CRM owner ID
 
+  // Tenant Context
+  tenantSlug String? // BarrierX tenant slug
+  tenantName String? // BarrierX tenant display name
+
   // Related entities
   dealId         String?
   dealName       String?
@@ -145,6 +149,7 @@ model ActivityLog {
   @@index([dealId])
   @@index([conversationId])
   @@index([createdAt])
+  @@index([tenantSlug])
   // ⚡ Composite indexes for common query patterns
   @@index([userId, createdAt(sort: Desc)])
   @@index([userEmail, createdAt(sort: Desc)])
@@ -168,6 +173,10 @@ model CallLog {
   userEmail      String // User email (stable field for filtering)
   barrierxUserId String? // BarrierX platform UUID
   hubspotOwnerId String? // HubSpot CRM owner ID
+
+  // Tenant Context
+  tenantSlug String? // BarrierX tenant slug
+  tenantName String? // BarrierX tenant display name
 
   // Deal context
   dealId       String
@@ -216,12 +225,14 @@ model CallLog {
   @@index([conversationId])
   @@index([initiatedAt])
   @@index([phoneNumber])
+  @@index([tenantSlug])
   // ⚡ Composite indexes for analytics and webhook queries
   @@index([phoneNumber, callType, initiatedAt(sort: Desc)])
   @@index([userId, initiatedAt(sort: Desc)])
   @@index([userEmail, initiatedAt(sort: Desc)])
   @@index([status, initiatedAt])
   @@index([callType, status])
+  @@index([tenantSlug, initiatedAt(sort: Desc)])
 }
 
 // CRM Action Log - Notes, Meetings, Contacts created via AI
@@ -243,6 +254,7 @@ model CrmActionLog {
   conversationId String?
   dealId         String?
   tenantSlug     String
+  tenantName     String? // BarrierX tenant display name
 
   // Action details
   entityId String?
@@ -269,6 +281,7 @@ model CrmActionLog {
   @@index([userEmail])
   @@index([userId])
   @@index([ownerId])
+  @@index([tenantSlug])
 }
 
 // Webhook Log - All incoming webhooks
@@ -282,6 +295,12 @@ model WebhookLog {
   // Context
   conversationId String?
   agentId        String?
+
+  // Tenant Context
+  tenantSlug     String? // BarrierX tenant slug
+  tenantName     String? // BarrierX tenant display name
+  barrierxUserId String? // BarrierX platform UUID
+  hubspotOwnerId String? // HubSpot CRM owner ID
 
   // Status
   status         Status  @default(SUCCESS)
@@ -313,6 +332,12 @@ model SchedulerLog {
   // Run details
   jobType SchedulerJobType
   status  Status           @default(RUNNING)
+
+  // Tenant Context
+  tenantSlug     String? // BarrierX tenant slug
+  tenantName     String? // BarrierX tenant display name
+  barrierxUserId String? // BarrierX platform UUID
+  hubspotOwnerId String? // HubSpot CRM owner ID
 
   // Results
   totalUsers         Int?
@@ -355,6 +380,10 @@ model ErrorLog {
   barrierxUserId String? // BarrierX platform UUID
   hubspotOwnerId String? // HubSpot CRM owner ID
 
+  // Tenant Context
+  tenantSlug String? // BarrierX tenant slug
+  tenantName String? // BarrierX tenant display name
+
   // Other Context
   dealId   String?
   endpoint String?
@@ -378,6 +407,7 @@ model ErrorLog {
   @@index([createdAt])
   @@index([userEmail])
   @@index([userId])
+  @@index([tenantSlug])
   // ⚡ Composite index for dashboard critical errors query
   @@index([severity, isResolved, createdAt(sort: Desc)])
   @@index([errorType, createdAt(sort: Desc)])
@@ -398,6 +428,10 @@ model SmsLog {
   userId         String // AgentX database user ID
   barrierxUserId String? // BarrierX user ID
   hubspotOwnerId String? // HubSpot owner ID
+
+  // Tenant Context
+  tenantSlug String? // BarrierX tenant slug
+  tenantName String? // BarrierX tenant display name
 
   // User info
   userName  String?
@@ -425,9 +459,11 @@ model SmsLog {
   @@index([status])
   @@index([createdAt])
   @@index([meetingId])
+  @@index([tenantSlug])
   // ⚡ Composite indexes for common queries
   @@index([userId, createdAt(sort: Desc)])
   @@index([status, createdAt(sort: Desc)])
+  @@index([tenantSlug, createdAt(sort: Desc)])
 }
 
 // ============================================
@@ -453,6 +489,7 @@ model BarrierXInfoGathering {
   ownerEmail     String
   ownerPhone     String
   hubspotOwnerId String?
+  barrierxUserId String? // BarrierX platform UUID
 
   // Call tracking
   conversationId String? @unique
@@ -799,6 +836,11 @@ model WorkflowCallOutcome {
   dealId      String?
   dealName    String?
   tenantSlug  String?
+  tenantName  String? // BarrierX tenant display name
+
+  // Tenant/User Context
+  barrierxUserId String? // BarrierX platform UUID
+  hubspotOwnerId String? // HubSpot CRM owner ID
 
   // Call tracking
   conversationId String? @unique
