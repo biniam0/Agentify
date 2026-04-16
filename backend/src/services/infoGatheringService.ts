@@ -106,11 +106,7 @@ const BATCH_SIZE = 2;
 const POLL_INTERVAL_MS = 15000;
 const BATCH_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
-const EXCLUDED_PHONE_NUMBERS = [
-  '+2347031277833',
-  '+251982846075',
-  '+251 98 284 6075',
-];
+const EXCLUDED_PHONE_NUMBERS: string[] | [] = [];
 
 const BARRIERX_BULK_API = `${config.barrierx.baseUrl}/api/external/tenants/bulk`;
 
@@ -1005,10 +1001,10 @@ export async function triggerSingleDealCall(
 
   if (result.error) {
     log(`   ❌ Failed to initiate: ${result.error}`);
-    
+
     // Still create a record to track the failed attempt
     const recordId = await createInfoGatheringRecord(tenant, deal, type);
-    
+
     return {
       success: false,
       error: result.error,

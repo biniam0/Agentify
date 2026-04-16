@@ -263,7 +263,7 @@ For development without real API calls:
 USE_MOCK_BARRIERX=true
 ```
 
-- Uses `mockUsers.json` for test data
+- Uses generated dummy data for testing
 - No rate limits or API costs
 - Fast development cycle
 

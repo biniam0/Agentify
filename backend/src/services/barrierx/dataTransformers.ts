@@ -15,7 +15,7 @@ const DEBUG_TRANSFORMERS = false;
 /**
  * Format phone number by removing hyphens, spaces, and parentheses
  * Keeps the + sign for international format
- * Example: "+251-914373107" → "+251914373107"
+ * Example: "+1-555-123-4567" → "+15551234567"
  */
 const formatPhoneNumber = (phone: string): string => {
   if (!phone) return phone;

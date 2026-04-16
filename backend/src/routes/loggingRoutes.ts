@@ -1,20 +1,20 @@
 /**
  * Logging Routes
  * 
- * Admin routes: Only tamiratkebede120@gmail.com can access ALL logs
+ * Admin routes: ADMIN and SUPER_ADMIN users can access ALL logs
  * User routes: Each authenticated user can access ONLY their own logs
  */
 
 import { Router } from 'express';
 import { authenticate } from '../middlewares/auth';
-import { requireSuperAdmin } from '../middlewares/adminAuth';
+import { requireAdmin } from '../middlewares/adminAuth';
 import * as loggingController from '../controllers/loggingController';
 import { config } from '../config/env';
 
 const router = Router();
 
-// All admin logging routes require authentication AND super-admin access
-const adminProtected = config.admin.disableAdminGuard ? [authenticate] : [authenticate, requireSuperAdmin];
+// All admin logging routes require authentication AND admin access (ADMIN or SUPER_ADMIN)
+const adminProtected = config.admin.disableAdminGuard ? [authenticate] : [authenticate, requireAdmin];
 
 // ============================================
 // ADMIN ROUTES (UNCHANGED - ALL USERS' DATA)

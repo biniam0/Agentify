@@ -6,14 +6,14 @@
 
 import { Router } from 'express';
 import { authenticate } from '../middlewares/auth';
-import { requireSuperAdmin } from '../middlewares/adminAuth';
+import { requireAdmin } from '../middlewares/adminAuth';
 import * as dealController from '../controllers/dealController';
 import { config } from '../config/env';
 
 const router = Router();
 
-// All deal routes require authentication AND super-admin access
-const adminProtected = config.admin.disableAdminGuard ? [authenticate] : [authenticate, requireSuperAdmin];
+// All deal routes require authentication AND admin access (ADMIN or SUPER_ADMIN)
+const adminProtected = config.admin.disableAdminGuard ? [authenticate] : [authenticate, requireAdmin];
 
 // Get all deals from BarrierX bulk API
 router.get('/admin', adminProtected, dealController.getAdminDeals);
