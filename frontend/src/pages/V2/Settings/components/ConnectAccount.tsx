@@ -1,11 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ExternalLinkIcon, SettingsIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Switch } from '@/components/ui/switch';
 
+import api from '@/services/api';
+
+type IntegrationStatus = 'CONNECTED' | 'DISCONNECTED' | 'ERROR' | 'PENDING';
+
 interface AppItem {
-  id: string;
+  // Backend provider enum value (e.g., "HUBSPOT")
+  providerId: string;
   name: string;
   iconUrl: string;
   websiteUrl: string;
@@ -13,10 +19,21 @@ interface AppItem {
   description: string;
 }
 
+interface IntegrationRecord {
+  id: string;
+  provider: string;
+  status: IntegrationStatus;
+}
+
+interface IntegrationsResponse {
+  success: boolean;
+  integrations: IntegrationRecord[];
+}
+
 // Catalog of apps that can be connected. Add more entries here as integrations are built.
 const apps: AppItem[] = [
   {
-    id: 'hubspot',
+    providerId: 'HUBSPOT',
     name: 'HubSpot',
     iconUrl: '/logos/hubspot-icon.svg',
     websiteUrl: 'https://www.hubspot.com',
@@ -26,10 +43,73 @@ const apps: AppItem[] = [
 ];
 
 const ConnectAccount = () => {
-  const [connectedIds, setConnectedIds] = useState<string[]>(['hubspot']);
+  const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState<Record<string, boolean>>({});
 
-  const toggleConnection = (appId: string, connected: boolean) => {
-    setConnectedIds((prev) => (connected ? [...new Set([...prev, appId])] : prev.filter((id) => id !== appId)));
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const { data } = await api.get<IntegrationsResponse>('/user/integrations');
+        if (cancelled || !data?.success) return;
+        const next = new Set<string>();
+        data.integrations.forEach((i) => {
+          if (i.status === 'CONNECTED') next.add(i.provider);
+        });
+        setConnectedProviders(next);
+      } catch (err) {
+        console.error('Failed to load integrations:', err);
+        toast.error('Failed to load connected accounts');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggleConnection = async (providerId: string, nextChecked: boolean) => {
+    if (pending[providerId]) return;
+    setPending((prev) => ({ ...prev, [providerId]: true }));
+
+    // Optimistic update — revert on failure.
+    setConnectedProviders((prev) => {
+      const next = new Set(prev);
+      if (nextChecked) next.add(providerId);
+      else next.delete(providerId);
+      return next;
+    });
+
+    try {
+      const action = nextChecked ? 'connect' : 'disconnect';
+      await api.post(`/user/integrations/${providerId}/${action}`);
+      toast.success(
+        `${apps.find((a) => a.providerId === providerId)?.name ?? providerId} ${nextChecked ? 'connected' : 'disconnected'}`
+      );
+    } catch (err) {
+      console.error('Failed to toggle integration:', err);
+      const message =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        'Failed to update integration';
+      toast.error(message);
+      setConnectedProviders((prev) => {
+        const next = new Set(prev);
+        if (nextChecked) next.delete(providerId);
+        else next.add(providerId);
+        return next;
+      });
+    } finally {
+      setPending((prev) => {
+        const next = { ...prev };
+        delete next[providerId];
+        return next;
+      });
+    }
   };
 
   return (
@@ -42,12 +122,13 @@ const ConnectAccount = () => {
       <div className="lg:col-span-2">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {apps.map((app) => {
-            const isConnected = connectedIds.includes(app.id);
+            const isConnected = connectedProviders.has(app.providerId);
+            const isPending = !!pending[app.providerId];
 
             return (
               <div
-                key={app.id}
-                className="bg-card flex flex-col rounded-xl border p-4"
+                key={app.providerId}
+                className="bg-card flex flex-col rounded-xl border p-4 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="bg-background flex size-10 items-center justify-center rounded-lg border p-1.5">
@@ -79,8 +160,9 @@ const ConnectAccount = () => {
                   </button>
                   <Switch
                     checked={isConnected}
-                    onCheckedChange={(checked) => toggleConnection(app.id, checked)}
+                    onCheckedChange={(checked) => toggleConnection(app.providerId, checked)}
                     aria-label={`${isConnected ? 'Disconnect' : 'Connect'} ${app.name}`}
+                    disabled={loading || isPending}
                     className={isConnected ? 'bg-emerald-500' : undefined}
                   />
                 </div>
