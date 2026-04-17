@@ -1,75 +1,35 @@
 import { useState } from 'react';
 
-import { XIcon, PlusIcon } from 'lucide-react';
+import { ExternalLinkIcon, SettingsIcon } from 'lucide-react';
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
-interface ConnectedAccountItem {
+interface AppItem {
   id: string;
   name: string;
   iconUrl: string;
+  websiteUrl: string;
+  websiteLabel: string;
+  description: string;
 }
 
-const initialAccounts: ConnectedAccountItem[] = [
+// Catalog of apps that can be connected. Add more entries here as integrations are built.
+const apps: AppItem[] = [
   {
-    id: 'google',
-    name: 'Google',
-    iconUrl: 'https://cdn.shadcnstudio.com/ss-assets/brand-logo/google-icon.png',
-  },
-  {
-    id: 'slack',
-    name: 'Slack',
-    iconUrl: 'https://cdn.shadcnstudio.com/ss-assets/brand-logo/slack-icon.png',
+    id: 'hubspot',
+    name: 'HubSpot',
+    iconUrl: '/logos/hubspot-icon.svg',
+    websiteUrl: 'https://www.hubspot.com',
+    websiteLabel: 'www.hubspot.com',
+    description: "Grow your business with HubSpot's integrated CRM platform.",
   },
 ];
 
 const ConnectAccount = () => {
-  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccountItem[]>(initialAccounts);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [connectedIds, setConnectedIds] = useState<string[]>(['hubspot']);
 
-  const [appName, setAppName] = useState('');
-  const [appUrl, setAppUrl] = useState('');
-  const [appIconUrl, setAppIconUrl] = useState('');
-  const [description, setDescription] = useState('');
-
-  const handleRemoveAccount = (accountId: string) => {
-    setConnectedAccounts((prev) => prev.filter((account) => account.id !== accountId));
-  };
-
-  const resetForm = () => {
-    setAppName('');
-    setAppUrl('');
-    setAppIconUrl('');
-    setDescription('');
-  };
-
-  const handleConnect = () => {
-    if (!appName.trim() || !appUrl.trim()) return;
-
-    const id = appName.toLowerCase().replace(/\s+/g, '-');
-
-    setConnectedAccounts((prev) => [
-      ...prev,
-      {
-        id,
-        name: appName,
-        iconUrl: appIconUrl.trim() || '',
-      },
-    ]);
-
-    resetForm();
-    setIsDialogOpen(false);
+  const toggleConnection = (appId: string, connected: boolean) => {
+    setConnectedIds((prev) => (connected ? [...new Set([...prev, appId])] : prev.filter((id) => id !== appId)));
   };
 
   return (
@@ -79,90 +39,55 @@ const ConnectAccount = () => {
         <p className="text-muted-foreground text-sm">Manage your connected accounts.</p>
       </div>
 
-      <div className="space-y-4 lg:col-span-2">
-        <div className="flex flex-wrap items-center gap-4">
-          {connectedAccounts.map((account) => (
-            <div key={account.id} className="flex w-fit items-center gap-3 rounded-md border p-2">
-              {account.iconUrl ? (
-                <img src={account.iconUrl} alt={account.name} className="size-4 rounded" />
-              ) : (
-                <div className="bg-muted-foreground/10 text-muted-foreground flex size-4 items-center justify-center rounded text-sm font-medium">
-                  {account.name.charAt(0)}
-                </div>
-              )}
+      <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {apps.map((app) => {
+            const isConnected = connectedIds.includes(app.id);
 
-              <p className="text-sm font-medium">{account.name}</p>
-              <Button
-                size="xs"
-                variant="ghost"
-                className="text-primary bg-primary/10 rounded-md transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none"
-                aria-label={`Remove ${account.name}`}
-                onClick={() => handleRemoveAccount(account.id)}
+            return (
+              <div
+                key={app.id}
+                className="bg-card flex flex-col rounded-xl border p-4"
               >
-                <XIcon className="size-3" aria-hidden="true" />
-              </Button>
-            </div>
-          ))}
-
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="h-[42px]" onClick={() => setIsDialogOpen(true)}>
-                <PlusIcon className="size-4" />
-                Add App
-              </Button>
-            </DialogTrigger>
-
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Connect New App</DialogTitle>
-                <DialogDescription>Add a new integration by providing the details below.</DialogDescription>
-              </DialogHeader>
-
-              <div className="grid gap-3 py-2">
-                <div className="grid gap-1">
-                  <Label>App Name</Label>
-                  <Input value={appName} onChange={(e) => setAppName(e.target.value)} placeholder="e.g., Zoom" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="bg-background flex size-10 items-center justify-center rounded-lg border p-1.5">
+                    <img src={app.iconUrl} alt={`${app.name} logo`} className="size-full object-contain" />
+                  </div>
+                  <a
+                    href={app.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs transition-colors"
+                  >
+                    {app.websiteLabel}
+                    <ExternalLinkIcon className="size-3" />
+                  </a>
                 </div>
 
-                <div className="grid gap-1">
-                  <Label>App URL or Integration Key</Label>
-                  <Input
-                    value={appUrl}
-                    onChange={(e) => setAppUrl(e.target.value)}
-                    placeholder="https://app.example.com or key_abc123"
-                  />
+                <div className="mt-3 space-y-1">
+                  <h4 className="text-foreground text-base font-semibold">{app.name}</h4>
+                  <p className="text-muted-foreground text-sm leading-snug">{app.description}</p>
                 </div>
 
-                <div className="grid gap-1">
-                  <Label>Optional Description</Label>
-                  <Input
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Notes about this integration (optional)"
+                <div className="border-border mt-4 flex items-center justify-between border-t pt-3">
+                  <button
+                    type="button"
+                    className="text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
+                  >
+                    <SettingsIcon className="size-4" />
+                    Manage
+                  </button>
+                  <Switch
+                    checked={isConnected}
+                    onCheckedChange={(checked) => toggleConnection(app.id, checked)}
+                    aria-label={`${isConnected ? 'Disconnect' : 'Connect'} ${app.name}`}
+                    className={isConnected ? 'bg-emerald-500' : undefined}
                   />
                 </div>
               </div>
-
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    resetForm();
-                    setIsDialogOpen(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleConnect} disabled={!appName.trim() || !appUrl.trim()}>
-                  Connect
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            );
+          })}
         </div>
-        <p className="text-muted-foreground text-sm">
-          Connected accounts allow you to integrate with third-party services for enhanced functionality.
-        </p>
       </div>
     </div>
   );

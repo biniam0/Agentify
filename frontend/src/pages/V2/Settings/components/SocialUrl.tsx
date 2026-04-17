@@ -37,7 +37,9 @@ const SocialUrl = () => {
             <PlusIcon className="size-4" />
             Add URL
           </Button>
-          <Button type="submit">Save Changes</Button>
+          <Button type="submit" variant="gradientEmerald">
+            Save Changes
+          </Button>
         </div>
       </div>
     </div>
