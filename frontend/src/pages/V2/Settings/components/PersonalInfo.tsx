@@ -13,21 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CountrySelect } from '@/components/ui/country-select';
 
 import api from '@/services/api';
-
-const countries = [
-  { value: 'india', label: 'India', flag: 'https://cdn.shadcnstudio.com/ss-assets/flags/india.png' },
-  { value: 'china', label: 'China', flag: 'https://cdn.shadcnstudio.com/ss-assets/flags/china.png' },
-  { value: 'monaco', label: 'Monaco', flag: 'https://cdn.shadcnstudio.com/ss-assets/flags/monaco.png' },
-  { value: 'serbia', label: 'Serbia', flag: 'https://cdn.shadcnstudio.com/ss-assets/flags/serbia.png' },
-  { value: 'romania', label: 'Romania', flag: 'https://cdn.shadcnstudio.com/ss-assets/flags/romania.png' },
-  { value: 'mayotte', label: 'Mayotte', flag: 'https://cdn.shadcnstudio.com/ss-assets/flags/mayotte.png' },
-  { value: 'iraq', label: 'Iraq', flag: 'https://cdn.shadcnstudio.com/ss-assets/flags/iraq.png' },
-  { value: 'syria', label: 'Syria', flag: 'https://cdn.shadcnstudio.com/ss-assets/flags/syria.png' },
-  { value: 'korea', label: 'Korea', flag: 'https://cdn.shadcnstudio.com/ss-assets/flags/korea.png' },
-  { value: 'zimbabwe', label: 'Zimbabwe', flag: 'https://cdn.shadcnstudio.com/ss-assets/flags/zimbabwe.png' },
-];
 
 type GenderValue = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
 
@@ -152,22 +140,12 @@ const PersonalInfo = () => {
             </div>
             <div className="flex flex-col items-start gap-2">
               <Label htmlFor="country">Country</Label>
-              <Select value={country} onValueChange={setCountry} disabled={loading}>
-                <SelectTrigger
-                  id="country"
-                  className="[&>span_svg]:text-muted-foreground/80 w-full [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span_svg]:shrink-0"
-                >
-                  <SelectValue placeholder="Select country" />
-                </SelectTrigger>
-                <SelectContent className="[&_*[role=option]>span>svg]:text-muted-foreground/80 max-h-[400px] [&_*[role=option]]:pr-8 [&_*[role=option]]:pl-2 [&_*[role=option]>span]:right-2 [&_*[role=option]>span]:left-auto [&_*[role=option]>span]:flex [&_*[role=option]>span]:items-center [&_*[role=option]>span]:gap-2 [&_*[role=option]>span>svg]:shrink-0">
-                  {countries.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      <img src={c.flag} alt={`${c.label} flag`} className="h-4 w-5" />{' '}
-                      <span className="truncate">{c.label}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CountrySelect
+                id="country"
+                value={country}
+                onChange={setCountry}
+                disabled={loading}
+              />
             </div>
 
             <div className="space-y-2">
