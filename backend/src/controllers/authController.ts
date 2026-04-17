@@ -7,8 +7,15 @@ import { setAuthCookies, clearAuthCookies } from '../utils/cookies';
 import { AuthRequest } from '../middlewares/auth';
 import { invalidateUserCache } from '../utils/userCache';
 
-async function issueTokens(res: Response, userId: string, email: string, role: string) {
-  const accessToken = generateAccessToken({ userId, email, role });
+async function issueTokens(
+  res: Response,
+  userId: string,
+  email: string,
+  role: string,
+  tenantSlug: string,
+  barrierxUserId: string,
+) {
+  const accessToken = generateAccessToken({ userId, email, role, tenantSlug, barrierxUserId });
   const refreshTokenValue = generateRefreshTokenValue();
 
   await prisma.refreshToken.create({
@@ -97,7 +104,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       });
     }
 
-    await issueTokens(res, user.id, user.email, user.role);
+    await issueTokens(res, user.id, user.email, user.role, user.tenantSlug, user.barrierxUserId);
 
     res.json({
       success: true,
@@ -109,6 +116,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         isAuth: user.isAuth,
         isEnabled: user.isEnabled,
         onboardingCompleted: user.onboardingCompleted,
+        tenantSlug: user.tenantSlug,
+        barrierxUserId: user.barrierxUserId,
+        hubspotOwnerId: user.hubspotOwnerId,
       },
     });
   } catch (error) {
@@ -151,7 +161,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     });
 
     const { user } = storedToken;
-    await issueTokens(res, user.id, user.email, user.role);
+    await issueTokens(res, user.id, user.email, user.role, user.tenantSlug, user.barrierxUserId);
 
     res.json({
       success: true,
@@ -163,6 +173,9 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
         isAuth: user.isAuth,
         isEnabled: user.isEnabled,
         onboardingCompleted: user.onboardingCompleted,
+        tenantSlug: user.tenantSlug,
+        barrierxUserId: user.barrierxUserId,
+        hubspotOwnerId: user.hubspotOwnerId,
       },
     });
   } catch (error) {

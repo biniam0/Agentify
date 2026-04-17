@@ -64,6 +64,9 @@ export const getCurrentUser = async (req: AuthRequest, res: Response): Promise<v
         onboardingCompleted: true,
         selectedPlan: true,
         stripeCustomerId: true,
+        tenantSlug: true,
+        barrierxUserId: true,
+        hubspotOwnerId: true,
       },
     });
 

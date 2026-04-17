@@ -7,6 +7,10 @@ export interface User {
   isAuth: boolean;
   isEnabled: boolean;
   onboardingCompleted?: boolean;
+  tenantSlug?: string;
+  tenantName?: string;
+  barrierxUserId?: string;
+  hubspotOwnerId?: string;
 }
 
 export interface Contact {

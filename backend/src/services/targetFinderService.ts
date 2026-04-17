@@ -3,7 +3,8 @@
  * Simplified MVP: Find targets from bulk data using LLM intent
  */
 
-import * as barrierxService from './barrierxService';
+import axios from 'axios';
+import { config } from '../config/env';
 import { Deal } from './barrierxService';
 import { SimpleIntent } from './llm/promptParserService';
 
@@ -24,38 +25,130 @@ export interface Target {
   hubspotOwnerId?: string;
 }
 
+export interface UnreachableTarget {
+  name: string;
+  email?: string;
+  dealId: string;
+  dealName: string;
+  company?: string;
+  reason: string;
+}
+
+// ============================================
+// PER-TENANT DATA FETCHING
+// ============================================
+
+async function getTenantDealsWildcard(tenantSlug: string): Promise<Deal[]> {
+  console.log(`📡 Fetching deals for tenant: ${tenantSlug}...`);
+
+  const url = `${config.barrierx.baseUrl}/api/external/tenants/${tenantSlug}/deals`;
+  const response = await axios.get(url, {
+    headers: {
+      'Authorization': `Bearer ${config.barrierx.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    timeout: 60000,
+  });
+
+  const rawDeals: any[] = response.data.deals || [];
+
+  const deals: Deal[] = rawDeals.map((deal: any) => ({
+    id: deal.id,
+    name: deal.dealName || 'Unnamed Deal',
+    amount: deal.amount || 0,
+    stage: deal.stage || 'Unknown',
+    company: deal.company || 'Unknown Company',
+    ownerId: deal.owner?.hubspotId || '',
+    ownerName: deal.owner?.name || 'Unknown',
+    ownerPhone: deal.owner?.phone || '',
+    ownerEmail: deal.owner?.email || '',
+    ownerHubspotId: deal.owner?.hubspotId,
+    ownerTimezone: deal.owner?.timezone,
+    tenantSlug,
+    contacts: (deal.contacts || []).map((c: any) => ({
+      id: c.id || '',
+      name: c.name || c.full_name || 'Unknown Contact',
+      email: c.email || '',
+      phone: c.phone || '',
+      company: deal.company || '',
+    })),
+    meetings: (deal.meetings || []).map((m: any) => ({
+      id: m.id || '',
+      title: m.title || '',
+      startTime: m.startTime || '',
+      endTime: m.endTime || '',
+      body: m.body || '',
+    })),
+    summary: deal.summary || `Deal: ${deal.dealName}`,
+    userDealRiskScores: deal.userDealRiskScores || {
+      arenaRisk: 0, controlRoomRisk: 0, scoreCardRisk: 0, totalDealRisk: 0, subCategoryRisk: {},
+    },
+    closeDate: deal.closeDate,
+    recommendations: deal.recommendations || [],
+  }));
+
+  console.log(`   ✅ Found ${deals.length} deals for tenant: ${tenantSlug}`);
+  return deals;
+}
+
 // ============================================
 // TARGET FINDING
 // ============================================
 
 /**
- * Find targets based on simple intent criteria
- * This replaces the complex audience resolution with simple filtering
+ * Find targets based on simple intent criteria (including unreachable ones).
+ * Returns both callable targets (phone present) and unreachable ones
+ * (matched by criteria but missing phone or owner name) so the caller can
+ * distinguish "no match" from "matched but can't call".
  */
-export const findTargets = async (intent: SimpleIntent): Promise<Target[]> => {
-  console.log(`🎯 Finding targets for intent: ${intent.action}`);
+const findTargetsWithUnreachable = async (
+  intent: SimpleIntent,
+  tenantSlug: string,
+): Promise<{ targets: Target[]; unreachable: UnreachableTarget[]; matchedDealCount: number }> => {
+  console.log(`🎯 Finding targets for intent: ${intent.action} (tenant: ${tenantSlug})`);
 
-  // Step 1: Fetch bulk data from BarrierX (cached by Redis)
-  const allDealsMap = await barrierxService.getAllDealsWildcard();
+  const allDeals = await getTenantDealsWildcard(tenantSlug);
 
-  // Flatten into single array
-  let allDeals: Deal[] = [];
-  allDealsMap.forEach((deals) => {
-    allDeals = allDeals.concat(deals);
-  });
+  console.log(`📊 Total deals for tenant ${tenantSlug}: ${allDeals.length}`);
 
-  console.log(`📊 Total deals in system: ${allDeals.length}`);
-
-  // Step 2: Apply simple filtering based on intent criteria
   const filteredDeals = filterDealsByIntent(allDeals, intent);
 
-  console.log(`✅ Targets found: ${filteredDeals.length}`);
+  console.log(`✅ Matched deals: ${filteredDeals.length}`);
 
-  // Step 3: Convert to target format and filter out contacts without phone numbers
-  const targets = filteredDeals
-    .map(deal => ({
-      name: deal.ownerName,
-      phone: deal.ownerPhone || '', // Ensure phone is always a string
+  const targets: Target[] = [];
+  const unreachable: UnreachableTarget[] = [];
+
+  for (const deal of filteredDeals) {
+    const phone = (deal.ownerPhone || '').trim();
+    const name = (deal.ownerName || '').trim();
+
+    if (!name) {
+      unreachable.push({
+        name: 'Unknown',
+        email: deal.ownerEmail,
+        dealId: deal.id,
+        dealName: deal.name,
+        company: deal.company,
+        reason: 'Deal owner has no name in BarrierX',
+      });
+      continue;
+    }
+
+    if (!phone) {
+      unreachable.push({
+        name,
+        email: deal.ownerEmail,
+        dealId: deal.id,
+        dealName: deal.name,
+        company: deal.company,
+        reason: 'Deal owner has no phone number in BarrierX',
+      });
+      continue;
+    }
+
+    targets.push({
+      name,
+      phone,
       email: deal.ownerEmail,
       dealId: deal.id,
       dealName: deal.name,
@@ -64,11 +157,26 @@ export const findTargets = async (intent: SimpleIntent): Promise<Target[]> => {
       company: deal.company,
       tenantSlug: deal.tenantSlug,
       hubspotOwnerId: deal.ownerHubspotId,
-    }))
-    .filter(target => target.phone && target.name); // Only include targets with phone and name
+    });
+  }
 
-  console.log(`📞 Targets with phone numbers: ${targets.length}`);
+  console.log(`📞 Reachable targets (with phone): ${targets.length}`);
+  if (unreachable.length > 0) {
+    console.log(`🚫 Unreachable matches (missing phone/name): ${unreachable.length}`);
+    unreachable.forEach(u =>
+      console.log(`   - "${u.dealName}" (${u.name}): ${u.reason}`),
+    );
+  }
 
+  return { targets, unreachable, matchedDealCount: filteredDeals.length };
+};
+
+/**
+ * Find callable targets based on simple intent criteria.
+ * Only returns targets with a phone number (required for calling).
+ */
+export const findTargets = async (intent: SimpleIntent, tenantSlug: string): Promise<Target[]> => {
+  const { targets } = await findTargetsWithUnreachable(intent, tenantSlug);
   return targets;
 };
 
@@ -211,17 +319,21 @@ const filterDealsByIntent = (deals: Deal[], intent: SimpleIntent): Deal[] => {
 /**
  * Get a preview of targets without executing the workflow
  */
-export const previewTargets = async (intent: SimpleIntent): Promise<{
+export const previewTargets = async (intent: SimpleIntent, tenantSlug: string): Promise<{
   count: number;
   sample: Target[];
   summary: string;
+  unreachable: UnreachableTarget[];
+  matchedDealCount: number;
 }> => {
-  const targets = await findTargets(intent);
+  const { targets, unreachable, matchedDealCount } = await findTargetsWithUnreachable(intent, tenantSlug);
 
   return {
     count: targets.length,
-    sample: targets.slice(0, 5), // First 5 targets as preview
+    sample: targets.slice(0, 5),
     summary: generateTargetSummary(targets, intent),
+    unreachable,
+    matchedDealCount,
   };
 };
 

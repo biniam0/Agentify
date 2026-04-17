@@ -32,6 +32,7 @@ export const getCallLogs = async (req: AuthRequest, res: Response): Promise<void
   try {
     const {
       userId,
+      tenantSlug,
       dealId,
       callType,
       status,
@@ -43,6 +44,7 @@ export const getCallLogs = async (req: AuthRequest, res: Response): Promise<void
 
     const result = await loggingService.getCallLogs({
       userId: userId as string,
+      tenantSlug: tenantSlug as string,
       dealId: dealId as string,
       callType: callType as CallType,
       status: status as CallStatus,
@@ -76,6 +78,7 @@ export const getActivityLogs = async (req: AuthRequest, res: Response): Promise<
   try {
     const {
       userId,
+      tenantSlug,
       activityType,
       status,
       startDate,
@@ -86,6 +89,7 @@ export const getActivityLogs = async (req: AuthRequest, res: Response): Promise<
 
     const result = await loggingService.getActivityLogs({
       userId: userId as string,
+      tenantSlug: tenantSlug as string,
       activityType: activityType as ActivityType,
       status: status as Status,
       startDate: startDate ? new Date(startDate as string) : undefined,
@@ -117,6 +121,7 @@ export const getActivityLogs = async (req: AuthRequest, res: Response): Promise<
 export const getErrorLogs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const {
+      tenantSlug,
       errorType,
       severity,
       isResolved,
@@ -127,6 +132,7 @@ export const getErrorLogs = async (req: AuthRequest, res: Response): Promise<voi
     } = req.query;
 
     const result = await loggingService.getErrorLogs({
+      tenantSlug: tenantSlug as string,
       errorType: errorType as ErrorType,
       severity: severity as Severity,
       isResolved: isResolved === 'true' ? true : isResolved === 'false' ? false : undefined,
@@ -159,6 +165,7 @@ export const getErrorLogs = async (req: AuthRequest, res: Response): Promise<voi
 export const getWebhookLogs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const {
+      tenantSlug,
       webhookType,
       eventType,
       conversationId,
@@ -170,6 +177,7 @@ export const getWebhookLogs = async (req: AuthRequest, res: Response): Promise<v
     } = req.query;
 
     const result = await loggingService.getWebhookLogs({
+      tenantSlug: tenantSlug as string,
       webhookType: webhookType as WebhookType,
       eventType: eventType as string,
       conversationId: conversationId as string,
@@ -203,6 +211,7 @@ export const getWebhookLogs = async (req: AuthRequest, res: Response): Promise<v
 export const getSchedulerLogs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const {
+      tenantSlug,
       jobType,
       status,
       startDate,
@@ -212,6 +221,7 @@ export const getSchedulerLogs = async (req: AuthRequest, res: Response): Promise
     } = req.query;
 
     const result = await loggingService.getSchedulerLogs({
+      tenantSlug: tenantSlug as string,
       jobType: jobType as SchedulerJobType,
       status: status as Status,
       startDate: startDate ? new Date(startDate as string) : undefined,
@@ -243,6 +253,7 @@ export const getSchedulerLogs = async (req: AuthRequest, res: Response): Promise
 export const getCrmActionLogs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const {
+      tenantSlug,
       actionType,
       conversationId,
       dealId,
@@ -254,6 +265,7 @@ export const getCrmActionLogs = async (req: AuthRequest, res: Response): Promise
     } = req.query;
 
     const result = await loggingService.getCrmActionLogs({
+      tenantSlug: tenantSlug as string,
       actionType: actionType as CrmActionType,
       conversationId: conversationId as string,
       dealId: dealId as string,
@@ -288,6 +300,7 @@ export const getSmsLogs = async (req: AuthRequest, res: Response): Promise<void>
   try {
     const {
       userId,
+      tenantSlug,
       userEmail,
       status,
       meetingId,
@@ -299,6 +312,7 @@ export const getSmsLogs = async (req: AuthRequest, res: Response): Promise<void>
 
     const result = await loggingService.getSmsLogs({
       userId: userId as string,
+      tenantSlug: tenantSlug as string,
       userEmail: userEmail as string,
       status: status as SmsStatus,
       meetingId: meetingId as string,
@@ -330,11 +344,12 @@ export const getSmsLogs = async (req: AuthRequest, res: Response): Promise<void>
 
 export const getCallAnalytics = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { userId, days = 7 } = req.query;
+    const { userId, tenantSlug, days = 7 } = req.query;
 
     const analytics = await loggingService.getCallAnalytics(
       userId as string,
-      parseInt(days as string)
+      parseInt(days as string),
+      tenantSlug as string,
     );
 
     res.json({
@@ -352,7 +367,8 @@ export const getCallAnalytics = async (req: AuthRequest, res: Response): Promise
 
 export const getDashboardStats = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const stats = await loggingService.getDashboardStats();
+    const { tenantSlug } = req.query;
+    const stats = await loggingService.getDashboardStats(tenantSlug as string);
 
     res.json({
       success: true,
@@ -928,7 +944,13 @@ export const triggerZeroScoreCalls = async (req: AuthRequest, res: Response): Pr
     console.log(`⏰ Time: ${new Date().toISOString()}`);
     console.log(`👤 Triggered by: ${triggeredBy}`);
 
-    const result = await infoGatheringService.startZeroScoreGathering(triggeredBy);
+    const tenantSlug = (req.body?.tenantSlug || req.user?.tenantSlug) as string | undefined;
+    if (!tenantSlug) {
+      res.status(400).json({ success: false, error: 'tenantSlug is required' });
+      return;
+    }
+
+    const result = await infoGatheringService.startZeroScoreGathering(triggeredBy, tenantSlug);
 
     if (!result.success) {
       res.status(result.warning ? 422 : 409).json({
@@ -967,7 +989,13 @@ export const triggerLostDealCalls = async (req: AuthRequest, res: Response): Pro
     console.log(`⏰ Time: ${new Date().toISOString()}`);
     console.log(`👤 Triggered by: ${triggeredBy}`);
 
-    const result = await infoGatheringService.startLostDealGathering(triggeredBy);
+    const tenantSlug = (req.body?.tenantSlug || req.user?.tenantSlug) as string | undefined;
+    if (!tenantSlug) {
+      res.status(400).json({ success: false, error: 'tenantSlug is required' });
+      return;
+    }
+
+    const result = await infoGatheringService.startLostDealGathering(triggeredBy, tenantSlug);
 
     if (!result.success) {
       res.status(result.warning ? 422 : 409).json({
@@ -1087,7 +1115,13 @@ export const triggerInactivityCalls = async (req: AuthRequest, res: Response): P
     console.log(`⏰ Time: ${new Date().toISOString()}`);
     console.log(`👤 Triggered by: ${triggeredBy}`);
 
-    const result = await infoGatheringService.startInactivityGathering(triggeredBy);
+    const tenantSlug = (req.body?.tenantSlug || req.user?.tenantSlug) as string | undefined;
+    if (!tenantSlug) {
+      res.status(400).json({ success: false, error: 'tenantSlug is required' });
+      return;
+    }
+
+    const result = await infoGatheringService.startInactivityGathering(triggeredBy, tenantSlug);
 
     if (!result.success) {
       res.status(result.warning ? 422 : 409).json({

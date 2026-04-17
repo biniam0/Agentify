@@ -8,6 +8,7 @@ import DealsFilterTabs from './DealsFilterTabs';
 import SmsSentTable from './SmsSentTable';
 import * as loggingService from '@/services/loggingService';
 import type { SmsLog } from '@/services/loggingService';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface SmsSentSectionProps {
   onViewDetails: (sms: SmsLog) => void;
@@ -16,6 +17,7 @@ interface SmsSentSectionProps {
 const ITEMS_PER_PAGE = 10;
 
 const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
+  const { tenantSlug } = useTenant();
   const [logs, setLogs] = useState<SmsLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -26,6 +28,7 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
     setLoading(true);
     try {
       const response = await loggingService.getSmsLogs({
+        tenantSlug: tenantSlug || undefined,
         limit: ITEMS_PER_PAGE,
         offset: (page - 1) * ITEMS_PER_PAGE,
       });
@@ -40,7 +43,7 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, tenantSlug]);
 
   useEffect(() => {
     fetchLogs();

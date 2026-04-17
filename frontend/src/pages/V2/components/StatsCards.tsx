@@ -11,6 +11,7 @@ import {
   getCrmActionLogs,
   type CallAnalytics,
 } from '@/services/loggingService';
+import { useTenant } from '@/contexts/TenantContext';
 
 type CardId = 'totalCalls' | 'completedCalls' | 'sms' | 'crm';
 
@@ -194,6 +195,7 @@ const CHART_TITLES: Record<CardId, string> = {
 };
 
 const StatsCards = () => {
+  const { tenantSlug } = useTenant();
   const [currentAnalytics, setCurrentAnalytics] = useState<CallAnalytics | null>(null);
   const [previousAnalytics, setPreviousAnalytics] = useState<CallAnalytics | null>(null);
   const [sparklines, setSparklines] = useState<SparklineData>({
@@ -213,6 +215,7 @@ const StatsCards = () => {
         const startDate30 = daysAgo(30);
         const startDate60 = daysAgo(60);
         const startDateSparkline = daysAgo(SPARKLINE_DAYS);
+        const ts = tenantSlug || undefined;
 
         const [
           currentRes, fullRes,
@@ -220,13 +223,13 @@ const StatsCards = () => {
           smsCurrentRes, smsPrevRes,
           crmCurrentRes, crmPrevRes,
         ] = await Promise.all([
-          getCallAnalytics(undefined, 30),
-          getCallAnalytics(undefined, 60),
-          getCallLogs({ startDate: startDateSparkline, limit: 5000 }),
-          getSmsLogs({ startDate: startDate30, limit: 5000 }),
-          getSmsLogs({ startDate: startDate60, limit: 5000 }),
-          getCrmActionLogs({ startDate: startDate30, limit: 5000 }),
-          getCrmActionLogs({ startDate: startDate60, limit: 5000 }),
+          getCallAnalytics(undefined, 30, ts),
+          getCallAnalytics(undefined, 60, ts),
+          getCallLogs({ tenantSlug: ts, startDate: startDateSparkline, limit: 5000 }),
+          getSmsLogs({ tenantSlug: ts, startDate: startDate30, limit: 5000 }),
+          getSmsLogs({ tenantSlug: ts, startDate: startDate60, limit: 5000 }),
+          getCrmActionLogs({ tenantSlug: ts, startDate: startDate30, limit: 5000 }),
+          getCrmActionLogs({ tenantSlug: ts, startDate: startDate60, limit: 5000 }),
         ]);
 
         const current = currentRes.success ? currentRes.data : null;
@@ -300,7 +303,7 @@ const StatsCards = () => {
     };
 
     fetchData();
-  }, []);
+  }, [tenantSlug]);
 
   const cards = buildCards(currentAnalytics, previousAnalytics, sparklines, counts, loading);
 

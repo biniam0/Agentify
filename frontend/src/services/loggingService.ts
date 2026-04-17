@@ -17,6 +17,10 @@ export interface CallLog {
     userId: string;
     userName: string;
     userEmail: string;
+    barrierxUserId?: string;
+    hubspotOwnerId?: string;
+    tenantSlug?: string;
+    tenantName?: string;
     dealId: string;
     dealName: string;
     meetingId: string;
@@ -50,6 +54,10 @@ export interface ActivityLog {
     userId?: string;
     userName?: string;
     userEmail?: string;
+    barrierxUserId?: string;
+    hubspotOwnerId?: string;
+    tenantSlug?: string;
+    tenantName?: string;
     dealId?: string;
     dealName?: string;
     meetingId?: string;
@@ -74,6 +82,8 @@ export interface ErrorLog {
     stack?: string;
     code?: string;
     userId?: string;
+    tenantSlug?: string;
+    tenantName?: string;
     dealId?: string;
     endpoint?: string;
     method?: string;
@@ -123,6 +133,7 @@ export interface CrmActionLog {
     conversationId?: string;
     dealId?: string;
     tenantSlug: string;
+    tenantName?: string;
     ownerId: string;
     entityId?: string;
     title?: string;
@@ -145,6 +156,8 @@ export interface SmsLog {
     userId: string;
     barrierxUserId?: string;
     hubspotOwnerId?: string;
+    tenantSlug?: string;
+    tenantName?: string;
     userName?: string;
     userEmail?: string;
     ownerName?: string;
@@ -201,6 +214,7 @@ interface PaginatedResponse<T> {
 
 export const getCallLogs = async (filters?: {
     userId?: string;
+    tenantSlug?: string;
     dealId?: string;
     callType?: string;
     status?: string;
@@ -223,6 +237,7 @@ export const getCallLogs = async (filters?: {
 
 export const getActivityLogs = async (filters?: {
     userId?: string;
+    tenantSlug?: string;
     activityType?: string;
     status?: string;
     startDate?: string;
@@ -243,6 +258,7 @@ export const getActivityLogs = async (filters?: {
 };
 
 export const getErrorLogs = async (filters?: {
+    tenantSlug?: string;
     errorType?: string;
     severity?: string;
     isResolved?: boolean;
@@ -264,6 +280,7 @@ export const getErrorLogs = async (filters?: {
 };
 
 export const getWebhookLogs = async (filters?: {
+    tenantSlug?: string;
     webhookType?: string;
     eventType?: string;
     conversationId?: string;
@@ -286,6 +303,7 @@ export const getWebhookLogs = async (filters?: {
 };
 
 export const getSchedulerLogs = async (filters?: {
+    tenantSlug?: string;
     jobType?: string;
     status?: string;
     startDate?: string;
@@ -306,6 +324,7 @@ export const getSchedulerLogs = async (filters?: {
 };
 
 export const getCrmActionLogs = async (filters?: {
+    tenantSlug?: string;
     actionType?: string;
     conversationId?: string;
     dealId?: string;
@@ -329,6 +348,7 @@ export const getCrmActionLogs = async (filters?: {
 
 export const getSmsLogs = async (filters?: {
     userId?: string;
+    tenantSlug?: string;
     userEmail?: string;
     status?: string;
     meetingId?: string;
@@ -349,16 +369,19 @@ export const getSmsLogs = async (filters?: {
     return response.data;
 };
 
-export const getCallAnalytics = async (userId?: string, days: number = 7): Promise<{ success: boolean; data: CallAnalytics }> => {
+export const getCallAnalytics = async (userId?: string, days: number = 7, tenantSlug?: string): Promise<{ success: boolean; data: CallAnalytics }> => {
     const params = new URLSearchParams();
     if (userId) params.append('userId', userId);
+    if (tenantSlug) params.append('tenantSlug', tenantSlug);
     params.append('days', days.toString());
     const response = await api.get(`/logs/analytics/calls?${params.toString()}`);
     return response.data;
 };
 
-export const getDashboardStats = async (): Promise<{ success: boolean; data: DashboardStats }> => {
-    const response = await api.get('/logs/analytics/dashboard');
+export const getDashboardStats = async (tenantSlug?: string): Promise<{ success: boolean; data: DashboardStats }> => {
+    const params = new URLSearchParams();
+    if (tenantSlug) params.append('tenantSlug', tenantSlug);
+    const response = await api.get(`/logs/analytics/dashboard?${params.toString()}`);
     return response.data;
 };
 
