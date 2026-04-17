@@ -12,7 +12,7 @@ const V2SettingsPage = () => {
   const activeTab = tabs.find((t) => t.path === location.pathname) ?? tabs[0];
 
   return (
-    <div className="w-full py-8">
+    <div className="w-full pb-8">
       <div className="mx-auto max-w-7xl">
         <div className="flex w-full border-b">
           {tabs.map((tab) => (

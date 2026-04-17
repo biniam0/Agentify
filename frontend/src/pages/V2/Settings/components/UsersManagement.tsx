@@ -22,6 +22,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+
+import InviteTeam from './InviteTeam';
 
 interface TenantMember {
   id: string;
@@ -100,7 +103,12 @@ const UsersManagement = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
+    <section className="py-3">
+      <InviteTeam />
+
+      <Separator className="my-10" />
+
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
       <div className="flex flex-col space-y-1">
         <h3 className="font-semibold">Team Members</h3>
         <p className="text-muted-foreground text-sm">
@@ -215,7 +223,8 @@ const UsersManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </section>
   );
 };
 
