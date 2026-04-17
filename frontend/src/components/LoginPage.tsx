@@ -181,7 +181,8 @@ const LoginPage: React.FC = () => {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 bg-brand hover:bg-brand-hover text-white font-medium transition-all shadow-sm hover:shadow-md"
+                  variant="gradientEmerald"
+                  className="w-full h-11 transition-all hover:shadow-md"
                   size="lg"
                 >
                   {loading ? (

@@ -197,7 +197,8 @@ export default function BusinessInfoStep() {
         <Button
           onClick={handleContinue}
           disabled={!isComplete || saving}
-          className="bg-brand hover:bg-brand-hover text-white font-medium px-6 h-11 gap-2"
+          variant="gradientEmerald"
+          className="px-6 h-11"
         >
           {saving ? (
             <>
