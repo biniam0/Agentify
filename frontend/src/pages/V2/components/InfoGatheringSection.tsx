@@ -8,6 +8,7 @@ import DealsFilterTabs from './DealsFilterTabs';
 import InfoGatheringTable from './InfoGatheringTable';
 import { API_BASE_URL } from '@/config/api';
 import type { BarrierXInfoRecord } from './InfoGatheringTable';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface InfoGatheringSectionProps {
   onViewDetails: (record: BarrierXInfoRecord) => void;
@@ -17,6 +18,7 @@ interface InfoGatheringSectionProps {
 const ITEMS_PER_PAGE = 10;
 
 const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectionProps) => {
+  const { tenantSlug } = useTenant();
   const [records, setRecords] = useState<BarrierXInfoRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -30,6 +32,7 @@ const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectio
         limit: ITEMS_PER_PAGE.toString(),
         offset: ((page - 1) * ITEMS_PER_PAGE).toString(),
       });
+      if (tenantSlug) params.set('tenantSlug', tenantSlug);
 
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info?${params}`, {
         credentials: 'include',
@@ -49,7 +52,7 @@ const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectio
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, tenantSlug]);
 
   useEffect(() => {
     fetchRecords();

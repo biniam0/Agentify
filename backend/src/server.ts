@@ -4,6 +4,7 @@ import prisma from './config/database';
 import { startScheduler, restoreCalledMeetingsFromRedis } from './services/schedulerService';
 import { getRedisClient, disconnectRedis } from './config/redis';
 import { restoreRetryStateFromRedis } from './services/callRetryService';
+import { restoreSmsNotificationsFromRedis } from './services/smsNotificationService';
 
 const startServer = async () => {
   try {
@@ -23,6 +24,9 @@ const startServer = async () => {
 
         // Restore called meetings tracking from Redis
         await restoreCalledMeetingsFromRedis();
+
+        // Restore SMS notification dedup state from Redis
+        await restoreSmsNotificationsFromRedis();
       } else {
         console.log('⚠️  Redis cache disabled - continuing without caching');
       }

@@ -6,6 +6,7 @@
 import twilio from 'twilio';
 import { config } from '../config/env';
 import * as loggingService from './loggingService';
+import { saveSmsNotification, getSmsNotification, getAllSmsNotifications, SmsNotificationRecord } from '../utils/smsNotificationsCache';
 
 // ============================================
 // TWILIO CLIENT INITIALIZATION
@@ -40,14 +41,8 @@ const getTwilioClient = (): twilio.Twilio | null => {
 // Key format: meetingId_startTime_sms
 // ============================================
 
-interface NotificationRecord {
-  sentAt: number;
-  meetingStartTime: string;
-  messageSid?: string;
-}
-
-// In-memory cache for fast lookups
-const sentNotifications = new Map<string, NotificationRecord>();
+// In-memory cache for fast lookups (backed by Redis for persistence across restarts)
+const sentNotifications = new Map<string, SmsNotificationRecord>();
 
 /**
  * Generate tracking key for a notification
@@ -57,23 +52,40 @@ const getNotificationKey = (meetingId: string, startTime: string): string => {
 };
 
 /**
- * Check if notification has already been sent for this meeting
+ * Check if notification has already been sent for this meeting.
+ * Checks in-memory first (fast), then falls back to Redis (survives restarts).
  */
-export const hasBeenNotified = (meetingId: string, startTime: string): boolean => {
+export const hasBeenNotified = async (meetingId: string, startTime: string): Promise<boolean> => {
   const key = getNotificationKey(meetingId, startTime);
-  return sentNotifications.has(key);
+
+  // Fast path: check in-memory cache
+  if (sentNotifications.has(key)) {
+    return true;
+  }
+
+  // Slow path: check Redis (persisted across restarts)
+  const redisRecord = await getSmsNotification(meetingId, startTime);
+  if (redisRecord) {
+    sentNotifications.set(key, redisRecord);
+    return true;
+  }
+
+  return false;
 };
 
 /**
- * Mark notification as sent
+ * Mark notification as sent (writes to both in-memory and Redis)
  */
-const markAsNotified = (meetingId: string, startTime: string, messageSid?: string): void => {
+const markAsNotified = async (meetingId: string, startTime: string, messageSid?: string): Promise<void> => {
   const key = getNotificationKey(meetingId, startTime);
   sentNotifications.set(key, {
     sentAt: Date.now(),
     meetingStartTime: startTime,
     messageSid,
   });
+
+  await saveSmsNotification(meetingId, startTime, messageSid);
+
   console.log(`       📝 Marked SMS as sent: ${key}`);
 };
 
@@ -325,8 +337,8 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
     tenantSlug,
   } = params;
 
-  // Check if already notified
-  if (hasBeenNotified(meetingId, meetingStartTime)) {
+  // Check if already notified (in-memory + Redis)
+  if (await hasBeenNotified(meetingId, meetingStartTime)) {
     console.log(`       ⏭️  SMS already sent for meeting: ${meetingId}`);
     return { success: false, error: 'Already notified' };
   }
@@ -406,9 +418,8 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
     console.log(`       📱 Status: ${message.status}`);
 
     // Mark as notified to prevent duplicates
-    markAsNotified(meetingId, meetingStartTime, message.sid);
+    await markAsNotified(meetingId, meetingStartTime, message.sid);
 
-    // Log to database
     await loggingService.logSmsNotification({
       messageSid: message.sid,
       status: 'SENT',
@@ -418,6 +429,7 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
       userId: userId || 'unknown',
       barrierxUserId,
       hubspotOwnerId,
+      tenantSlug,
       userName: ownerName,
       userEmail,
       ownerName,
@@ -436,7 +448,6 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
   } catch (error: any) {
     console.error(`       ❌ SMS sending failed:`, error.message);
 
-    // Log failed SMS to database
     await loggingService.logSmsNotification({
       status: 'FAILED',
       toPhone: ownerPhone,
@@ -444,6 +455,7 @@ export const sendPreCallNotification = async (params: PreCallNotificationParams)
       userId: userId || 'unknown',
       barrierxUserId,
       hubspotOwnerId,
+      tenantSlug,
       userName: ownerName,
       userEmail,
       ownerName,
@@ -540,6 +552,22 @@ export const sendTestSms = async (toNumber: string, customMessage?: string): Pro
       error: error.message,
     };
   }
+};
+
+/**
+ * Restore SMS notification records from Redis into the in-memory cache.
+ * Call this on server startup after Redis connects.
+ */
+export const restoreSmsNotificationsFromRedis = async (): Promise<void> => {
+  const records = await getAllSmsNotifications();
+  if (records.length === 0) return;
+
+  for (const { meetingId, startTime, record } of records) {
+    const key = getNotificationKey(meetingId, startTime);
+    sentNotifications.set(key, record);
+  }
+
+  console.log(`🔄 Restored ${records.length} SMS notification records from Redis`);
 };
 
 /**

@@ -80,12 +80,12 @@ const generateSmartSuggestions = (intent: SimpleIntent): string[] => {
   return suggestions.slice(0, 5); // Limit to 5 suggestions
 };
 
-// Define a custom request interface that supports both User (JWT) and Service (API Key) auth
 interface AuthenticatedRequest extends Request {
   user?: {
     userId: string;
     email: string;
     name?: string;
+    tenantSlug?: string;
   };
   service?: {
     id: string;
@@ -435,10 +435,14 @@ export const findTargetsEndpoint = async (req: AuthenticatedRequest, res: Respon
       return res.status(400).json({ error: 'Intent is required' });
     }
 
-    console.log(`🎯 Finding targets for intent: ${intent.action}`);
+    const tenantSlug = (req.body?.tenantSlug || req.user?.tenantSlug) as string | undefined;
+    if (!tenantSlug) {
+      return res.status(400).json({ error: 'tenantSlug is required' });
+    }
 
-    // Get target preview
-    const preview = await previewTargets(intent);
+    console.log(`🎯 Finding targets for intent: ${intent.action} (tenant: ${tenantSlug})`);
+
+    const preview = await previewTargets(intent, tenantSlug);
 
     return res.json({
       ok: true,
@@ -468,7 +472,6 @@ export const executeSimpleWorkflow = async (req: AuthenticatedRequest, res: Resp
       return res.status(400).json({ error: 'Intent is required' });
     }
 
-    // Get user ID
     let userId = req.user?.userId;
     if (!userId && req.service) {
       userId = 'service-account';
@@ -478,10 +481,14 @@ export const executeSimpleWorkflow = async (req: AuthenticatedRequest, res: Resp
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    console.log(`🚀 Executing simple workflow: ${intent.action}`);
+    const tenantSlug = (req.body?.tenantSlug || req.user?.tenantSlug) as string | undefined;
+    if (!tenantSlug) {
+      return res.status(400).json({ error: 'tenantSlug is required' });
+    }
 
-    // Execute workflow
-    const result = await workflowService.executeSimpleWorkflow(intent, userId, workflowName);
+    console.log(`🚀 Executing simple workflow: ${intent.action} (tenant: ${tenantSlug})`);
+
+    const result = await workflowService.executeSimpleWorkflow(intent, userId, tenantSlug, workflowName);
 
     if (!result.success) {
       return res.status(400).json({ error: result.error });
@@ -512,7 +519,6 @@ export const runSimpleWorkflow = async (req: AuthenticatedRequest, res: Response
       return res.status(400).json({ error: 'Prompt is required and must be a string' });
     }
 
-    // Get user ID
     let userId = req.user?.userId;
     if (!userId && req.service) {
       userId = 'service-account';
@@ -522,7 +528,12 @@ export const runSimpleWorkflow = async (req: AuthenticatedRequest, res: Response
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    console.log(`🔄 Running complete simple workflow for: "${prompt.substring(0, 100)}..."`);
+    const tenantSlug = (req.body?.tenantSlug || req.user?.tenantSlug) as string | undefined;
+    if (!tenantSlug) {
+      return res.status(400).json({ error: 'tenantSlug is required' });
+    }
+
+    console.log(`🔄 Running complete simple workflow for: "${prompt.substring(0, 100)}..." (tenant: ${tenantSlug})`);
 
     // Step 1: Parse intent
     const intent = await parseIntent(prompt);
@@ -535,7 +546,31 @@ export const runSimpleWorkflow = async (req: AuthenticatedRequest, res: Response
     }
 
     // Step 2: Find targets
-    const preview = await previewTargets(intent);
+    const preview = await previewTargets(intent, tenantSlug);
+
+    // Distinguish between "no deal matched" and "deals matched but unreachable"
+    if (preview.count === 0 && preview.matchedDealCount > 0) {
+      return res.json({
+        ok: true,
+        intent,
+        intentSummary: generateIntentSummary(intent),
+        targets: {
+          count: 0,
+          sample: [],
+          summary: `Matched ${preview.matchedDealCount} deal${preview.matchedDealCount === 1 ? '' : 's'} but none are reachable.`,
+        },
+        noTargetsFound: true,
+        unreachable: preview.unreachable,
+        matchedDealCount: preview.matchedDealCount,
+        message: `Matched ${preview.matchedDealCount} deal${preview.matchedDealCount === 1 ? '' : 's'}, but the owner${preview.matchedDealCount === 1 ? ' has' : 's have'} no phone number registered in BarrierX, so the call cannot be placed.`,
+        suggestions: [
+          'Add a phone number to the deal owner in HubSpot/BarrierX',
+          'Verify that BarrierX has synced the latest owner contact details',
+        ],
+        requiresApproval: false,
+      });
+    }
+
     if (preview.count === 0) {
       return res.json({
         ok: true,
@@ -548,7 +583,7 @@ export const runSimpleWorkflow = async (req: AuthenticatedRequest, res: Response
         },
         noTargetsFound: true,
         suggestions: generateSmartSuggestions(intent),
-        requiresApproval: false, // No approval needed when no targets
+        requiresApproval: false,
       });
     }
 
@@ -562,6 +597,8 @@ export const runSimpleWorkflow = async (req: AuthenticatedRequest, res: Response
         sample: preview.sample,
         summary: preview.summary,
       },
+      unreachable: preview.unreachable,
+      matchedDealCount: preview.matchedDealCount,
       requiresApproval: true,
       estimatedCost: calculateEstimatedCost(preview.count),
       message: `Found ${preview.count} target${preview.count === 1 ? '' : 's'} - approval required before execution`,
@@ -589,7 +626,6 @@ export const approveAndExecuteWorkflow = async (req: AuthenticatedRequest, res: 
       return res.status(400).json({ error: 'User confirmation is required for execution' });
     }
 
-    // Get user ID
     let userId = req.user?.userId;
     if (!userId && req.service) {
       userId = 'service-account';
@@ -599,10 +635,15 @@ export const approveAndExecuteWorkflow = async (req: AuthenticatedRequest, res: 
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    console.log(`🔒 Executing approved workflow: ${intent.action} (User: ${userId})`);
+    const tenantSlug = (req.body?.tenantSlug || req.user?.tenantSlug) as string | undefined;
+    if (!tenantSlug) {
+      return res.status(400).json({ error: 'tenantSlug is required' });
+    }
+
+    console.log(`🔒 Executing approved workflow: ${intent.action} (User: ${userId}, tenant: ${tenantSlug})`);
 
     // Safety checks before execution
-    const preview = await previewTargets(intent);
+    const preview = await previewTargets(intent, tenantSlug);
     
     // Check target limits (safety threshold)
     if (preview.count > 50) {
@@ -610,6 +651,27 @@ export const approveAndExecuteWorkflow = async (req: AuthenticatedRequest, res: 
         error: 'Target count exceeds safety limit (50). Please contact admin for large batch approvals.',
         targetCount: preview.count,
         limit: 50
+      });
+    }
+
+    if (preview.count === 0 && preview.matchedDealCount > 0) {
+      return res.json({
+        ok: true,
+        intent,
+        intentSummary: generateIntentSummary(intent),
+        targets: {
+          count: 0,
+          sample: [],
+          summary: `Matched ${preview.matchedDealCount} deal${preview.matchedDealCount === 1 ? '' : 's'} but none are reachable.`,
+        },
+        noTargetsFound: true,
+        unreachable: preview.unreachable,
+        matchedDealCount: preview.matchedDealCount,
+        message: `Matched ${preview.matchedDealCount} deal${preview.matchedDealCount === 1 ? '' : 's'}, but the owner${preview.matchedDealCount === 1 ? ' has' : 's have'} no phone number registered in BarrierX, so the call cannot be placed.`,
+        suggestions: [
+          'Add a phone number to the deal owner in HubSpot/BarrierX',
+          'Verify that BarrierX has synced the latest owner contact details',
+        ],
       });
     }
 
@@ -629,8 +691,7 @@ export const approveAndExecuteWorkflow = async (req: AuthenticatedRequest, res: 
       });
     }
 
-    // Execute the workflow
-    const result = await workflowService.executeSimpleWorkflow(intent, userId, workflowName);
+    const result = await workflowService.executeSimpleWorkflow(intent, userId, tenantSlug, workflowName);
 
     if (!result.success) {
       return res.status(400).json({ error: result.error });

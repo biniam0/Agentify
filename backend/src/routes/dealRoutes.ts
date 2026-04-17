@@ -18,6 +18,9 @@ const adminProtected = config.admin.disableAdminGuard ? [authenticate] : [authen
 // Get all deals from BarrierX bulk API
 router.get('/admin', adminProtected, dealController.getAdminDeals);
 
+// Get deals for the authenticated user's tenant (V2 dashboard)
+router.get('/tenant', adminProtected, dealController.getTenantDeals);
+
 // Generate AI summary of filtered deals (must be before :dealId routes)
 router.post('/admin/ai-summary', adminProtected, dealController.generateDealSummary);
 

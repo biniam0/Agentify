@@ -13,7 +13,7 @@ import {
 
 const AgentXLogo = () => (
   <svg
-    className="h-[1.1rem] w-auto"
+    className="h-[1.4rem] w-auto"
     viewBox="0 0 42 28"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -46,7 +46,7 @@ const TopNav = () => {
               className="flex items-center gap-1.5 cursor-pointer select-none"
               onClick={() => navigate('/app/v2')}
             >
-              <span className="text-xl font-bold tracking-tight text-gray-900 leading-none">
+              <span className="text-3xl font-bold tracking-tight text-gray-900 leading-none">
                 Agent
               </span>
               <AgentXLogo />

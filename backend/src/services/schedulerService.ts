@@ -535,9 +535,10 @@ const runAutomationJob = async () => {
             if (result?.conversation_id || result?.callSid) {
               await loggingService.logCallInitiation({
                 callType: 'PRE_CALL',
-                userId: meeting.user.databaseUserId || meeting.user.userId, // Use AgentX DB UUID for proper user filtering
+                userId: meeting.user.databaseUserId || meeting.user.userId,
                 userName: meeting.user.name,
                 userEmail: meeting.user.email,
+                tenantSlug: meeting.deal.tenantSlug,
                 dealId: meeting.deal.id,
                 dealName: meeting.deal.dealName,
                 meetingId: meeting.id,
@@ -591,9 +592,10 @@ const runAutomationJob = async () => {
             if (result?.conversation_id || result?.callSid) {
               await loggingService.logCallInitiation({
                 callType: 'POST_CALL',
-                userId: meeting.user.databaseUserId || meeting.user.userId, // Use AgentX DB UUID for proper user filtering
+                userId: meeting.user.databaseUserId || meeting.user.userId,
                 userName: meeting.user.name,
                 userEmail: meeting.user.email,
+                tenantSlug: meeting.deal.tenantSlug,
                 dealId: meeting.deal.id,
                 dealName: meeting.deal.dealName,
                 meetingId: meeting.id,

@@ -8,6 +8,7 @@ import DealsFilterTabs from './DealsFilterTabs';
 import CrmActionsTable from './CrmActionsTable';
 import * as loggingService from '@/services/loggingService';
 import type { CrmActionLog } from '@/services/loggingService';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface CrmActionsSectionProps {
   onViewDetails: (log: CrmActionLog) => void;
@@ -16,6 +17,7 @@ interface CrmActionsSectionProps {
 const ITEMS_PER_PAGE = 10;
 
 const CrmActionsSection = ({ onViewDetails }: CrmActionsSectionProps) => {
+  const { tenantSlug } = useTenant();
   const [logs, setLogs] = useState<CrmActionLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -26,6 +28,7 @@ const CrmActionsSection = ({ onViewDetails }: CrmActionsSectionProps) => {
     setLoading(true);
     try {
       const response = await loggingService.getCrmActionLogs({
+        tenantSlug: tenantSlug || undefined,
         limit: ITEMS_PER_PAGE,
         offset: (page - 1) * ITEMS_PER_PAGE,
       });
@@ -40,7 +43,7 @@ const CrmActionsSection = ({ onViewDetails }: CrmActionsSectionProps) => {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, tenantSlug]);
 
   useEffect(() => {
     fetchLogs();

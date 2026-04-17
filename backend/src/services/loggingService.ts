@@ -33,6 +33,8 @@ export const logActivity = async (data: {
   userEmail?: string;
   barrierxUserId?: string;
   hubspotOwnerId?: string;
+  tenantSlug?: string;
+  tenantName?: string;
   dealId?: string;
   dealName?: string;
   meetingId?: string;
@@ -88,6 +90,8 @@ export const logCallInitiation = async (data: {
   userEmail: string;
   barrierxUserId?: string;
   hubspotOwnerId?: string;
+  tenantSlug?: string;
+  tenantName?: string;
   dealId: string;
   dealName: string;
   meetingId: string;
@@ -190,6 +194,7 @@ export const logCrmAction = async (data: {
   conversationId?: string;
   dealId?: string;
   tenantSlug: string;
+  tenantName?: string;
   ownerId: string;
   entityId?: string;
   title?: string;
@@ -238,6 +243,10 @@ export const logWebhook = async (data: {
   eventType: string;
   conversationId?: string;
   agentId?: string;
+  tenantSlug?: string;
+  tenantName?: string;
+  barrierxUserId?: string;
+  hubspotOwnerId?: string;
   status?: Status;
   processingTime?: number;
   errorMessage?: string;
@@ -265,12 +274,18 @@ export const logWebhook = async (data: {
 // SCHEDULER LOGGING
 // ============================================
 
-export const logSchedulerStart = async (jobType: SchedulerJobType) => {
+export const logSchedulerStart = async (jobType: SchedulerJobType, tenantContext?: {
+  tenantSlug?: string;
+  tenantName?: string;
+  barrierxUserId?: string;
+  hubspotOwnerId?: string;
+}) => {
   try {
     return await prisma.schedulerLog.create({
       data: {
         jobType,
         status: 'RUNNING',
+        ...tenantContext,
       },
     });
   } catch (error) {
@@ -338,6 +353,8 @@ export const logError = async (data: {
   userEmail?: string;
   barrierxUserId?: string;
   hubspotOwnerId?: string;
+  tenantSlug?: string;
+  tenantName?: string;
   dealId?: string;
   endpoint?: string;
   method?: string;
@@ -371,6 +388,8 @@ export const logSmsNotification = async (data: {
   userId: string;
   barrierxUserId?: string;
   hubspotOwnerId?: string;
+  tenantSlug?: string;
+  tenantName?: string;
   userName?: string;
   userEmail?: string;
   ownerName?: string;
@@ -418,6 +437,7 @@ export const updateSmsLog = async (
 export const getSmsLogs = async (filters: {
   userId?: string;
   userEmail?: string;
+  tenantSlug?: string;
   status?: SmsStatus;
   meetingId?: string;
   startDate?: Date;
@@ -430,6 +450,7 @@ export const getSmsLogs = async (filters: {
 
     if (filters.userId) where.userId = filters.userId;
     if (filters.userEmail) where.userEmail = filters.userEmail;
+    if (filters.tenantSlug) where.tenantSlug = filters.tenantSlug;
     if (filters.status) where.status = filters.status;
     if (filters.meetingId) where.meetingId = filters.meetingId;
     if (filters.startDate || filters.endDate) {
@@ -462,6 +483,7 @@ export const getSmsLogs = async (filters: {
 export const getCallLogs = async (filters: {
   userId?: string;
   userEmail?: string;
+  tenantSlug?: string;
   dealId?: string;
   callType?: CallType;
   status?: CallStatus;
@@ -475,6 +497,7 @@ export const getCallLogs = async (filters: {
 
     if (filters.userId) where.userId = filters.userId;
     if (filters.userEmail) where.userEmail = filters.userEmail;
+    if (filters.tenantSlug) where.tenantSlug = filters.tenantSlug;
     if (filters.dealId) where.dealId = filters.dealId;
     if (filters.callType) where.callType = filters.callType;
     if (filters.status) where.status = filters.status;
@@ -504,6 +527,7 @@ export const getCallLogs = async (filters: {
 export const getActivityLogs = async (filters: {
   userId?: string;
   userEmail?: string;
+  tenantSlug?: string;
   activityType?: ActivityType;
   status?: Status;
   startDate?: Date;
@@ -516,6 +540,7 @@ export const getActivityLogs = async (filters: {
 
     if (filters.userId) where.userId = filters.userId;
     if (filters.userEmail) where.userEmail = filters.userEmail;
+    if (filters.tenantSlug) where.tenantSlug = filters.tenantSlug;
     if (filters.activityType) where.activityType = filters.activityType;
     if (filters.status) where.status = filters.status;
     if (filters.startDate || filters.endDate) {
@@ -544,6 +569,7 @@ export const getActivityLogs = async (filters: {
 export const getErrorLogs = async (filters: {
   userId?: string;
   userEmail?: string;
+  tenantSlug?: string;
   errorType?: ErrorType;
   severity?: Severity;
   isResolved?: boolean;
@@ -557,6 +583,7 @@ export const getErrorLogs = async (filters: {
 
     if (filters.userId) where.userId = filters.userId;
     if (filters.userEmail) where.userEmail = filters.userEmail;
+    if (filters.tenantSlug) where.tenantSlug = filters.tenantSlug;
     if (filters.errorType) where.errorType = filters.errorType;
     if (filters.severity) where.severity = filters.severity;
     if (filters.isResolved !== undefined) where.isResolved = filters.isResolved;
@@ -587,6 +614,7 @@ export const getWebhookLogs = async (filters: {
   webhookType?: WebhookType;
   eventType?: string;
   conversationId?: string;
+  tenantSlug?: string;
   status?: Status;
   startDate?: Date;
   endDate?: Date;
@@ -599,6 +627,7 @@ export const getWebhookLogs = async (filters: {
     if (filters.webhookType) where.webhookType = filters.webhookType;
     if (filters.eventType) where.eventType = filters.eventType;
     if (filters.conversationId) where.conversationId = filters.conversationId;
+    if (filters.tenantSlug) where.tenantSlug = filters.tenantSlug;
     if (filters.status) where.status = filters.status;
     if (filters.startDate || filters.endDate) {
       where.createdAt = {};
@@ -625,6 +654,7 @@ export const getWebhookLogs = async (filters: {
 
 export const getSchedulerLogs = async (filters: {
   jobType?: SchedulerJobType;
+  tenantSlug?: string;
   status?: Status;
   startDate?: Date;
   endDate?: Date;
@@ -635,6 +665,7 @@ export const getSchedulerLogs = async (filters: {
     const where: any = {};
 
     if (filters.jobType) where.jobType = filters.jobType;
+    if (filters.tenantSlug) where.tenantSlug = filters.tenantSlug;
     if (filters.status) where.status = filters.status;
     if (filters.startDate || filters.endDate) {
       where.startedAt = {};
@@ -662,6 +693,7 @@ export const getSchedulerLogs = async (filters: {
 export const getCrmActionLogs = async (filters: {
   actionType?: CrmActionType;
   conversationId?: string;
+  tenantSlug?: string;
   dealId?: string;
   status?: Status;
   startDate?: Date;
@@ -674,6 +706,7 @@ export const getCrmActionLogs = async (filters: {
 
     if (filters.actionType) where.actionType = filters.actionType;
     if (filters.conversationId) where.conversationId = filters.conversationId;
+    if (filters.tenantSlug) where.tenantSlug = filters.tenantSlug;
     if (filters.dealId) where.dealId = filters.dealId;
     if (filters.status) where.status = filters.status;
     if (filters.startDate || filters.endDate) {
@@ -703,7 +736,7 @@ export const getCrmActionLogs = async (filters: {
 // ANALYTICS HELPERS
 // ============================================
 
-export const getCallAnalytics = async (userId?: string, days: number = 7) => {
+export const getCallAnalytics = async (userId?: string, days: number = 7, tenantSlug?: string) => {
   try {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
@@ -712,6 +745,7 @@ export const getCallAnalytics = async (userId?: string, days: number = 7) => {
       initiatedAt: { gte: startDate },
     };
     if (userId) where.userId = userId;
+    if (tenantSlug) where.tenantSlug = tenantSlug;
 
     // ⚡ OPTIMIZED: Use database aggregation instead of fetching all records
     const [
@@ -793,10 +827,20 @@ export const getCallAnalytics = async (userId?: string, days: number = 7) => {
   }
 };
 
-export const getDashboardStats = async () => {
+export const getDashboardStats = async (tenantSlug?: string) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    const callWhere: any = { initiatedAt: { gte: today } };
+    const errorWhere: any = { severity: 'CRITICAL' as const, isResolved: false };
+    const activityWhere: any = {};
+
+    if (tenantSlug) {
+      callWhere.tenantSlug = tenantSlug;
+      errorWhere.tenantSlug = tenantSlug;
+      activityWhere.tenantSlug = tenantSlug;
+    }
 
     const [
       totalCallsToday,
@@ -804,17 +848,11 @@ export const getDashboardStats = async () => {
       criticalErrors,
       recentActivity,
     ] = await Promise.all([
-      prisma.callLog.count({
-        where: { initiatedAt: { gte: today } },
-      }),
-      getCallAnalytics(undefined, 1),
-      prisma.errorLog.count({
-        where: {
-          severity: 'CRITICAL',
-          isResolved: false,
-        },
-      }),
+      prisma.callLog.count({ where: callWhere }),
+      getCallAnalytics(undefined, 1, tenantSlug),
+      prisma.errorLog.count({ where: errorWhere }),
       prisma.activityLog.findMany({
+        where: activityWhere,
         take: 10,
         orderBy: { createdAt: 'desc' },
       }),

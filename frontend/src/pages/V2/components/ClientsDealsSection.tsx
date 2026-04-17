@@ -21,7 +21,7 @@ const ClientsDealsSection = ({ onViewDetails }: ClientsDealsSectionProps) => {
   const fetchDeals = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await dealService.getAdminDeals();
+      const response = await dealService.getTenantDeals();
       setDeals(response.deals || []);
     } catch (error: any) {
       console.error('Failed to fetch deals:', error);

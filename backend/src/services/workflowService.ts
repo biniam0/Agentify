@@ -32,13 +32,14 @@ const replaceVariables = (template: string, variables: Record<string, string | u
 export const executeSimpleWorkflow = async (
   intent: SimpleIntent,
   userId: string,
-  workflowName?: string
+  tenantSlug: string,
+  workflowName?: string,
 ): Promise<{ success: boolean; batchId?: string; executionId?: string; error?: string }> => {
   try {
-    console.log(`🚀 Executing simple workflow: ${intent.action}`);
+    console.log(`🚀 Executing simple workflow: ${intent.action} (tenant: ${tenantSlug})`);
 
-    // 1. Find targets using the intent
-    const targets = await findTargets(intent);
+    // 1. Find targets using the intent (scoped to tenant)
+    const targets = await findTargets(intent, tenantSlug);
 
     if (targets.length === 0) {
       return { success: false, error: 'No targets found matching the criteria' };

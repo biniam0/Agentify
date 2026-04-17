@@ -20,7 +20,7 @@ const ClientsMeetingsSection = ({ onViewDetails }: ClientsMeetingsSectionProps) 
   const fetchMeetings = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await meetingService.getAdminMeetings();
+      const response = await meetingService.getTenantMeetings();
       setMeetings(response.meetings || []);
     } catch (error: any) {
       console.error('Failed to fetch meetings:', error);

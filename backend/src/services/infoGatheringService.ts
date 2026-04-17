@@ -367,6 +367,40 @@ async function fetchDeals(): Promise<Array<{ tenant: Tenant; deal: Deal }>> {
   return result;
 }
 
+async function fetchTenantDeals(tenantSlug: string): Promise<Array<{ tenant: Tenant; deal: Deal }>> {
+  log(`📡 Fetching deals for tenant: ${tenantSlug}...`);
+
+  const url = `${config.barrierx.baseUrl}/api/external/tenants/${tenantSlug}/deals`;
+  const response = await axios.get(url, {
+    headers: {
+      'Authorization': `Bearer ${config.barrierx.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const rawDeals: any[] = response.data.deals || [];
+  const result: Array<{ tenant: Tenant; deal: Deal }> = rawDeals.map((deal: any) => ({
+    tenant: { id: tenantSlug, slug: tenantSlug, name: tenantSlug },
+    deal: {
+      id: deal.id,
+      dealName: deal.dealName,
+      company: deal.company,
+      pipelineName: deal.pipelineName || '',
+      stage: deal.stage,
+      amount: deal.amount,
+      owner: deal.owner,
+      userDealRiskScores: deal.userDealRiskScores || {
+        arenaRisk: 0, controlRoomRisk: 0, scoreCardRisk: 0, totalDealRisk: 0, subCategoryRisk: {},
+      },
+      createdAt: deal.createdAt,
+      updatedAt: deal.updatedAt,
+    },
+  }));
+
+  log(`   ✅ Found ${result.length} deals for tenant: ${tenantSlug}`);
+  return result;
+}
+
 async function triggerCall(
   tenant: Tenant,
   deal: Deal,
@@ -509,9 +543,9 @@ async function waitForBatchCompletion(recordIds: string[]): Promise<void> {
 // MAIN EXECUTION FUNCTIONS
 // ============================================
 
-async function runZeroScoreGathering(): Promise<void> {
+async function runZeroScoreGathering(tenantSlug: string): Promise<void> {
   log('═══════════════════════════════════════════════════════════════');
-  log('🎯 Starting Zero Score Info Gathering');
+  log(`🎯 Starting Zero Score Info Gathering (tenant: ${tenantSlug})`);
   log('═══════════════════════════════════════════════════════════════');
 
   // Only call deals created within the last 60 days (fresh deals)
@@ -520,7 +554,7 @@ async function runZeroScoreGathering(): Promise<void> {
   cutoffDate.setDate(cutoffDate.getDate() - FRESHNESS_DAYS);
   log(`📅 Only calling deals created after: ${cutoffDate.toISOString().split('T')[0]}`);
 
-  const allDeals = await fetchDeals();
+  const allDeals = await fetchTenantDeals(tenantSlug);
 
   // Filter: Zero BarrierX score AND created within 60 days
   const filteredDeals = allDeals.filter(({ deal }) =>
@@ -537,12 +571,12 @@ async function runZeroScoreGathering(): Promise<void> {
   await processDeals(eligibleDeals, 'ZERO_SCORE');
 }
 
-async function runLostDealGathering(): Promise<void> {
+async function runLostDealGathering(tenantSlug: string): Promise<void> {
   log('═══════════════════════════════════════════════════════════════');
-  log('❌ Starting Lost Deal Questionnaire');
+  log(`❌ Starting Lost Deal Questionnaire (tenant: ${tenantSlug})`);
   log('═══════════════════════════════════════════════════════════════');
 
-  const allDeals = await fetchDeals();
+  const allDeals = await fetchTenantDeals(tenantSlug);
   const lostDeals = allDeals.filter(({ deal }) => isLost(deal.stage));
 
   // Spread deals by owner - reorder so same owner's deals are in different batches
@@ -556,12 +590,12 @@ async function runLostDealGathering(): Promise<void> {
   await processDeals(eligibleDeals, 'LOST_DEAL');
 }
 
-async function runInactivityGathering(): Promise<void> {
+async function runInactivityGathering(tenantSlug: string): Promise<void> {
   log('═══════════════════════════════════════════════════════════════');
-  log('⏰ Starting Inactivity Check');
+  log(`⏰ Starting Inactivity Check (tenant: ${tenantSlug})`);
   log('═══════════════════════════════════════════════════════════════');
 
-  const allDeals = await fetchDeals();
+  const allDeals = await fetchTenantDeals(tenantSlug);
 
   const twoWeeksAgo = new Date();
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
@@ -748,7 +782,7 @@ async function processDeals(
 /**
  * Start zero score info gathering
  */
-export async function startZeroScoreGathering(triggeredBy: string): Promise<{ success: boolean; warning?: boolean; error?: string }> {
+export async function startZeroScoreGathering(triggeredBy: string, tenantSlug: string): Promise<{ success: boolean; warning?: boolean; error?: string }> {
   if (jobState.isRunning) {
     return { success: false, error: 'A job is already running' };
   }
@@ -783,10 +817,10 @@ export async function startZeroScoreGathering(triggeredBy: string): Promise<{ su
   jobState.recentLogs = [];
   jobState.lastError = null;
 
-  log(`🎯 Zero Score gathering triggered by: ${triggeredBy}`);
+  log(`🎯 Zero Score gathering triggered by: ${triggeredBy} (tenant: ${tenantSlug})`);
 
   // Run asynchronously
-  runZeroScoreGathering()
+  runZeroScoreGathering(tenantSlug)
     .catch(error => {
       jobState.lastError = error.message;
       log(`❌ Error: ${error.message}`);
@@ -803,7 +837,7 @@ export async function startZeroScoreGathering(triggeredBy: string): Promise<{ su
 /**
  * Start lost deal questionnaire
  */
-export async function startLostDealGathering(triggeredBy: string): Promise<{ success: boolean; warning?: boolean; error?: string }> {
+export async function startLostDealGathering(triggeredBy: string, tenantSlug: string): Promise<{ success: boolean; warning?: boolean; error?: string }> {
   if (jobState.isRunning) {
     return { success: false, error: 'A job is already running' };
   }
@@ -838,10 +872,10 @@ export async function startLostDealGathering(triggeredBy: string): Promise<{ suc
   jobState.recentLogs = [];
   jobState.lastError = null;
 
-  log(`❌ Lost Deal gathering triggered by: ${triggeredBy}`);
+  log(`❌ Lost Deal gathering triggered by: ${triggeredBy} (tenant: ${tenantSlug})`);
 
   // Run asynchronously
-  runLostDealGathering()
+  runLostDealGathering(tenantSlug)
     .catch(error => {
       jobState.lastError = error.message;
       log(`❌ Error: ${error.message}`);
@@ -858,7 +892,7 @@ export async function startLostDealGathering(triggeredBy: string): Promise<{ suc
 /**
  * Start inactivity check
  */
-export async function startInactivityGathering(triggeredBy: string): Promise<{ success: boolean; warning?: boolean; error?: string }> {
+export async function startInactivityGathering(triggeredBy: string, tenantSlug: string): Promise<{ success: boolean; warning?: boolean; error?: string }> {
   if (jobState.isRunning) {
     return { success: false, error: 'A job is already running' };
   }
@@ -894,10 +928,10 @@ export async function startInactivityGathering(triggeredBy: string): Promise<{ s
   jobState.recentLogs = [];
   jobState.lastError = null;
 
-  log(`⏰ Inactivity Check triggered by: ${triggeredBy}`);
+  log(`⏰ Inactivity Check triggered by: ${triggeredBy} (tenant: ${tenantSlug})`);
 
   // Run asynchronously
-  runInactivityGathering()
+  runInactivityGathering(tenantSlug)
     .catch(error => {
       jobState.lastError = error.message;
       log(`❌ Error: ${error.message}`);

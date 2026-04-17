@@ -246,12 +246,13 @@ Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
       markCallAsSuccessful(calledNumber, agentId);
     }
 
-    // Log the webhook
     await loggingService.logWebhook({
       webhookType: 'ELEVENLABS_CALL',
       eventType: type,
       conversationId: conversationId,
       agentId: agentId,
+      tenantSlug: tenantSlug,
+      hubspotOwnerId: hubspotOwnerId,
       status: 'SUCCESS',
       payload: req.body,
     });
@@ -1233,9 +1234,10 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     await loggingService.logCallInitiation({
       callType: 'POST_CALL',
       callDirection: 'INBOUND',
-      userId: dbUser?.id || recentCall.userId, // Use correct DB UUID; fallback to stored value if user not found
+      userId: dbUser?.id || recentCall.userId,
       userName: recentCall.userName,
       userEmail: recentCall.userEmail,
+      tenantSlug: tenantSlug,
       dealId: recentCall.dealId,
       dealName: recentCall.dealName,
       meetingId: recentCall.meetingId,
