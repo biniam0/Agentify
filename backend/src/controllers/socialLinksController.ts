@@ -15,7 +15,11 @@ const ALLOWED_PLATFORMS = [
 type PlatformValue = (typeof ALLOWED_PLATFORMS)[number];
 
 const isPlatform = (value: unknown): value is PlatformValue =>
-  typeof value === 'string' && (ALLOWED_PLATFORMS as readonly string[]).includes(value);
+  typeof value === 'string' &&
+  (ALLOWED_PLATFORMS as readonly string[]).includes(value.toUpperCase());
+
+const normalizePlatform = (value: string): PlatformValue =>
+  value.toUpperCase() as PlatformValue;
 
 // Best-effort inference so the client can just send a URL and we store a nice enum.
 const inferPlatform = (url: string): PlatformValue => {
@@ -70,16 +74,21 @@ export const replaceSocialLinks = async (req: AuthRequest, res: Response): Promi
     }
 
     const cleaned = rawLinks
-      .map((item, index) => {
+      .map((item) => {
         if (!item || typeof item !== 'object') return null;
         const rec = item as Record<string, unknown>;
         const url = typeof rec.url === 'string' ? rec.url.trim() : '';
         if (!url) return null;
 
-        const platform = isPlatform(rec.platform) ? (rec.platform as PlatformValue) : inferPlatform(url);
-        return { url, platform, order: index };
+        const platform = isPlatform(rec.platform)
+          ? normalizePlatform(rec.platform as string)
+          : inferPlatform(url);
+        return { url, platform };
       })
-      .filter((v): v is { url: string; platform: PlatformValue; order: number } => v !== null);
+      .filter((v): v is { url: string; platform: PlatformValue } => v !== null)
+      // Re-index `order` after filtering so indices are contiguous (0, 1, 2, ...)
+      // regardless of how many blank rows were dropped from the input.
+      .map((link, order) => ({ ...link, order }));
 
     const replaced = await prisma.$transaction(async (tx) => {
       await tx.userSocialLink.deleteMany({ where: { userId } });

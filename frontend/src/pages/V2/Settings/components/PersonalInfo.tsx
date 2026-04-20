@@ -17,7 +17,7 @@ import { CountrySelect } from '@/components/ui/country-select';
 
 import api from '@/services/api';
 
-type GenderValue = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+type GenderValue = 'MALE' | 'FEMALE';
 
 interface ProfileResponse {
   success: boolean;

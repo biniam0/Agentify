@@ -179,14 +179,21 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     // Keep the legacy `name` column in sync so other systems relying on it stay consistent.
+    // Use `in` (not `??`) so an explicit clear (null) is preserved instead of falling
+    // back to the existing value — otherwise users can't clear just one half of their name.
     if (firstName !== undefined || lastName !== undefined) {
       const existing = await prisma.user.findUnique({
         where: { id: userId },
         select: { firstName: true, lastName: true },
       });
-      const nextFirst = (data.firstName as string | null | undefined) ?? existing?.firstName ?? '';
-      const nextLast = (data.lastName as string | null | undefined) ?? existing?.lastName ?? '';
+      const nextFirst = 'firstName' in data
+        ? (data.firstName as string | null)
+        : (existing?.firstName ?? null);
+      const nextLast = 'lastName' in data
+        ? (data.lastName as string | null)
+        : (existing?.lastName ?? null);
       const joined = `${nextFirst ?? ''} ${nextLast ?? ''}`.trim();
+      // `User.name` is non-nullable, so only overwrite when we actually have a value.
       if (joined) data.name = joined;
     }
 
