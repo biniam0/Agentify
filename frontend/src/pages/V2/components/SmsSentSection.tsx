@@ -70,14 +70,14 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-4">
-        <div>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold text-heading">SMS Sent</h2>
           <p className="text-sm text-subtle">
             Track SMS notifications sent to deal owners.
           </p>
         </div>
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-brand-light text-brand">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-brand-light text-brand flex-shrink-0 whitespace-nowrap">
           {total} total
         </span>
       </div>
@@ -87,18 +87,18 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading && logs.length === 0 ? (
-          <div className="p-6 space-y-4">
+          <div className="p-4 sm:p-6 space-y-4">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-9 w-9 rounded-lg" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-32" />
+              <div key={i} className="flex items-center gap-3 sm:gap-4">
+                <Skeleton className="h-9 w-9 rounded-lg flex-shrink-0" />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <Skeleton className="h-4 w-full max-w-[200px]" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
-                <Skeleton className="h-6 w-20 rounded-lg" />
-                <Skeleton className="h-6 w-20 rounded-lg" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-8 w-28 rounded-lg" />
+                <Skeleton className="hidden sm:block h-6 w-20 rounded-lg flex-shrink-0" />
+                <Skeleton className="hidden md:block h-6 w-20 rounded-lg flex-shrink-0" />
+                <Skeleton className="hidden md:block h-4 w-16 flex-shrink-0" />
+                <Skeleton className="hidden lg:block h-8 w-28 rounded-lg flex-shrink-0" />
               </div>
             ))}
           </div>
@@ -118,7 +118,7 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
       </div>
 
       {total > ITEMS_PER_PAGE && (
-        <div className="flex items-center justify-between px-1 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1 py-4">
           <p className="text-xs text-subtle">
             Showing <span className="font-medium text-heading">{startItem}–{endItem}</span> of <span className="font-medium text-heading">{total}</span>
           </p>
