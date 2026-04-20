@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import * as userController from '../controllers/userController';
+import * as socialLinksController from '../controllers/socialLinksController';
+import * as integrationsController from '../controllers/integrationsController';
 import { authenticate } from '../middlewares/auth';
 
 const router = Router();
@@ -15,6 +17,19 @@ router.patch('/toggle-enabled', userController.toggleEnabled);
 
 // Get tenant members from BarrierX
 router.get('/tenant-members', userController.getTenantMembers);
+
+// Settings > Personal Information
+router.get('/profile', userController.getProfile);
+router.patch('/profile', userController.updateProfile);
+
+// Settings > Social URLs
+router.get('/social-links', socialLinksController.listSocialLinks);
+router.put('/social-links', socialLinksController.replaceSocialLinks);
+
+// Settings > Connect Accounts
+router.get('/integrations', integrationsController.listIntegrations);
+router.post('/integrations/:provider/connect', integrationsController.connectIntegration);
+router.post('/integrations/:provider/disconnect', integrationsController.disconnectIntegration);
 
 export default router;
 

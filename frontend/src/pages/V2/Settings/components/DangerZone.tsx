@@ -38,8 +38,8 @@ const DangerZone = () => {
               <Dialog>
                 <DialogTrigger asChild>
                   <Button
-                    variant="outline"
-                    className="!text-destructive !border-destructive hover:!bg-destructive/10 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 max-lg:w-full"
+                    variant="destructive"
+                    size="lg"
                   >
                     <Trash2Icon />
                     Delete

@@ -156,7 +156,7 @@ const EmailPassword = () => {
           </div>
 
           <div className="mt-6 flex justify-end">
-            <Button type="submit" className="max-sm:w-full">
+            <Button type="submit" variant="gradientEmerald" className="max-sm:w-full">
               Save Changes
             </Button>
           </div>

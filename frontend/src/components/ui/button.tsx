@@ -19,6 +19,8 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-100",
         link: "text-primary underline-offset-4 hover:underline",
+        gradientEmerald:
+          "rounded-lg border-0 bg-gradient-to-r from-[#14D994] to-[#059669] font-bold text-white shadow-sm hover:brightness-[0.97] active:brightness-[0.94]",
       },
       size: {
         default: "h-9 px-4 py-2",
