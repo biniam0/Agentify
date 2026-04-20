@@ -132,7 +132,8 @@ export default function ConnectHubSpotStep() {
         <Button
           onClick={() => setCurrentStep(3)}
           disabled={!state.hubspotConnected}
-          className="bg-brand hover:bg-brand-hover text-white font-medium px-6 h-11 gap-2"
+          variant="gradientEmerald"
+          className="px-6 h-11"
         >
           Continue
           <ArrowRight className="h-4 w-4" />

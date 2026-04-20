@@ -30,14 +30,69 @@ model User {
   selectedPlan        String?
   stripeCustomerId    String? @unique
 
+  // Settings profile fields
+  firstName String?
+  lastName  String?
+  country   String?
+  gender    Gender?
+  avatarUrl String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   subscription   Subscription?
   refreshTokens  RefreshToken[]
+  socialLinks    UserSocialLink[]
+  integrations   UserIntegration[]
 
   // ⚡ Composite index for scheduler query optimization
   @@index([isAuth, isEnabled])
+}
+
+// User's social profile URLs (1:many)
+model UserSocialLink {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  platform SocialPlatform @default(OTHER)
+  url      String
+  order    Int            @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, order])
+}
+
+// User's connected third-party integrations (1:many, unique per provider)
+model UserIntegration {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider IntegrationProvider
+  status   IntegrationStatus   @default(DISCONNECTED)
+
+  externalAccountId String?
+  scopes            String[]
+  metadata          Json?
+
+  // Credentials (encrypted at rest; null while mocked)
+  accessTokenEnc  String?   @db.Text
+  refreshTokenEnc String?   @db.Text
+  tokenExpiresAt  DateTime?
+
+  connectedAt    DateTime?
+  disconnectedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider])
 }
 
 model RefreshToken {
@@ -604,6 +659,39 @@ enum UserRole {
   USER
   ADMIN
   SUPER_ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum SocialPlatform {
+  LINKEDIN
+  TWITTER
+  GITHUB
+  FACEBOOK
+  INSTAGRAM
+  YOUTUBE
+  WEBSITE
+  OTHER
+}
+
+enum IntegrationProvider {
+  HUBSPOT
+  SALESFORCE
+  PIPEDRIVE
+  GONG
+  SLACK
+  GOOGLE
+  NOTION
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  PENDING
 }
 
 enum SubscriptionStatus {
