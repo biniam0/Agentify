@@ -142,7 +142,7 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
-const ALLOWED_GENDERS = ['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'] as const;
+const ALLOWED_GENDERS = ['MALE', 'FEMALE'] as const;
 type GenderValue = (typeof ALLOWED_GENDERS)[number];
 
 const isGender = (value: unknown): value is GenderValue =>

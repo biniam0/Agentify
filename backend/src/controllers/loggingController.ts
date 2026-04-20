@@ -9,7 +9,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import * as loggingService from '../services/loggingService';
 import * as infoGatheringService from '../services/infoGatheringService';
-import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType, SmsStatus } from '@prisma/client';
+import { CallType, CallStatus, ActivityType, Status, ErrorType, Severity, WebhookType, SchedulerJobType, CrmActionType, SmsStatus, TriggerSource } from '@prisma/client';
 import prisma from '../config/database';
 
 const applyDateRange = (
@@ -281,12 +281,15 @@ export const getCrmActionLogs = async (req: AuthRequest, res: Response): Promise
       offset = 0,
     } = req.query;
 
+    const actionTypeFilter = parseMulti(actionType);
+    const statusFilter = parseMulti(status);
+
     const result = await loggingService.getCrmActionLogs({
       tenantSlug: tenantSlug as string,
-      actionType: actionType as CrmActionType,
+      actionType: actionTypeFilter as CrmActionType | CrmActionType[] | undefined,
       conversationId: conversationId as string,
       dealId: dealId as string,
-      status: status as Status,
+      status: statusFilter as Status | Status[] | undefined,
       startDate: startDate ? new Date(startDate as string) : undefined,
       endDate: endDate ? new Date(endDate as string) : undefined,
       limit: parseInt(limit as string),
@@ -320,6 +323,7 @@ export const getSmsLogs = async (req: AuthRequest, res: Response): Promise<void>
       tenantSlug,
       userEmail,
       status,
+      triggerSource,
       meetingId,
       startDate,
       endDate,
@@ -327,11 +331,15 @@ export const getSmsLogs = async (req: AuthRequest, res: Response): Promise<void>
       offset = 0,
     } = req.query;
 
+    const statusFilter = parseMulti(status);
+    const triggerSourceFilter = parseMulti(triggerSource);
+
     const result = await loggingService.getSmsLogs({
       userId: userId as string,
       tenantSlug: tenantSlug as string,
       userEmail: userEmail as string,
-      status: status as SmsStatus,
+      status: statusFilter as SmsStatus | SmsStatus[] | undefined,
+      triggerSource: triggerSourceFilter as TriggerSource | TriggerSource[] | undefined,
       meetingId: meetingId as string,
       startDate: startDate ? new Date(startDate as string) : undefined,
       endDate: endDate ? new Date(endDate as string) : undefined,
@@ -775,6 +783,7 @@ export const getBarrierXInfoGathering = async (req: AuthRequest, res: Response):
   try {
     const {
       status,
+      gatheringType,
       tenantSlug,
       startDate,
       endDate,
@@ -782,10 +791,19 @@ export const getBarrierXInfoGathering = async (req: AuthRequest, res: Response):
       offset = 0,
     } = req.query;
 
+    const statusFilter = parseMulti(status);
+    const gatheringTypeFilter = parseMulti(gatheringType);
+
     const where: any = {};
 
-    if (status) {
-      where.status = status;
+    if (statusFilter) {
+      where.status = Array.isArray(statusFilter) ? { in: statusFilter } : statusFilter;
+    }
+
+    if (gatheringTypeFilter) {
+      where.gatheringType = Array.isArray(gatheringTypeFilter)
+        ? { in: gatheringTypeFilter }
+        : gatheringTypeFilter;
     }
 
     if (tenantSlug) {

@@ -328,10 +328,10 @@ export const getSchedulerLogs = async (filters?: {
 
 export const getCrmActionLogs = async (filters?: {
     tenantSlug?: string;
-    actionType?: string;
+    actionType?: string | string[];
     conversationId?: string;
     dealId?: string;
-    status?: string;
+    status?: string | string[];
     startDate?: string;
     endDate?: string;
     limit?: number;
@@ -340,7 +340,10 @@ export const getCrmActionLogs = async (filters?: {
     const params = new URLSearchParams();
     if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
+            if (value === undefined || value === null) return;
+            if (Array.isArray(value)) {
+                if (value.length > 0) params.append(key, value.join(','));
+            } else {
                 params.append(key, value.toString());
             }
         });
@@ -353,7 +356,8 @@ export const getSmsLogs = async (filters?: {
     userId?: string;
     tenantSlug?: string;
     userEmail?: string;
-    status?: string;
+    status?: string | string[];
+    triggerSource?: string | string[];
     meetingId?: string;
     startDate?: string;
     endDate?: string;
@@ -363,7 +367,10 @@ export const getSmsLogs = async (filters?: {
     const params = new URLSearchParams();
     if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
+            if (value === undefined || value === null) return;
+            if (Array.isArray(value)) {
+                if (value.length > 0) params.append(key, value.join(','));
+            } else {
                 params.append(key, value.toString());
             }
         });

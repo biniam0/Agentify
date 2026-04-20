@@ -1,20 +1,43 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import DealsSearchBar from './DealsSearchBar';
+import DealsSearchBar, { type FilterDef } from './DealsSearchBar';
 import DealsFilterTabs from './DealsFilterTabs';
 import SmsSentTable from './SmsSentTable';
 import * as loggingService from '@/services/loggingService';
 import type { SmsLog } from '@/services/loggingService';
 import { useTenant } from '@/contexts/TenantContext';
+import { useFilters } from '@/hooks/useFilters';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface SmsSentSectionProps {
   onViewDetails: (sms: SmsLog) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
+
+const FILTER_IDS = ['status', 'triggerSource'] as const;
+
+const SMS_STATUS_OPTIONS = [
+  { value: 'QUEUED', label: 'Queued' },
+  { value: 'SENT', label: 'Sent' },
+  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'FAILED', label: 'Failed' },
+];
+
+const TRIGGER_OPTIONS = [
+  { value: 'SCHEDULED', label: 'Scheduled' },
+  { value: 'MANUAL', label: 'Manual' },
+  { value: 'RETRY', label: 'Retry' },
+  { value: 'WEBHOOK', label: 'Webhook' },
+];
+
+const SMS_FILTERS: FilterDef[] = [
+  { id: 'status', label: 'Status', options: SMS_STATUS_OPTIONS, multiple: true },
+  { id: 'triggerSource', label: 'Trigger', options: TRIGGER_OPTIONS, multiple: true },
+];
 
 const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
   const { tenantSlug } = useTenant();
@@ -23,6 +46,27 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 250);
+
+  const {
+    values: filterValues,
+    activeCount,
+    hasActive,
+    setFilter,
+    clearAll,
+  } = useFilters(FILTER_IDS);
+
+  const statusFilter = filterValues.status ?? [];
+  const triggerFilter = filterValues.triggerSource ?? [];
+
+  const filterKey = useMemo(
+    () => `${statusFilter.join(',')}|${triggerFilter.join(',')}`,
+    [statusFilter, triggerFilter]
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterKey]);
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -31,6 +75,8 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
         tenantSlug: tenantSlug || undefined,
         limit: ITEMS_PER_PAGE,
         offset: (page - 1) * ITEMS_PER_PAGE,
+        status: statusFilter.length > 0 ? statusFilter : undefined,
+        triggerSource: triggerFilter.length > 0 ? triggerFilter : undefined,
       });
 
       if (response.success) {
@@ -43,15 +89,16 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
     } finally {
       setLoading(false);
     }
-  }, [page, tenantSlug]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, tenantSlug, filterKey]);
 
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
 
-  const filteredLogs = searchQuery
+  const filteredLogs = debouncedSearch
     ? logs.filter((l) => {
-        const q = searchQuery.toLowerCase();
+        const q = debouncedSearch.toLowerCase();
         return (
           l.ownerName?.toLowerCase().includes(q) ||
           l.userName?.toLowerCase().includes(q) ||
@@ -67,6 +114,7 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
   const startItem = (page - 1) * ITEMS_PER_PAGE + 1;
   const endItem = Math.min(page * ITEMS_PER_PAGE, total);
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+  const hasAnyConstraint = hasActive || debouncedSearch.length > 0;
 
   return (
     <div>
@@ -82,7 +130,13 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
         </span>
       </div>
 
-      <DealsSearchBar onSearch={setSearchQuery} />
+      <DealsSearchBar
+        onSearch={setSearchQuery}
+        filters={SMS_FILTERS}
+        values={filterValues}
+        onFilterChange={setFilter}
+        onClearAll={clearAll}
+      />
       <DealsFilterTabs />
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -103,14 +157,25 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
             ))}
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex flex-col items-center justify-center py-16 text-center px-6">
             <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
               <MessageSquare className="h-6 w-6 text-subtle" />
             </div>
             <p className="text-sm font-medium text-heading">No SMS logs found</p>
-            <p className="text-xs text-subtle mt-1">
-              {searchQuery ? 'Try adjusting your search query' : 'SMS notifications will appear here'}
+            <p className="text-xs text-subtle mt-1 max-w-sm">
+              {hasAnyConstraint
+                ? 'No SMS messages match your current filters. Try clearing a filter or adjusting your search.'
+                : 'SMS notifications will appear here'}
             </p>
+            {hasActive && (
+              <button
+                type="button"
+                onClick={clearAll}
+                className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-brand hover:underline"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
         ) : (
           <SmsSentTable logs={filteredLogs} onViewDetails={onViewDetails} />
@@ -121,6 +186,7 @@ const SmsSentSection = ({ onViewDetails }: SmsSentSectionProps) => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1 py-4">
           <p className="text-xs text-subtle">
             Showing <span className="font-medium text-heading">{startItem}–{endItem}</span> of <span className="font-medium text-heading">{total}</span>
+            {activeCount > 0 && <span className="text-subtle"> · filtered</span>}
           </p>
           <div className="flex items-center gap-2">
             <Button

@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import DealsSearchBar from './DealsSearchBar';
+import DealsSearchBar, { type FilterDef } from './DealsSearchBar';
 import DealsFilterTabs from './DealsFilterTabs';
 import InfoGatheringTable from './InfoGatheringTable';
 import { API_BASE_URL } from '@/config/api';
 import type { BarrierXInfoRecord } from './InfoGatheringTable';
 import { useTenant } from '@/contexts/TenantContext';
+import { useFilters } from '@/hooks/useFilters';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface InfoGatheringSectionProps {
   onViewDetails: (record: BarrierXInfoRecord) => void;
@@ -17,6 +19,27 @@ interface InfoGatheringSectionProps {
 
 const ITEMS_PER_PAGE = 10;
 
+const FILTER_IDS = ['status', 'gatheringType'] as const;
+
+const INFO_STATUS_OPTIONS = [
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'IN_PROGRESS', label: 'In progress' },
+  { value: 'COMPLETED', label: 'Completed' },
+  { value: 'FAILED', label: 'Failed' },
+  { value: 'SKIPPED', label: 'Skipped' },
+];
+
+const GATHERING_TYPE_OPTIONS = [
+  { value: 'ZERO_SCORE', label: 'Zero score' },
+  { value: 'LOST_DEAL', label: 'Lost deal' },
+  { value: 'INACTIVITY', label: 'Inactivity' },
+];
+
+const INFO_FILTERS: FilterDef[] = [
+  { id: 'status', label: 'Status', options: INFO_STATUS_OPTIONS, multiple: true },
+  { id: 'gatheringType', label: 'Type', options: GATHERING_TYPE_OPTIONS, multiple: true },
+];
+
 const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectionProps) => {
   const { tenantSlug } = useTenant();
   const [records, setRecords] = useState<BarrierXInfoRecord[]>([]);
@@ -24,6 +47,27 @@ const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectio
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 250);
+
+  const {
+    values: filterValues,
+    activeCount,
+    hasActive,
+    setFilter,
+    clearAll,
+  } = useFilters(FILTER_IDS);
+
+  const statusFilter = filterValues.status ?? [];
+  const typeFilter = filterValues.gatheringType ?? [];
+
+  const filterKey = useMemo(
+    () => `${statusFilter.join(',')}|${typeFilter.join(',')}`,
+    [statusFilter, typeFilter]
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterKey]);
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
@@ -33,6 +77,8 @@ const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectio
         offset: ((page - 1) * ITEMS_PER_PAGE).toString(),
       });
       if (tenantSlug) params.set('tenantSlug', tenantSlug);
+      if (statusFilter.length > 0) params.set('status', statusFilter.join(','));
+      if (typeFilter.length > 0) params.set('gatheringType', typeFilter.join(','));
 
       const response = await fetch(`${API_BASE_URL}/logs/barrierx-info?${params}`, {
         credentials: 'include',
@@ -52,7 +98,8 @@ const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectio
     } finally {
       setLoading(false);
     }
-  }, [page, tenantSlug]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, tenantSlug, filterKey]);
 
   useEffect(() => {
     fetchRecords();
@@ -64,9 +111,9 @@ const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectio
     return () => clearInterval(interval);
   }, [jobRunning, fetchRecords]);
 
-  const filteredRecords = searchQuery
+  const filteredRecords = debouncedSearch
     ? records.filter((r) => {
-        const q = searchQuery.toLowerCase();
+        const q = debouncedSearch.toLowerCase();
         return (
           r.dealName?.toLowerCase().includes(q) ||
           r.companyName?.toLowerCase().includes(q) ||
@@ -79,6 +126,7 @@ const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectio
   const startItem = (page - 1) * ITEMS_PER_PAGE + 1;
   const endItem = Math.min(page * ITEMS_PER_PAGE, total);
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+  const hasAnyConstraint = hasActive || debouncedSearch.length > 0;
 
   return (
     <div>
@@ -91,7 +139,13 @@ const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectio
         </div>
       </div>
 
-      <DealsSearchBar onSearch={setSearchQuery} />
+      <DealsSearchBar
+        onSearch={setSearchQuery}
+        filters={INFO_FILTERS}
+        values={filterValues}
+        onFilterChange={setFilter}
+        onClearAll={clearAll}
+      />
       <DealsFilterTabs />
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -112,14 +166,25 @@ const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectio
             ))}
           </div>
         ) : filteredRecords.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex flex-col items-center justify-center py-16 text-center px-6">
             <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
               <Phone className="h-6 w-6 text-subtle" />
             </div>
             <p className="text-sm font-medium text-heading">No records found</p>
-            <p className="text-xs text-subtle mt-1">
-              {searchQuery ? 'Try adjusting your search query' : 'Info gathering records will appear here'}
+            <p className="text-xs text-subtle mt-1 max-w-sm">
+              {hasAnyConstraint
+                ? 'No records match your current filters. Try clearing a filter or adjusting your search.'
+                : 'Info gathering records will appear here'}
             </p>
+            {hasActive && (
+              <button
+                type="button"
+                onClick={clearAll}
+                className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-brand hover:underline"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
         ) : (
           <InfoGatheringTable records={filteredRecords} onViewDetails={onViewDetails} />
@@ -130,6 +195,7 @@ const InfoGatheringSection = ({ onViewDetails, jobRunning }: InfoGatheringSectio
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1 py-4">
           <p className="text-xs text-subtle">
             Showing <span className="font-medium text-heading">{startItem}–{endItem}</span> of <span className="font-medium text-heading">{total}</span>
+            {activeCount > 0 && <span className="text-subtle"> · filtered</span>}
           </p>
           <div className="flex items-center gap-2">
             <Button
