@@ -216,8 +216,8 @@ export const getCallLogs = async (filters?: {
     userId?: string;
     tenantSlug?: string;
     dealId?: string;
-    callType?: string;
-    status?: string;
+    callType?: string | string[];
+    status?: string | string[];
     startDate?: string;
     endDate?: string;
     limit?: number;
@@ -226,7 +226,10 @@ export const getCallLogs = async (filters?: {
     const params = new URLSearchParams();
     if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
+            if (value === undefined || value === null) return;
+            if (Array.isArray(value)) {
+                if (value.length > 0) params.append(key, value.join(','));
+            } else {
                 params.append(key, value.toString());
             }
         });

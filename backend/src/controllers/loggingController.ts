@@ -24,6 +24,20 @@ const applyDateRange = (
   if (endDate) where[field].lte = new Date(endDate);
 };
 
+/**
+ * Parse a query-string value that may represent a single value or a
+ * comma-separated list of values. Returns undefined if empty, a single string
+ * for one value, or an array of trimmed non-empty strings for many.
+ */
+const parseMulti = (raw: unknown): string | string[] | undefined => {
+  if (typeof raw !== 'string' || raw.length === 0) return undefined;
+  if (!raw.includes(',')) return raw;
+  const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  if (parts.length === 0) return undefined;
+  if (parts.length === 1) return parts[0];
+  return parts;
+};
+
 // ============================================
 // CALL LOGS
 // ============================================
@@ -42,12 +56,15 @@ export const getCallLogs = async (req: AuthRequest, res: Response): Promise<void
       offset = 0,
     } = req.query;
 
+    const callTypeFilter = parseMulti(callType);
+    const statusFilter = parseMulti(status);
+
     const result = await loggingService.getCallLogs({
       userId: userId as string,
       tenantSlug: tenantSlug as string,
       dealId: dealId as string,
-      callType: callType as CallType,
-      status: status as CallStatus,
+      callType: callTypeFilter as CallType | CallType[] | undefined,
+      status: statusFilter as CallStatus | CallStatus[] | undefined,
       startDate: startDate ? new Date(startDate as string) : undefined,
       endDate: endDate ? new Date(endDate as string) : undefined,
       limit: parseInt(limit as string),
