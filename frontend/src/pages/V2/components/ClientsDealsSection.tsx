@@ -10,6 +10,7 @@ import * as dealService from '@/services/dealService';
 import type { Deal } from '@/services/dealService';
 import { useFilters } from '@/hooks/useFilters';
 import { useDebounce } from '@/hooks/useDebounce';
+import { riskBucket } from '@/utils/dealRisk';
 
 interface ClientsDealsSectionProps {
   onViewDetails: (deal: Deal) => void;
@@ -31,13 +32,6 @@ const formatStageLabel = (stage: string) =>
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/^./, (s) => s.toUpperCase());
-
-const riskBucket = (totalRisk: number): 'zero' | 'low' | 'medium' | 'high' => {
-  if (totalRisk === 0) return 'zero';
-  if (totalRisk >= 70) return 'high';
-  if (totalRisk >= 40) return 'medium';
-  return 'low';
-};
 
 const ClientsDealsSection = ({ onViewDetails }: ClientsDealsSectionProps) => {
   const [deals, setDeals] = useState<Deal[]>([]);
