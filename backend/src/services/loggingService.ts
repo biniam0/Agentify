@@ -438,7 +438,8 @@ export const getSmsLogs = async (filters: {
   userId?: string;
   userEmail?: string;
   tenantSlug?: string;
-  status?: SmsStatus;
+  status?: SmsStatus | SmsStatus[];
+  triggerSource?: TriggerSource | TriggerSource[];
   meetingId?: string;
   startDate?: Date;
   endDate?: Date;
@@ -451,7 +452,16 @@ export const getSmsLogs = async (filters: {
     if (filters.userId) where.userId = filters.userId;
     if (filters.userEmail) where.userEmail = filters.userEmail;
     if (filters.tenantSlug) where.tenantSlug = filters.tenantSlug;
-    if (filters.status) where.status = filters.status;
+    if (filters.status) {
+      where.status = Array.isArray(filters.status)
+        ? { in: filters.status }
+        : filters.status;
+    }
+    if (filters.triggerSource) {
+      where.triggerSource = Array.isArray(filters.triggerSource)
+        ? { in: filters.triggerSource }
+        : filters.triggerSource;
+    }
     if (filters.meetingId) where.meetingId = filters.meetingId;
     if (filters.startDate || filters.endDate) {
       where.createdAt = {};
@@ -485,8 +495,8 @@ export const getCallLogs = async (filters: {
   userEmail?: string;
   tenantSlug?: string;
   dealId?: string;
-  callType?: CallType;
-  status?: CallStatus;
+  callType?: CallType | CallType[];
+  status?: CallStatus | CallStatus[];
   startDate?: Date;
   endDate?: Date;
   limit?: number;
@@ -499,8 +509,16 @@ export const getCallLogs = async (filters: {
     if (filters.userEmail) where.userEmail = filters.userEmail;
     if (filters.tenantSlug) where.tenantSlug = filters.tenantSlug;
     if (filters.dealId) where.dealId = filters.dealId;
-    if (filters.callType) where.callType = filters.callType;
-    if (filters.status) where.status = filters.status;
+    if (filters.callType) {
+      where.callType = Array.isArray(filters.callType)
+        ? { in: filters.callType }
+        : filters.callType;
+    }
+    if (filters.status) {
+      where.status = Array.isArray(filters.status)
+        ? { in: filters.status }
+        : filters.status;
+    }
     if (filters.startDate || filters.endDate) {
       where.initiatedAt = {};
       if (filters.startDate) where.initiatedAt.gte = filters.startDate;
@@ -691,11 +709,11 @@ export const getSchedulerLogs = async (filters: {
 };
 
 export const getCrmActionLogs = async (filters: {
-  actionType?: CrmActionType;
+  actionType?: CrmActionType | CrmActionType[];
   conversationId?: string;
   tenantSlug?: string;
   dealId?: string;
-  status?: Status;
+  status?: Status | Status[];
   startDate?: Date;
   endDate?: Date;
   limit?: number;
@@ -704,11 +722,19 @@ export const getCrmActionLogs = async (filters: {
   try {
     const where: any = {};
 
-    if (filters.actionType) where.actionType = filters.actionType;
+    if (filters.actionType) {
+      where.actionType = Array.isArray(filters.actionType)
+        ? { in: filters.actionType }
+        : filters.actionType;
+    }
     if (filters.conversationId) where.conversationId = filters.conversationId;
     if (filters.tenantSlug) where.tenantSlug = filters.tenantSlug;
     if (filters.dealId) where.dealId = filters.dealId;
-    if (filters.status) where.status = filters.status;
+    if (filters.status) {
+      where.status = Array.isArray(filters.status)
+        ? { in: filters.status }
+        : filters.status;
+    }
     if (filters.startDate || filters.endDate) {
       where.createdAt = {};
       if (filters.startDate) where.createdAt.gte = filters.startDate;

@@ -84,7 +84,7 @@ const V2DashboardPage = () => {
     <div>
       <HeroSection userName={user?.name?.split(' ')[0] || 'there'} />
       <TopTabs activeTab={activeTopTab} onTabChange={setActiveTopTab} />
-      <AlertBanner />
+      <AlertBanner onViewDeal={setSelectedDeal} />
       <StatsCards />
       <WorkflowActions
         onAddWorkflow={() => { setActiveWorkflowExec(null); setIsAddWorkflowOpen(true); }}

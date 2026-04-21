@@ -101,7 +101,7 @@ const ExpandedDealRow = ({ deal, onViewDetails }: ExpandedDealRowProps) => (
       <div className="relative px-5 pb-5 pt-2">
         <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#DB475D]" />
 
-        <div className="flex items-center justify-between pl-4 border border-default rounded-lg p-5 shadow-sm ml-2">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 pl-4 border border-default rounded-lg p-5 shadow-sm ml-2">
           <div>
             <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
               DEAL OWNER
@@ -109,8 +109,8 @@ const ExpandedDealRow = ({ deal, onViewDetails }: ExpandedDealRowProps) => (
             <p className="text-[15px] font-medium text-heading mb-1">
               {deal.owner?.name || 'Unknown'}
             </p>
-            <p className="text-xs text-subtle mb-3">{deal.owner?.email || '--'}</p>
-            <div className="flex items-center gap-2">
+            <p className="text-xs text-subtle mb-3 truncate">{deal.owner?.email || '--'}</p>
+            <div className="flex items-center gap-2 flex-wrap">
               {deal.owner?.email && (
                 <button className="inline-flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
                   <Mail className="h-4 w-4 text-subtle" />
@@ -130,7 +130,7 @@ const ExpandedDealRow = ({ deal, onViewDetails }: ExpandedDealRowProps) => (
             <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
               RISK SCORES
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
               <RiskMiniBar label="Arena" value={deal.riskScores?.arenaRisk || 0} />
               <RiskMiniBar label="Control" value={deal.riskScores?.controlRoomRisk || 0} />
               <RiskMiniBar label="Scorecard" value={deal.riskScores?.scoreCardRisk || 0} />
@@ -140,7 +140,7 @@ const ExpandedDealRow = ({ deal, onViewDetails }: ExpandedDealRowProps) => (
 
           <button
             onClick={() => onViewDetails(deal)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors shadow-sm"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors shadow-sm self-start lg:self-auto whitespace-nowrap"
           >
             View full details
             <ArrowRight className="h-4 w-4" />
@@ -150,6 +150,139 @@ const ExpandedDealRow = ({ deal, onViewDetails }: ExpandedDealRowProps) => (
     </TableCell>
   </TableRow>
 );
+
+const MobileField = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="min-w-0">
+    <p className="text-[10px] font-semibold text-subtle uppercase tracking-wider mb-1">{label}</p>
+    <div className="truncate">{children}</div>
+  </div>
+);
+
+interface MobileDealCardProps {
+  deal: Deal;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onViewDetails: (deal: Deal) => void;
+}
+
+const MobileDealCard = ({ deal, isExpanded, onToggle, onViewDetails }: MobileDealCardProps) => {
+  const risk = getRiskLabel(deal);
+  return (
+    <div
+      className={cn(
+        'relative border-b border-default last:border-b-0 transition-colors',
+        isExpanded ? 'bg-white' : 'hover:bg-gray-50/50'
+      )}
+    >
+      {isExpanded && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#DB475D]" />}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full text-left p-4 flex items-start gap-3"
+      >
+        <DealAvatar id={deal.id} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-heading truncate">{deal.dealName}</p>
+              <div className="flex items-center gap-1.5 text-xs text-subtle min-w-0">
+                {deal.company && (
+                  <>
+                    <Building2 className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{deal.company}</span>
+                  </>
+                )}
+              </div>
+            </div>
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 text-subtle transition-transform flex-shrink-0 mt-0.5',
+                isExpanded && 'rotate-180'
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3">
+            <MobileField label="Stage">
+              <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-md', getStageBadge(deal.stage))}>
+                {formatStageName(deal.stage)}
+              </span>
+            </MobileField>
+            <MobileField label="Deal Risk">
+              <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-md', risk.style)}>
+                {risk.text}
+              </span>
+            </MobileField>
+            <MobileField label="Amount">
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="h-3 w-3 text-subtle flex-shrink-0" />
+                <span className="text-sm font-medium text-heading">{formatAmount(deal.amount)}</span>
+              </div>
+            </MobileField>
+            <MobileField label="Next step">
+              <button
+                onClick={(e) => { e.stopPropagation(); onViewDetails(deal); }}
+                className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+              >
+                View details
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </MobileField>
+          </div>
+        </div>
+      </button>
+
+      {isExpanded && (
+        <div className="px-4 pb-4">
+          <div className="border border-default rounded-lg p-4 shadow-sm space-y-4 ml-2">
+            <div>
+              <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
+                DEAL OWNER
+              </p>
+              <p className="text-[15px] font-medium text-heading mb-1">
+                {deal.owner?.name || 'Unknown'}
+              </p>
+              <p className="text-xs text-subtle mb-2 truncate">{deal.owner?.email || '--'}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {deal.owner?.email && (
+                  <button className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
+                    <Mail className="h-4 w-4 text-subtle" />
+                    Email
+                  </button>
+                )}
+                {deal.owner?.phone && (
+                  <button className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
+                    <Phone className="h-4 w-4 text-subtle" />
+                    Call
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
+                RISK SCORES
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                <RiskMiniBar label="Arena" value={deal.riskScores?.arenaRisk || 0} />
+                <RiskMiniBar label="Control" value={deal.riskScores?.controlRoomRisk || 0} />
+                <RiskMiniBar label="Score" value={deal.riskScores?.scoreCardRisk || 0} />
+                <RiskMiniBar label="Total" value={deal.riskScores?.totalDealRisk || 0} bold />
+              </div>
+            </div>
+
+            <button
+              onClick={() => onViewDetails(deal)}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors shadow-sm"
+            >
+              View full details
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const RiskMiniBar = ({ label, value, bold }: { label: string; value: number; bold?: boolean }) => (
   <div className="text-center">
@@ -198,50 +331,64 @@ const ClientsDealsTable = ({ deals, onViewDetails }: ClientsDealsTableProps) => 
   });
 
   return (
-    <div className="overflow-x-auto">
-      <Table className="w-full">
-        <TableHeader>
-          <TableRow className="border-b border-default bg-[#F9FAFB] hover:bg-[#F9FAFB]">
-            <TableHead className="w-10 rounded-tl-xl" />
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider">
-              Deal & Company
-            </TableHead>
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider">
-              Stage
-            </TableHead>
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider">
-              <button
-                onClick={() => handleSort('risk')}
-                className="inline-flex items-center gap-1 hover:text-heading transition-colors"
-              >
-                Deal Risk
-                <ArrowDown className={cn('h-3 w-3', sortField === 'risk' && sortDir === 'asc' && 'rotate-180')} />
-              </button>
-            </TableHead>
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider">
-              Amount
-            </TableHead>
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider rounded-tr-xl">
-              Next step
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sorted.map((deal) => {
-            const isExpanded = expandedId === deal.id;
-            return (
-              <DealRow
-                key={deal.id}
-                deal={deal}
-                isExpanded={isExpanded}
-                onToggle={() => toggleExpand(deal.id)}
-                onViewDetails={onViewDetails}
-              />
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+    <>
+      <div className="hidden md:block overflow-x-auto">
+        <Table className="w-full min-w-[900px]">
+          <TableHeader>
+            <TableRow className="border-b border-default bg-[#F9FAFB] hover:bg-[#F9FAFB]">
+              <TableHead className="w-10 rounded-tl-xl" />
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider whitespace-nowrap">
+                Deal & Company
+              </TableHead>
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider whitespace-nowrap">
+                Stage
+              </TableHead>
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider whitespace-nowrap">
+                <button
+                  onClick={() => handleSort('risk')}
+                  className="inline-flex items-center gap-1 hover:text-heading transition-colors"
+                >
+                  Deal Risk
+                  <ArrowDown className={cn('h-3 w-3', sortField === 'risk' && sortDir === 'asc' && 'rotate-180')} />
+                </button>
+              </TableHead>
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider whitespace-nowrap">
+                Amount
+              </TableHead>
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider rounded-tr-xl whitespace-nowrap">
+                Next step
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sorted.map((deal) => {
+              const isExpanded = expandedId === deal.id;
+              return (
+                <DealRow
+                  key={deal.id}
+                  deal={deal}
+                  isExpanded={isExpanded}
+                  onToggle={() => toggleExpand(deal.id)}
+                  onViewDetails={onViewDetails}
+                />
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="md:hidden">
+        {sorted.map((deal) => (
+          <MobileDealCard
+            key={deal.id}
+            deal={deal}
+            isExpanded={expandedId === deal.id}
+            onToggle={() => toggleExpand(deal.id)}
+            onViewDetails={onViewDetails}
+          />
+        ))}
+      </div>
+    </>
   );
 };
 

@@ -81,8 +81,8 @@ const ExpandedMeetingRow = ({ meeting, onViewDetails }: { meeting: Meeting; onVi
       <div className="relative px-5 pb-5 pt-2">
         <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#DB475D]" />
 
-        <div className="flex items-center justify-between pl-4 border border-default rounded-lg p-5 shadow-sm ml-2">
-          <div>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pl-4 border border-default rounded-lg p-5 shadow-sm ml-2">
+          <div className="flex-1 min-w-0">
             <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">MEETING INFO</p>
             <p className="text-[15px] font-medium text-heading mb-1">{meeting.title}</p>
             {meeting.agenda && (
@@ -90,7 +90,7 @@ const ExpandedMeetingRow = ({ meeting, onViewDetails }: { meeting: Meeting; onVi
                 <MeetingAgendaFormatter agenda={meeting.agenda} variant="compact" />
               </div>
             )}
-            <div className="flex items-center gap-3 text-xs text-subtle">
+            <div className="flex items-center gap-3 flex-wrap text-xs text-subtle">
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {formatDate(meeting.startTime)}, {formatTime(meeting.startTime)} – {formatTime(meeting.endTime)}
@@ -108,7 +108,7 @@ const ExpandedMeetingRow = ({ meeting, onViewDetails }: { meeting: Meeting; onVi
 
           <button
             onClick={() => onViewDetails(meeting)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors shadow-sm whitespace-nowrap"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors shadow-sm whitespace-nowrap self-start lg:self-auto"
           >
             View full details
             <ArrowRight className="h-4 w-4" />
@@ -118,6 +118,126 @@ const ExpandedMeetingRow = ({ meeting, onViewDetails }: { meeting: Meeting; onVi
     </TableCell>
   </TableRow>
 );
+
+const MobileField = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="min-w-0">
+    <p className="text-[10px] font-semibold text-subtle uppercase tracking-wider mb-1">{label}</p>
+    <div className="truncate">{children}</div>
+  </div>
+);
+
+interface MobileMeetingCardProps {
+  meeting: Meeting;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onViewDetails: (meeting: Meeting) => void;
+}
+
+const MobileMeetingCard = ({ meeting, isExpanded, onToggle, onViewDetails }: MobileMeetingCardProps) => {
+  const past = isMeetingPast(meeting.startTime);
+  return (
+    <div
+      className={cn(
+        'relative border-b border-default last:border-b-0 transition-colors',
+        isExpanded ? 'bg-white' : 'hover:bg-gray-50/50'
+      )}
+    >
+      {isExpanded && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#DB475D]" />}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full text-left p-4 flex items-start gap-3"
+      >
+        <MeetingAvatar id={meeting.id} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-heading truncate">{meeting.title}</p>
+              <div className="flex items-center gap-1.5 text-xs text-subtle min-w-0">
+                {meeting.dealCompany && (
+                  <>
+                    <Building2 className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{meeting.dealCompany}</span>
+                  </>
+                )}
+              </div>
+            </div>
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 text-subtle transition-transform flex-shrink-0 mt-0.5',
+                isExpanded && 'rotate-180'
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3">
+            <MobileField label="Status">
+              <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-md capitalize', STATUS_STYLES[meeting.status] || 'bg-gray-50 text-gray-600')}>
+                {meeting.status.replace('_', ' ')}
+              </span>
+            </MobileField>
+            <MobileField label="Time">
+              <div>
+                <p className={cn('text-sm font-medium', past ? 'text-red-500' : 'text-brand')}>
+                  {getTimeUntil(meeting.startTime)}
+                </p>
+              </div>
+            </MobileField>
+            <MobileField label="Date">
+              <span className="text-xs text-subtle">{formatDate(meeting.startTime)}</span>
+            </MobileField>
+            <MobileField label="Next step">
+              <button
+                onClick={(e) => { e.stopPropagation(); onViewDetails(meeting); }}
+                className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+              >
+                View details
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </MobileField>
+          </div>
+        </div>
+      </button>
+
+      {isExpanded && (
+        <div className="px-4 pb-4">
+          <div className="border border-default rounded-lg p-4 shadow-sm space-y-3 ml-2">
+            <div>
+              <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">MEETING INFO</p>
+              <p className="text-[15px] font-medium text-heading mb-2">{meeting.title}</p>
+              {meeting.agenda && (
+                <div className="mb-3">
+                  <MeetingAgendaFormatter agenda={meeting.agenda} variant="compact" />
+                </div>
+              )}
+              <div className="flex flex-col gap-2 text-xs text-subtle">
+                <span className="inline-flex items-center gap-1">
+                  <Calendar className="h-3 w-3 flex-shrink-0" />
+                  {formatDate(meeting.startTime)}, {formatTime(meeting.startTime)} – {formatTime(meeting.endTime)}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3 w-3 flex-shrink-0" />
+                  {getDuration(meeting.startTime, meeting.endTime)}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Users className="h-3 w-3 flex-shrink-0" />
+                  {meeting.participants?.length || 0} participants
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => onViewDetails(meeting)}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors shadow-sm"
+            >
+              View full details
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ── Main Table ──────────────────────────────────────────────────
 
@@ -146,47 +266,61 @@ const ClientsMeetingsTable = ({ meetings, onViewDetails }: ClientsMeetingsTableP
   });
 
   return (
-    <div className="overflow-x-auto">
-      <Table className="w-full">
-        <TableHeader>
-          <TableRow className="border-b border-default bg-[#F9FAFB] hover:bg-[#F9FAFB]">
-            <TableHead className="w-10 rounded-tl-xl" />
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider">
-              Meeting & Deal
-            </TableHead>
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider">
-              Status
-            </TableHead>
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider">
-              <button
-                onClick={() => handleSort('time')}
-                className="inline-flex items-center gap-1 hover:text-heading transition-colors"
-              >
-                Time
-                <ArrowDown className={cn('h-3 w-3', sortField === 'time' && sortDir === 'desc' && 'rotate-180')} />
-              </button>
-            </TableHead>
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider rounded-tr-xl">
-              Next step
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sorted.map((meeting) => {
-            const isExpanded = expandedId === meeting.id;
-            return (
-              <MeetingRow
-                key={meeting.id}
-                meeting={meeting}
-                isExpanded={isExpanded}
-                onToggle={() => toggleExpand(meeting.id)}
-                onViewDetails={onViewDetails}
-              />
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+    <>
+      <div className="hidden md:block overflow-x-auto">
+        <Table className="w-full min-w-[780px]">
+          <TableHeader>
+            <TableRow className="border-b border-default bg-[#F9FAFB] hover:bg-[#F9FAFB]">
+              <TableHead className="w-10 rounded-tl-xl" />
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider whitespace-nowrap">
+                Meeting & Deal
+              </TableHead>
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider whitespace-nowrap">
+                Status
+              </TableHead>
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider whitespace-nowrap">
+                <button
+                  onClick={() => handleSort('time')}
+                  className="inline-flex items-center gap-1 hover:text-heading transition-colors"
+                >
+                  Time
+                  <ArrowDown className={cn('h-3 w-3', sortField === 'time' && sortDir === 'desc' && 'rotate-180')} />
+                </button>
+              </TableHead>
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider rounded-tr-xl whitespace-nowrap">
+                Next step
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sorted.map((meeting) => {
+              const isExpanded = expandedId === meeting.id;
+              return (
+                <MeetingRow
+                  key={meeting.id}
+                  meeting={meeting}
+                  isExpanded={isExpanded}
+                  onToggle={() => toggleExpand(meeting.id)}
+                  onViewDetails={onViewDetails}
+                />
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="md:hidden">
+        {sorted.map((meeting) => (
+          <MobileMeetingCard
+            key={meeting.id}
+            meeting={meeting}
+            isExpanded={expandedId === meeting.id}
+            onToggle={() => toggleExpand(meeting.id)}
+            onViewDetails={onViewDetails}
+          />
+        ))}
+      </div>
+    </>
   );
 };
 

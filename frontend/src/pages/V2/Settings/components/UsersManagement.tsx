@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2Icon, UsersIcon, AlertCircle } from 'lucide-react';
+import { UsersIcon, AlertCircle } from 'lucide-react';
 import api from '@/services/api';
 
 import {
@@ -14,14 +14,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 
 import InviteTeam from './InviteTeam';
@@ -52,7 +44,6 @@ const UsersManagement = () => {
   const [tenantName, setTenantName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<TenantMember | null>(null);
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -66,8 +57,12 @@ const UsersManagement = () => {
         } else {
           setError('Failed to load team members');
         }
-      } catch (err: any) {
-        setError(err.response?.data?.error || 'Failed to load team members');
+      } catch (err: unknown) {
+        const message =
+          (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+          (err instanceof Error ? err.message : undefined) ||
+          'Failed to load team members';
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -75,12 +70,6 @@ const UsersManagement = () => {
 
     fetchMembers();
   }, []);
-
-  const handleDelete = () => {
-    if (!deleteTarget) return;
-    setMembers((prev) => prev.filter((m) => m.id !== deleteTarget.id));
-    setDeleteTarget(null);
-  };
 
   const getInitials = (member: TenantMember) => {
     if (member.firstName && member.lastName) {
@@ -157,7 +146,6 @@ const UsersManagement = () => {
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-4">User</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead className="w-[70px] text-right pr-4" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -181,17 +169,6 @@ const UsersManagement = () => {
                         {member.role}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right pr-4">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleteTarget(member)}
-                      >
-                        <Trash2Icon className="h-4 w-4" />
-                        <span className="sr-only">Delete {getDisplayName(member)}</span>
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -204,25 +181,6 @@ const UsersManagement = () => {
           </p>
         )}
       </div>
-
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader className="space-y-2">
-            <DialogTitle>Remove team member</DialogTitle>
-            <div className="text-muted-foreground text-sm">
-              Are you sure you want to remove <span className="font-medium text-foreground">{deleteTarget ? getDisplayName(deleteTarget) : ''}</span> ({deleteTarget?.email}) from the organization? This action cannot be undone.
-            </div>
-          </DialogHeader>
-          <DialogFooter className="mt-4 gap-4 sm:justify-end">
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button variant="destructive" onClick={handleDelete}>
-              Remove
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       </div>
     </section>
   );
