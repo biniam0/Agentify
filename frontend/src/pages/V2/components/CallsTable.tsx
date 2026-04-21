@@ -94,14 +94,13 @@ const ExpandedCallRow = ({ log, onViewDetails }: ExpandedCallRowProps) => (
       <div className="relative px-5 pb-5 pt-2">
         <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#DB475D]" />
 
-        <div className="flex items-center justify-between pl-4 border border-default rounded-lg p-5 shadow-sm ml-2">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pl-4 border border-default rounded-lg p-5 shadow-sm ml-2">
           <div>
             <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
               CONTACT INFO
             </p>
             <p className="text-[15px] font-medium text-heading mb-1">{log.ownerName || log.userName}</p>
-            {/* <p className="text-xs text-subtle mb-3">{log.phoneNumber}</p> */}
-            <div className="flex items-center gap-2 mt-3">
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
               <button className="inline-flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
                 <Mail className="h-4 w-4 text-subtle" />
                 Email
@@ -120,7 +119,7 @@ const ExpandedCallRow = ({ log, onViewDetails }: ExpandedCallRowProps) => (
             <p className="text-[15px] font-medium text-heading mb-3">
               Current: {log.callType.replace('_', ' ')}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {log.completedAt && (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-md">
                   <Calendar className="h-3.5 w-3.5 text-subtle" />
@@ -134,7 +133,7 @@ const ExpandedCallRow = ({ log, onViewDetails }: ExpandedCallRowProps) => (
 
           <button
             onClick={() => onViewDetails(log)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors shadow-sm"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors shadow-sm self-start lg:self-auto whitespace-nowrap"
           >
             <Plus className="h-4 w-4" />
             View full details
@@ -143,6 +142,117 @@ const ExpandedCallRow = ({ log, onViewDetails }: ExpandedCallRowProps) => (
       </div>
     </TableCell>
   </TableRow>
+);
+
+const MobileCallCard = ({ log, isExpanded, onToggle, onViewDetails }: CallRowProps) => (
+  <div
+    className={cn(
+      'relative border-b border-default last:border-b-0 transition-colors',
+      isExpanded ? 'bg-white' : 'hover:bg-gray-50/50'
+    )}
+  >
+    {isExpanded && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#DB475D]" />}
+    <button
+      type="button"
+      onClick={onToggle}
+      className="w-full text-left p-4 flex items-start gap-3"
+    >
+      <CallAvatar id={log.id} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-heading truncate">{log.dealName || 'Unknown Deal'}</p>
+            <p className="text-xs text-subtle truncate">{log.userName}</p>
+          </div>
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 text-subtle transition-transform flex-shrink-0 mt-0.5',
+              isExpanded && 'rotate-180'
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3">
+          <MobileField label="Status">
+            <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-md', STATUS_STYLES[log.status] || 'bg-gray-50 text-gray-600')}>
+              {log.status.replace('_', ' ')}
+            </span>
+          </MobileField>
+          <MobileField label="Duration">
+            <span className="text-sm font-medium text-heading">{formatDuration(log.duration)}</span>
+          </MobileField>
+          <MobileField label="Call Type">
+            <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-md', CALL_TYPE_STYLES[log.callType])}>
+              {log.callType.replace('_', ' ')}
+            </span>
+          </MobileField>
+          <MobileField label="Next step">
+            <button
+              onClick={(e) => { e.stopPropagation(); onViewDetails(log); }}
+              className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+            >
+              {getNextAction(log)}
+              <ArrowRight className="h-3 w-3" />
+            </button>
+          </MobileField>
+        </div>
+      </div>
+    </button>
+
+    {isExpanded && (
+      <div className="px-4 pb-4">
+        <div className="border border-default rounded-lg p-4 shadow-sm space-y-4 ml-2">
+          <div>
+            <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
+              CONTACT INFO
+            </p>
+            <p className="text-[15px] font-medium text-heading mb-2">{log.ownerName || log.userName}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
+                <Mail className="h-4 w-4 text-subtle" />
+                Email
+              </button>
+              <button className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-body bg-white border border-default rounded-lg hover:bg-gray-50 transition-colors">
+                <Phone className="h-4 w-4 text-subtle" />
+                Call
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
+              WORKFLOW STATUS
+            </p>
+            <p className="text-[15px] font-medium text-heading mb-2">
+              Current: {log.callType.replace('_', ' ')}
+            </p>
+            {log.completedAt && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-md">
+                <Calendar className="h-3.5 w-3.5 text-subtle" />
+                <span className="text-xs font-medium text-body">
+                  Call completed {formatTimestamp(log.completedAt)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => onViewDetails(log)}
+            className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            View full details
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+);
+
+const MobileField = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="min-w-0">
+    <p className="text-[10px] font-semibold text-subtle uppercase tracking-wider mb-1">{label}</p>
+    <div className="truncate">{children}</div>
+  </div>
 );
 
 interface CallsTableProps {
@@ -169,50 +279,64 @@ const CallsTable = ({ logs, onViewDetails }: CallsTableProps) => {
   };
 
   return (
-    <div className="overflow-x-auto">
-      <Table className="w-full">
-        <TableHeader>
-          <TableRow className="border-b border-default bg-[#F9FAFB] hover:bg-[#F9FAFB]">
-            <TableHead className="w-10 rounded-tl-xl" />
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider">
-              Deal & User
-            </TableHead>
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider">
-              <button
-                onClick={() => handleSort('status')}
-                className="inline-flex items-center gap-1 hover:text-heading transition-colors"
-              >
-                Status
-                <ArrowDown className={cn('h-3 w-3', sortField === 'status' && sortDir === 'asc' && 'rotate-180')} />
-              </button>
-            </TableHead>
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider">
-              Duration
-            </TableHead>
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider">
-              Call Type
-            </TableHead>
-            <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider rounded-tr-xl">
-              Next step
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {logs.map((log) => {
-            const isExpanded = expandedId === log.id;
-            return (
-              <CallRow
-                key={log.id}
-                log={log}
-                isExpanded={isExpanded}
-                onToggle={() => toggleExpand(log.id)}
-                onViewDetails={onViewDetails}
-              />
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+    <>
+      <div className="hidden md:block overflow-x-auto">
+        <Table className="w-full min-w-[820px]">
+          <TableHeader>
+            <TableRow className="border-b border-default bg-[#F9FAFB] hover:bg-[#F9FAFB]">
+              <TableHead className="w-10 rounded-tl-xl" />
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider whitespace-nowrap">
+                Deal & User
+              </TableHead>
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider whitespace-nowrap">
+                <button
+                  onClick={() => handleSort('status')}
+                  className="inline-flex items-center gap-1 hover:text-heading transition-colors"
+                >
+                  Status
+                  <ArrowDown className={cn('h-3 w-3', sortField === 'status' && sortDir === 'asc' && 'rotate-180')} />
+                </button>
+              </TableHead>
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider whitespace-nowrap">
+                Duration
+              </TableHead>
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider whitespace-nowrap">
+                Call Type
+              </TableHead>
+              <TableHead className="text-left py-3 px-3 text-[11px] font-semibold text-subtle tracking-wider rounded-tr-xl whitespace-nowrap">
+                Next step
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {logs.map((log) => {
+              const isExpanded = expandedId === log.id;
+              return (
+                <CallRow
+                  key={log.id}
+                  log={log}
+                  isExpanded={isExpanded}
+                  onToggle={() => toggleExpand(log.id)}
+                  onViewDetails={onViewDetails}
+                />
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="md:hidden">
+        {logs.map((log) => (
+          <MobileCallCard
+            key={log.id}
+            log={log}
+            isExpanded={expandedId === log.id}
+            onToggle={() => toggleExpand(log.id)}
+            onViewDetails={onViewDetails}
+          />
+        ))}
+      </div>
+    </>
   );
 };
 

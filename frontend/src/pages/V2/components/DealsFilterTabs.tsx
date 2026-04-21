@@ -18,13 +18,13 @@ const DealsFilterTabs = () => {
   const activeTab = location.pathname.split('/v2/')[1] || 'calls';
 
   return (
-    <div className="flex gap-0 border-b border-default mb-6 relative">
+    <div className="flex gap-0 border-b border-default mb-6 relative overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
       {FILTER_TABS.map((tab) => (
         <button
           key={tab.id}
           onClick={() => navigate(`/app/v2/${tab.id}`)}
           className={cn(
-            'px-4 py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap',
+            'px-4 py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap flex-shrink-0',
             activeTab === tab.id
               ? 'text-brand'
               : 'text-subtle hover:text-heading'
