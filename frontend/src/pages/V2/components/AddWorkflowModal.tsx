@@ -30,6 +30,10 @@ import {
   Building2,
   Banknote,
   HelpCircle,
+  Copy,
+  Check,
+  Info,
+  Inbox,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -240,6 +244,26 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
     (promptTab === 'templates' && templateReady) ||
     (promptTab === 'custom' && prompt.trim().length > 0);
 
+  // List of missing required pieces so we can show a precise hint when the
+  // Generate button is disabled. Recomputed per render — cheap.
+  const missingPieces: string[] = useMemo(() => {
+    if (promptTab !== 'templates' || !selectedTemplate) return [];
+    const missing: string[] = [];
+    for (const s of selectedTemplate.slots) {
+      if (!s.required) continue;
+      const v = slotValues[s.id];
+      const empty =
+        v === undefined ||
+        v === null ||
+        (typeof v === 'string' && !v.trim()) ||
+        (Array.isArray(v) && v.length === 0) ||
+        (typeof v === 'number' && Number.isNaN(v));
+      if (empty) missing.push(s.label);
+    }
+    if (!selectedQuestion.trim()) missing.push('Question');
+    return missing;
+  }, [promptTab, selectedTemplate, slotValues, selectedQuestion]);
+
   const [substeps, setSubsteps] = useState<Record<string, SubStep>>({
     parsing: { status: 'pending', message: 'Analyzing your request...' },
     finding: { status: 'pending', message: 'Searching for targets...' },
@@ -271,7 +295,15 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && step !== 'processing' && step !== 'executing') onClose();
+      if (e.key !== 'Escape') return;
+      if (step === 'processing' || step === 'executing') return;
+      // Two-stage Esc: collapse expanded template first, then close modal.
+      if (step === 'prompt' && promptTab === 'templates' && selectedTemplateId) {
+        e.stopPropagation();
+        setSelectedTemplateId(null);
+        return;
+      }
+      onClose();
     };
     document.addEventListener('keydown', handleEsc);
     document.body.style.overflow = 'hidden';
@@ -279,7 +311,7 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
       document.removeEventListener('keydown', handleEsc);
       document.body.style.overflow = '';
     };
-  }, [onClose, step]);
+  }, [onClose, step, promptTab, selectedTemplateId]);
 
   const runWorkflow = async () => {
     const outgoingPrompt = resolvedPrompt.trim();
@@ -460,7 +492,7 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={step !== 'processing' && step !== 'executing' ? onClose : undefined} />
 
-      <div className="relative w-full max-w-[720px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 mx-4">
+      <div className="relative w-full max-w-[720px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 mx-3 sm:mx-4">
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-start justify-between border-b border-default">
           <div>
@@ -531,7 +563,7 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
               {promptTab === 'templates' && (
                 <>
                   {/* Quick starts band — kept per Phase-1 plan */}
-                  <div className="grid grid-cols-2 gap-4 bg-gray-50/50 border border-gray-100 rounded-xl p-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50/50 border border-gray-100 rounded-xl p-4 sm:p-5">
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <Target className="h-4 w-4 text-brand" />
@@ -644,6 +676,22 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
                         </div>
                       )}
 
+                      {/* Tenant-empty hint — only when a slot actually needs deal/contact/company data */}
+                      {!dealsLoading &&
+                        tenantDeals.length === 0 &&
+                        selectedTemplate.slots.some((s) =>
+                          ['deal', 'deals', 'contact', 'contacts', 'company', 'companies'].includes(s.kind),
+                        ) && (
+                          <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                            <Inbox className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-blue-800 leading-relaxed">
+                              {dealsError
+                                ? 'Could not load your deals. You can still type names and our AI will interpret them.'
+                                : 'No deals synced yet for this tenant. You can still type names and our AI will interpret them.'}
+                            </p>
+                          </div>
+                        )}
+
                       {selectedTemplate.slots.map((slot) => (
                         <SlotInput
                           key={slot.id}
@@ -652,6 +700,7 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
                           onChange={(v) => updateSlot(slot.id, v)}
                           deals={tenantDeals}
                           facets={tenantFacets}
+                          loading={dealsLoading}
                         />
                       ))}
 
@@ -706,27 +755,42 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
               )}
 
               {/* Footer actions */}
-              <div className="flex items-center justify-between pt-1">
-                <p className="text-[11px] text-subtle">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1">
+                <div className="text-[11px] text-subtle min-w-0">
                   {promptTab === 'custom' ? (
                     <>
-                      Press <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono border border-gray-200">Ctrl+Enter</kbd> to run
+                      Press{' '}
+                      <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono border border-gray-200">
+                        Ctrl+Enter
+                      </kbd>{' '}
+                      to run
                     </>
                   ) : selectedTemplate ? (
                     templateReady ? (
                       <span className="text-emerald-600">Ready — click Generate & Preview</span>
                     ) : (
-                      <span>Fill every field and pick a question</span>
+                      <span className="flex flex-wrap items-center gap-1">
+                        <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
+                        Missing:
+                        {missingPieces.map((m) => (
+                          <span
+                            key={m}
+                            className="inline-flex px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 rounded text-[10px] font-medium"
+                          >
+                            {m}
+                          </span>
+                        ))}
+                      </span>
                     )
                   ) : (
                     <span>Pick a template to start</span>
                   )}
-                </p>
+                </div>
                 <Button
                   onClick={runWorkflow}
                   disabled={!canRun}
                   className={cn(
-                    'gap-2 px-5 py-2.5 h-auto font-medium rounded-lg transition-all',
+                    'gap-2 px-5 py-2.5 h-auto font-medium rounded-lg transition-all self-end sm:self-auto shrink-0',
                     canRun
                       ? 'bg-brand hover:bg-brand-hover text-white'
                       : 'bg-gray-100 text-gray-400 cursor-not-allowed',
@@ -1206,9 +1270,10 @@ interface SlotInputProps {
   onChange: (v: SlotValues[string]) => void;
   deals: TenantDeal[];
   facets: { companies: string[]; owners: string[]; stages: string[] };
+  loading?: boolean;
 }
 
-function SlotInput({ slot, value, onChange, deals, facets }: SlotInputProps) {
+function SlotInput({ slot, value, onChange, deals, facets, loading }: SlotInputProps) {
   switch (slot.kind) {
     case 'deal':
     case 'deals': {
@@ -1226,7 +1291,9 @@ function SlotInput({ slot, value, onChange, deals, facets }: SlotInputProps) {
           onChange={onChange}
           options={options}
           searchKeys={['label', 'sublabel']}
-          emptyHint="No matching deal — you can still type a name below."
+          emptyHint="No matching deal — type a name to use it anyway."
+          loading={loading}
+          sourceEmpty={!loading && options.length === 0}
         />
       );
     }
@@ -1242,7 +1309,9 @@ function SlotInput({ slot, value, onChange, deals, facets }: SlotInputProps) {
           onChange={onChange}
           options={options}
           searchKeys={['label']}
-          emptyHint="Rep not listed — type their name below."
+          emptyHint="Rep not listed — type their name."
+          loading={loading}
+          sourceEmpty={!loading && options.length === 0}
         />
       );
     }
@@ -1258,7 +1327,9 @@ function SlotInput({ slot, value, onChange, deals, facets }: SlotInputProps) {
           onChange={onChange}
           options={options}
           searchKeys={['label']}
-          emptyHint="Company not listed — type it below."
+          emptyHint="Company not listed — type it."
+          loading={loading}
+          sourceEmpty={!loading && options.length === 0}
         />
       );
     }
@@ -1331,9 +1402,11 @@ interface ComboBoxProps {
   options: ComboOption[];
   searchKeys: Array<keyof ComboOption>;
   emptyHint?: string;
+  loading?: boolean;
+  sourceEmpty?: boolean;
 }
 
-function ComboBox({ slot, multi, value, onChange, options, searchKeys, emptyHint }: ComboBoxProps) {
+function ComboBox({ slot, multi, value, onChange, options, searchKeys, emptyHint, loading, sourceEmpty }: ComboBoxProps) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -1442,7 +1515,18 @@ function ComboBox({ slot, multi, value, onChange, options, searchKeys, emptyHint
 
       {open && (
         <div className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-default rounded-lg shadow-lg">
-          {filtered.length === 0 && query.trim() && (
+          {loading && (
+            <div className="flex items-center gap-2 px-3 py-2 text-xs text-subtle">
+              <Loader2 className="h-3 w-3 animate-spin" /> Loading deals...
+            </div>
+          )}
+          {!loading && sourceEmpty && !query.trim() && (
+            <div className="flex items-start gap-2 px-3 py-2 text-xs text-subtle">
+              <Info className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
+              <span>No deals on record yet — type a name and we'll pass it to our AI as-is.</span>
+            </div>
+          )}
+          {!loading && filtered.length === 0 && query.trim() && (
             <div className="px-3 py-2 text-xs text-subtle">
               {emptyHint || 'No match'}
             </div>
@@ -1551,20 +1635,59 @@ function StageChips({ slot, multi, value, onChange }: StageChipsProps) {
 }
 
 function LivePreview({ compiled, ready }: { compiled: string; ready: boolean }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!compiled) return;
+    try {
+      await navigator.clipboard.writeText(compiled);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error('Failed to copy');
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider">
           Compiled prompt
         </p>
-        <span
-          className={cn(
-            'text-[10px] font-semibold uppercase tracking-wider',
-            ready ? 'text-emerald-600' : 'text-amber-600',
-          )}
-        >
-          {ready ? 'Ready' : 'Incomplete'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              'text-[10px] font-semibold uppercase tracking-wider',
+              ready ? 'text-emerald-600' : 'text-amber-600',
+            )}
+          >
+            {ready ? 'Ready' : 'Incomplete'}
+          </span>
+          <button
+            type="button"
+            onClick={handleCopy}
+            disabled={!compiled}
+            className={cn(
+              'inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-md border transition-colors',
+              compiled
+                ? copied
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-white border-default text-subtle hover:text-heading hover:border-brand/40'
+                : 'bg-gray-50 border-default text-gray-300 cursor-not-allowed',
+            )}
+            title="Copy compiled prompt"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3 w-3" /> Copied
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" /> Copy
+              </>
+            )}
+          </button>
+        </div>
       </div>
       <div
         className={cn(
