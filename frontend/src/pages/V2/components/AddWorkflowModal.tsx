@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   X,
   Sparkles,
@@ -20,11 +20,32 @@ import {
   XCircle,
   PhoneCall,
   Ban,
+  Search,
+  RefreshCw,
+  PhoneIncoming,
+  PhoneOutgoing,
+  Layers,
+  AlertOctagon,
+  Trophy,
+  Building2,
+  Banknote,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import api from '@/services/api';
 import { toast } from 'sonner';
+import { DEAL_STAGES } from '@/config/dealStages';
+import { useTenantDeals, type TenantDeal } from '@/hooks/useTenantDeals';
+import {
+  WORKFLOW_TEMPLATES,
+  type WorkflowTemplate,
+  type WorkflowTemplateSlot,
+  type SlotValues,
+  type TemplateIconKey,
+  compileTemplatePrompt,
+  isTemplateReady,
+} from './workflowTemplates';
 
 interface SimpleIntent {
   action: string;
@@ -164,6 +185,61 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
   const [isCancelling, setIsCancelling] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
+  // ── Template builder state ────────────────────────────────────────────
+  const [promptTab, setPromptTab] = useState<'templates' | 'custom'>('templates');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [slotValues, setSlotValues] = useState<SlotValues>({});
+  const [selectedQuestion, setSelectedQuestion] = useState<string>('');
+
+  const selectedTemplate: WorkflowTemplate | null = useMemo(
+    () => WORKFLOW_TEMPLATES.find((t) => t.id === selectedTemplateId) || null,
+    [selectedTemplateId],
+  );
+
+  const compiledTemplatePrompt = useMemo(() => {
+    if (!selectedTemplate) return '';
+    return compileTemplatePrompt(selectedTemplate, slotValues, selectedQuestion);
+  }, [selectedTemplate, slotValues, selectedQuestion]);
+
+  const templateReady = useMemo(() => {
+    if (!selectedTemplate) return false;
+    return isTemplateReady(selectedTemplate, slotValues, selectedQuestion);
+  }, [selectedTemplate, slotValues, selectedQuestion]);
+
+  // Preload tenant deals for combobox slots. Only when modal is open on
+  // the prompt step — no point wasting a network call during live-progress.
+  const { deals: tenantDeals, facets: tenantFacets, initialLoading: dealsLoading, error: dealsError, refresh: refreshDeals } =
+    useTenantDeals(step === 'prompt');
+
+  const handleTemplateSelect = (tpl: WorkflowTemplate) => {
+    if (selectedTemplateId === tpl.id) {
+      setSelectedTemplateId(null); // toggle-collapse
+      return;
+    }
+    setSelectedTemplateId(tpl.id);
+    setSlotValues({});
+    setSelectedQuestion(tpl.questionPresets[0] || '');
+  };
+
+  const updateSlot = (slotId: string, value: SlotValues[string]) => {
+    setSlotValues((prev) => ({ ...prev, [slotId]: value }));
+  };
+
+  // Soft-carry: copy the compiled template prompt into the free-text area
+  // when the user flips to the "Write your own" tab.
+  const handleSwitchTab = (next: 'templates' | 'custom') => {
+    if (next === 'custom' && promptTab === 'templates' && compiledTemplatePrompt && !prompt.trim()) {
+      setPrompt(compiledTemplatePrompt);
+    }
+    setPromptTab(next);
+  };
+
+  /** The prompt actually submitted to DeepSeek — free text OR compiled template. */
+  const resolvedPrompt = promptTab === 'templates' ? compiledTemplatePrompt : prompt;
+  const canRun =
+    (promptTab === 'templates' && templateReady) ||
+    (promptTab === 'custom' && prompt.trim().length > 0);
+
   const [substeps, setSubsteps] = useState<Record<string, SubStep>>({
     parsing: { status: 'pending', message: 'Analyzing your request...' },
     finding: { status: 'pending', message: 'Searching for targets...' },
@@ -206,7 +282,8 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
   }, [onClose, step]);
 
   const runWorkflow = async () => {
-    if (!prompt.trim()) return;
+    const outgoingPrompt = resolvedPrompt.trim();
+    if (!outgoingPrompt) return;
 
     setStep('processing');
     setError(null);
@@ -218,7 +295,7 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
 
     try {
       const response = await api.post('/workflows/run-simple', {
-        prompt,
+        prompt: outgoingPrompt,
         workflowName: `Workflow - ${new Date().toLocaleString()}`,
       });
 
@@ -432,69 +509,231 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
           {/* ──── STEP: PROMPT ──── */}
           {step === 'prompt' && (
             <>
-              <div className="grid grid-cols-2 gap-4 bg-gray-50/50 border border-gray-100 rounded-xl p-5">
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Target className="h-4 w-4 text-brand" />
-                    <h3 className="text-sm font-semibold text-brand">Client Check-ins</h3>
-                  </div>
-                  <ul className="space-y-2.5">
-                    {[
-                      '"Call Andreja Andrejevic about the "Ten Brinke (DE), Operating Model 2026" deal.',
-                      '"Client check in with Tamirat for BarrierX deal"',
-                      '"Schedule check-in with the owner of Wesgroup deal"',
-                    ].map((t) => (
-                      <li key={t} className="text-sm text-gray-600 flex items-start gap-2 cursor-pointer hover:text-heading transition-colors" onClick={() => setPrompt(t.replace(/"/g, ''))}>
-                        <span className="w-1 h-1 rounded-full bg-brand/40 mt-2 shrink-0" />
-                        {t}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <BarChart2 className="h-4 w-4 text-brand" />
-                    <h3 className="text-sm font-semibold text-brand">Filter by Deal Stage</h3>
-                  </div>
-                  <ul className="space-y-2.5">
-                    {[
-                      '"Call all owners of Lost deals"',
-                      '"Call everyone with deals in Negotiation"',
-                      '"Call owners of Closed Lost deals to ask why"',
-                    ].map((t) => (
-                      <li key={t} className="text-sm text-gray-600 flex items-start gap-2 cursor-pointer hover:text-heading transition-colors" onClick={() => setPrompt(t.replace(/"/g, ''))}>
-                        <span className="w-1 h-1 rounded-full bg-brand/40 mt-2 shrink-0" />
-                        {t}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {/* Tab bar: Templates | Write your own */}
+              <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+                {(['templates', 'custom'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => handleSwitchTab(t)}
+                    className={cn(
+                      'px-4 py-1.5 text-sm font-medium rounded-lg transition-colors',
+                      promptTab === t
+                        ? 'bg-white text-heading shadow-sm'
+                        : 'text-subtle hover:text-heading',
+                    )}
+                  >
+                    {t === 'templates' ? 'Templates' : 'Write your own'}
+                  </button>
+                ))}
               </div>
 
-              <div className="relative">
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Example: Call Andreja about his Bosa Properties deal..."
-                  className="w-full min-h-[100px] p-4 text-sm bg-white border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand placeholder:text-gray-400 transition-colors"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && prompt.trim()) runWorkflow();
-                  }}
-                />
-              </div>
+              {/* ── TEMPLATES TAB ── */}
+              {promptTab === 'templates' && (
+                <>
+                  {/* Quick starts band — kept per Phase-1 plan */}
+                  <div className="grid grid-cols-2 gap-4 bg-gray-50/50 border border-gray-100 rounded-xl p-5">
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Target className="h-4 w-4 text-brand" />
+                        <h3 className="text-sm font-semibold text-brand">Quick Starts · Client Check-ins</h3>
+                      </div>
+                      <ul className="space-y-2.5">
+                        {[
+                          'Call Andreja Andrejevic about the "Ten Brinke (DE)" deal',
+                          'Client check in with Tamirat for BarrierX deal',
+                          'Schedule check-in with the owner of Wesgroup deal',
+                        ].map((t) => (
+                          <li
+                            key={t}
+                            className="text-sm text-gray-600 flex items-start gap-2 cursor-pointer hover:text-heading transition-colors"
+                            onClick={() => {
+                              setPrompt(t);
+                              setPromptTab('custom');
+                            }}
+                          >
+                            <span className="w-1 h-1 rounded-full bg-brand/40 mt-2 shrink-0" />
+                            {t}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <BarChart2 className="h-4 w-4 text-brand" />
+                        <h3 className="text-sm font-semibold text-brand">Quick Starts · By Deal Stage</h3>
+                      </div>
+                      <ul className="space-y-2.5">
+                        {[
+                          'Call all owners of Lost deals',
+                          'Call everyone with deals in Negotiation',
+                          'Call owners of Closed Lost deals to ask why',
+                        ].map((t) => (
+                          <li
+                            key={t}
+                            className="text-sm text-gray-600 flex items-start gap-2 cursor-pointer hover:text-heading transition-colors"
+                            onClick={() => {
+                              setPrompt(t);
+                              setPromptTab('custom');
+                            }}
+                          >
+                            <span className="w-1 h-1 rounded-full bg-brand/40 mt-2 shrink-0" />
+                            {t}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
 
+                  {/* Refresh / deals loading */}
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider">Guided Templates</p>
+                    <div className="flex items-center gap-2 text-[11px] text-subtle">
+                      {dealsLoading ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" /> Loading deals...
+                        </>
+                      ) : dealsError ? (
+                        <span className="text-amber-600">Deals unavailable — typing still works</span>
+                      ) : (
+                        <>
+                          {tenantDeals.length} deal{tenantDeals.length === 1 ? '' : 's'} loaded
+                          <button
+                            onClick={() => refreshDeals()}
+                            className="p-0.5 hover:text-heading transition-colors"
+                            title="Refresh deals"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {WORKFLOW_TEMPLATES.map((tpl) => (
+                      <TemplateCard
+                        key={tpl.id}
+                        template={tpl}
+                        selected={selectedTemplateId === tpl.id}
+                        onClick={() => handleTemplateSelect(tpl)}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Expanded form for the selected template */}
+                  {selectedTemplate && (
+                    <div className="border border-brand/30 bg-brand/5 rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-heading">{selectedTemplate.title}</p>
+                          <p className="text-xs text-subtle mt-0.5">{selectedTemplate.description}</p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedTemplateId(null)}
+                          className="p-1 rounded hover:bg-white/80 transition-colors text-subtle"
+                          title="Close template"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {selectedTemplate.note && (
+                        <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                          <p className="text-[11px] text-amber-800 leading-relaxed">{selectedTemplate.note}</p>
+                        </div>
+                      )}
+
+                      {selectedTemplate.slots.map((slot) => (
+                        <SlotInput
+                          key={slot.id}
+                          slot={slot}
+                          value={slotValues[slot.id]}
+                          onChange={(v) => updateSlot(slot.id, v)}
+                          deals={tenantDeals}
+                          facets={tenantFacets}
+                        />
+                      ))}
+
+                      <div>
+                        <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">
+                          Question to ask
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedTemplate.questionPresets.map((q) => (
+                            <button
+                              key={q}
+                              onClick={() => setSelectedQuestion(q)}
+                              className={cn(
+                                'px-3 py-1.5 text-xs rounded-lg border transition-colors',
+                                selectedQuestion === q
+                                  ? 'bg-brand text-white border-brand'
+                                  : 'bg-white text-heading border-default hover:border-brand/40',
+                              )}
+                            >
+                              {q}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <LivePreview compiled={compiledTemplatePrompt} ready={templateReady} />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── WRITE-YOUR-OWN TAB ── */}
+              {promptTab === 'custom' && (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                    <Sparkles className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-blue-700 leading-relaxed">
+                      Write freely. Our AI will parse who to call and what to say. For structured
+                      guidance, switch to <strong>Templates</strong>.
+                    </p>
+                  </div>
+                  <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="Example: Call Andreja about his Bosa Properties deal..."
+                    className="w-full min-h-[140px] p-4 text-sm bg-white border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand placeholder:text-gray-400 transition-colors"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && prompt.trim()) runWorkflow();
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Footer actions */}
               <div className="flex items-center justify-between pt-1">
-                <p className="text-[11px] text-subtle">Press <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono border border-gray-200">Ctrl+Enter</kbd> to run</p>
+                <p className="text-[11px] text-subtle">
+                  {promptTab === 'custom' ? (
+                    <>
+                      Press <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono border border-gray-200">Ctrl+Enter</kbd> to run
+                    </>
+                  ) : selectedTemplate ? (
+                    templateReady ? (
+                      <span className="text-emerald-600">Ready — click Generate & Preview</span>
+                    ) : (
+                      <span>Fill every field and pick a question</span>
+                    )
+                  ) : (
+                    <span>Pick a template to start</span>
+                  )}
+                </p>
                 <Button
                   onClick={runWorkflow}
-                  disabled={!prompt.trim()}
+                  disabled={!canRun}
                   className={cn(
                     'gap-2 px-5 py-2.5 h-auto font-medium rounded-lg transition-all',
-                    prompt.trim() ? 'bg-brand hover:bg-brand-hover text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    canRun
+                      ? 'bg-brand hover:bg-brand-hover text-white'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed',
                   )}
                 >
                   <Sparkles className="h-4 w-4" />
-                  Preview Workflow
+                  Generate & Preview
                 </Button>
               </div>
             </>
@@ -908,6 +1147,435 @@ function TargetRow({ target }: { target: LiveTargetInfo }) {
         <Icon className={cn('h-3 w-3', meta.pulse && 'animate-pulse')} />
         {meta.label}
       </span>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Template builder subcomponents
+// ═══════════════════════════════════════════════════════════════════════
+
+const TEMPLATE_ICON: Record<TemplateIconKey, React.ElementType> = {
+  'check-in': PhoneOutgoing,
+  'follow-up': PhoneIncoming,
+  stage: Layers,
+  stuck: AlertOctagon,
+  lost: XCircle,
+  won: Trophy,
+  company: Building2,
+  'high-value': Banknote,
+};
+
+interface TemplateCardProps {
+  template: WorkflowTemplate;
+  selected: boolean;
+  onClick: () => void;
+}
+
+function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
+  const Icon = TEMPLATE_ICON[template.icon] || HelpCircle;
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex items-start gap-3 p-3.5 text-left rounded-xl border transition-all',
+        selected
+          ? 'border-brand bg-brand/5 ring-2 ring-brand/20'
+          : 'border-default bg-white hover:border-brand/40 hover:shadow-sm',
+      )}
+    >
+      <div
+        className={cn(
+          'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+          selected ? 'bg-brand/20' : 'bg-gray-100',
+        )}
+      >
+        <Icon className={cn('h-4 w-4', selected ? 'text-brand' : 'text-heading')} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-heading">{template.title}</p>
+        <p className="text-[11px] text-subtle mt-0.5 leading-snug">{template.description}</p>
+      </div>
+    </button>
+  );
+}
+
+interface SlotInputProps {
+  slot: WorkflowTemplateSlot;
+  value: SlotValues[string];
+  onChange: (v: SlotValues[string]) => void;
+  deals: TenantDeal[];
+  facets: { companies: string[]; owners: string[]; stages: string[] };
+}
+
+function SlotInput({ slot, value, onChange, deals, facets }: SlotInputProps) {
+  switch (slot.kind) {
+    case 'deal':
+    case 'deals': {
+      const multi = slot.kind === 'deals';
+      const options = deals.map((d) => ({
+        value: d.dealName,
+        label: d.dealName,
+        sublabel: [d.ownerName, d.company].filter(Boolean).join(' · '),
+      }));
+      return (
+        <ComboBox
+          slot={slot}
+          multi={multi}
+          value={value}
+          onChange={onChange}
+          options={options}
+          searchKeys={['label', 'sublabel']}
+          emptyHint="No matching deal — you can still type a name below."
+        />
+      );
+    }
+    case 'contact':
+    case 'contacts': {
+      const multi = slot.kind === 'contacts';
+      const options = facets.owners.map((o) => ({ value: o, label: o, sublabel: '' }));
+      return (
+        <ComboBox
+          slot={slot}
+          multi={multi}
+          value={value}
+          onChange={onChange}
+          options={options}
+          searchKeys={['label']}
+          emptyHint="Rep not listed — type their name below."
+        />
+      );
+    }
+    case 'company':
+    case 'companies': {
+      const multi = slot.kind === 'companies';
+      const options = facets.companies.map((c) => ({ value: c, label: c, sublabel: '' }));
+      return (
+        <ComboBox
+          slot={slot}
+          multi={multi}
+          value={value}
+          onChange={onChange}
+          options={options}
+          searchKeys={['label']}
+          emptyHint="Company not listed — type it below."
+        />
+      );
+    }
+    case 'stage':
+    case 'stages': {
+      const multi = slot.kind === 'stages';
+      return (
+        <StageChips slot={slot} multi={multi} value={value} onChange={onChange} />
+      );
+    }
+    case 'number':
+      return (
+        <div>
+          <label className="text-[11px] font-semibold text-subtle uppercase tracking-wider">
+            {slot.label}
+            {slot.required && <span className="text-red-500 ml-0.5">*</span>}
+          </label>
+          <input
+            type="number"
+            min={slot.min}
+            max={slot.max}
+            value={typeof value === 'number' && !Number.isNaN(value) ? value : ''}
+            onChange={(e) => {
+              const n = e.target.value === '' ? undefined : Number(e.target.value);
+              onChange(n as SlotValues[string]);
+            }}
+            placeholder={slot.placeholder}
+            className="w-full mt-1 px-3 py-2 text-sm bg-white border border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+          />
+          {slot.help && <p className="text-[11px] text-subtle mt-1">{slot.help}</p>}
+        </div>
+      );
+    case 'text':
+      return (
+        <div>
+          <label className="text-[11px] font-semibold text-subtle uppercase tracking-wider">
+            {slot.label}
+            {slot.required && <span className="text-red-500 ml-0.5">*</span>}
+          </label>
+          <input
+            type="text"
+            value={typeof value === 'string' ? value : ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={slot.placeholder}
+            className="w-full mt-1 px-3 py-2 text-sm bg-white border border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+          />
+          {slot.help && <p className="text-[11px] text-subtle mt-1">{slot.help}</p>}
+        </div>
+      );
+    case 'question':
+      // Currently handled at the template level (shared preset picker); this
+      // is reserved for future per-slot question inputs.
+      return null;
+    default:
+      return null;
+  }
+}
+
+interface ComboOption {
+  value: string;
+  label: string;
+  sublabel?: string;
+}
+
+interface ComboBoxProps {
+  slot: WorkflowTemplateSlot;
+  multi: boolean;
+  value: SlotValues[string];
+  onChange: (v: SlotValues[string]) => void;
+  options: ComboOption[];
+  searchKeys: Array<keyof ComboOption>;
+  emptyHint?: string;
+}
+
+function ComboBox({ slot, multi, value, onChange, options, searchKeys, emptyHint }: ComboBoxProps) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+
+  const selectedArr: string[] = multi
+    ? Array.isArray(value)
+      ? value
+      : []
+    : typeof value === 'string' && value
+      ? [value]
+      : [];
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options.slice(0, 60);
+    return options
+      .filter((o) =>
+        searchKeys.some((k) => ((o[k] as string) || '').toLowerCase().includes(q)),
+      )
+      .slice(0, 60);
+  }, [query, options, searchKeys]);
+
+  const toggle = (val: string) => {
+    if (multi) {
+      const next = selectedArr.includes(val)
+        ? selectedArr.filter((x) => x !== val)
+        : [...selectedArr, val];
+      onChange(next);
+    } else {
+      onChange(val);
+      setOpen(false);
+    }
+  };
+
+  const useTypedFallback = () => {
+    if (!query.trim()) return;
+    if (multi) {
+      if (!selectedArr.includes(query.trim())) onChange([...selectedArr, query.trim()]);
+    } else {
+      onChange(query.trim());
+      setOpen(false);
+    }
+    setQuery('');
+  };
+
+  const removeTag = (val: string) => {
+    if (multi) onChange(selectedArr.filter((x) => x !== val));
+    else onChange(undefined);
+  };
+
+  const hasExactMatch = options.some(
+    (o) => o.label.toLowerCase() === query.trim().toLowerCase(),
+  );
+
+  return (
+    <div ref={rootRef} className="relative">
+      <label className="text-[11px] font-semibold text-subtle uppercase tracking-wider">
+        {slot.label}
+        {slot.required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+
+      <div
+        className="mt-1 min-h-[38px] w-full px-2 py-1.5 bg-white border border-default rounded-lg flex flex-wrap items-center gap-1 focus-within:ring-2 focus-within:ring-brand/20 focus-within:border-brand cursor-text"
+        onClick={() => setOpen(true)}
+      >
+        {selectedArr.map((val) => (
+          <span
+            key={val}
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand/10 text-brand border border-brand/20 rounded-md text-xs"
+          >
+            {val}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeTag(val);
+              }}
+              className="hover:text-brand-hover"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+        <div className="flex-1 min-w-[100px] flex items-center gap-1">
+          <Search className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            placeholder={selectedArr.length > 0 ? '' : slot.placeholder || 'Search or type...'}
+            className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-400"
+          />
+        </div>
+      </div>
+
+      {open && (
+        <div className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-default rounded-lg shadow-lg">
+          {filtered.length === 0 && query.trim() && (
+            <div className="px-3 py-2 text-xs text-subtle">
+              {emptyHint || 'No match'}
+            </div>
+          )}
+          {filtered.map((opt) => {
+            const isSel = selectedArr.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                onClick={() => toggle(opt.value)}
+                className={cn(
+                  'w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between gap-2 border-b border-default last:border-b-0',
+                  isSel && 'bg-brand/5',
+                )}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm text-heading truncate">{opt.label}</p>
+                  {opt.sublabel && <p className="text-[11px] text-subtle truncate">{opt.sublabel}</p>}
+                </div>
+                {isSel && <CheckCircle2 className="h-4 w-4 text-brand shrink-0" />}
+              </button>
+            );
+          })}
+          {query.trim() && !hasExactMatch && (
+            <button
+              onClick={useTypedFallback}
+              className="w-full px-3 py-2 text-left text-xs text-brand hover:bg-brand/5 border-t border-default flex items-center gap-2"
+            >
+              <Sparkles className="h-3 w-3" />
+              Use "{query.trim()}" anyway
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface StageChipsProps {
+  slot: WorkflowTemplateSlot;
+  multi: boolean;
+  value: SlotValues[string];
+  onChange: (v: SlotValues[string]) => void;
+}
+
+function StageChips({ slot, multi, value, onChange }: StageChipsProps) {
+  const selected: string[] = multi
+    ? Array.isArray(value)
+      ? value
+      : []
+    : typeof value === 'string' && value
+      ? [value]
+      : [];
+
+  const toggle = (val: string) => {
+    if (multi) {
+      onChange(selected.includes(val) ? selected.filter((x) => x !== val) : [...selected, val]);
+    } else {
+      onChange(selected[0] === val ? undefined : val);
+    }
+  };
+
+  const groups: Array<{ label: string; items: typeof DEAL_STAGES }> = [
+    { label: 'Pipeline', items: DEAL_STAGES.filter((s) => s.group === 'Pipeline') },
+    { label: 'Negotiation', items: DEAL_STAGES.filter((s) => s.group === 'Negotiation') },
+    { label: 'Closed', items: DEAL_STAGES.filter((s) => s.group === 'Closed') },
+  ];
+
+  return (
+    <div>
+      <label className="text-[11px] font-semibold text-subtle uppercase tracking-wider">
+        {slot.label}
+        {slot.required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      <div className="mt-2 space-y-3">
+        {groups.map((g) => (
+          <div key={g.label}>
+            <p className="text-[10px] font-semibold text-subtle uppercase tracking-wider mb-1.5">
+              {g.label}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {g.items.map((s) => {
+                const isSel = selected.includes(s.value);
+                return (
+                  <button
+                    key={s.value}
+                    onClick={() => toggle(s.value)}
+                    className={cn(
+                      'px-2.5 py-1 text-xs rounded-md border transition-colors',
+                      isSel
+                        ? 'bg-brand text-white border-brand'
+                        : 'bg-white text-heading border-default hover:border-brand/40',
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      {slot.help && <p className="text-[11px] text-subtle mt-1">{slot.help}</p>}
+    </div>
+  );
+}
+
+function LivePreview({ compiled, ready }: { compiled: string; ready: boolean }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider">
+          Compiled prompt
+        </p>
+        <span
+          className={cn(
+            'text-[10px] font-semibold uppercase tracking-wider',
+            ready ? 'text-emerald-600' : 'text-amber-600',
+          )}
+        >
+          {ready ? 'Ready' : 'Incomplete'}
+        </span>
+      </div>
+      <div
+        className={cn(
+          'rounded-lg p-3 text-sm font-mono leading-relaxed border',
+          ready
+            ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
+            : 'bg-white border-default text-heading',
+        )}
+      >
+        {compiled || 'Select a template to preview the prompt.'}
+      </div>
     </div>
   );
 }

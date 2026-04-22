@@ -47,6 +47,12 @@ router.post('/:id/preview', authenticate, workflowController.previewWorkflow);
 router.post('/parse-intent', authenticate, workflowController.parseIntentEndpoint);
 
 /**
+ * GET /api/workflows/tenant-deals
+ * List the tenant's deals in a slim shape for the template-slot dropdowns.
+ */
+router.get('/tenant-deals', authenticate, workflowController.listTenantDeals);
+
+/**
  * POST /api/workflows/find-targets
  * Find targets based on intent criteria
  */

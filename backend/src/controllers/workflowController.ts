@@ -11,7 +11,7 @@ import {
 } from '../services/llm/promptParserService';
 import * as loggingService from '../services/loggingService';
 import * as workflowService from '../services/workflowService';
-import { previewTargets } from '../services/targetFinderService';
+import { previewTargets, getTenantDealsWildcard } from '../services/targetFinderService';
 import { getCachedUser } from '../utils/userCache';
 import prisma from '../config/database';
 import { WorkflowConfig } from '../types/workflow';
@@ -378,6 +378,65 @@ export const parseIntentEndpoint = async (req: AuthenticatedRequest, res: Respon
   } catch (error: any) {
     console.error('❌ Parse intent error:', error.message);
     return res.status(500).json({ error: 'Failed to parse intent' });
+  }
+};
+
+/**
+ * List the tenant's deals in a slim shape that the frontend template-slot
+ * dropdowns (deal / contact / company pickers) can populate from.
+ *
+ * Much lighter than `/find-targets` — no intent filtering, no
+ * reachable / unreachable split, no LLM. Purely a list.
+ *
+ * GET /api/workflows/tenant-deals[?tenantSlug=X]
+ */
+export const listTenantDeals = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    let userId = req.user?.userId;
+    if (!userId && req.service) userId = 'service-account';
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const tenantSlug = ((req.query.tenantSlug as string | undefined) || req.user?.tenantSlug) as
+      | string
+      | undefined;
+    if (!tenantSlug) {
+      return res.status(400).json({ error: 'tenantSlug is required' });
+    }
+
+    const deals = await getTenantDealsWildcard(tenantSlug);
+
+    // Slim shape for the UI combobox — only what the template slots need.
+    const slim = deals.map((d) => ({
+      dealId: d.id,
+      dealName: d.name,
+      ownerName: d.ownerName,
+      ownerEmail: d.ownerEmail || null,
+      company: d.company || null,
+      stage: d.stage || null,
+      amount: d.amount || 0,
+    }));
+
+    // Pre-computed unique facets so the UI doesn't need to dedupe itself.
+    const companies = Array.from(
+      new Set(slim.map((d) => d.company).filter((c): c is string => !!c)),
+    ).sort((a, b) => a.localeCompare(b));
+    const owners = Array.from(
+      new Set(slim.map((d) => d.ownerName).filter((o): o is string => !!o)),
+    ).sort((a, b) => a.localeCompare(b));
+    const stages = Array.from(
+      new Set(slim.map((d) => d.stage).filter((s): s is string => !!s)),
+    ).sort((a, b) => a.localeCompare(b));
+
+    return res.json({
+      ok: true,
+      tenantSlug,
+      count: slim.length,
+      deals: slim,
+      facets: { companies, owners, stages },
+    });
+  } catch (error: any) {
+    console.error('❌ List tenant deals error:', error.message);
+    return res.status(500).json({ error: 'Failed to fetch tenant deals' });
   }
 };
 
