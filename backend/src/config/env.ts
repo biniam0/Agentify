@@ -49,6 +49,8 @@ export const config = {
     dealUpdateWindowDays: parseInt(process.env.DEAL_UPDATE_WINDOW_DAYS || '60'),
     // Optional: comma-separated deal pipelines to filter (e.g., "1. Sales Pipeline,Sales Pipeline")
     dealPipelines: process.env.DEAL_PIPELINES?.split(',').map(p => p.trim()).filter(Boolean) || [],
+    // Optional: comma-separated deal outcomes to filter (e.g., "open" or "open,won"). Allowed: open, won, lost
+    dealOutcomes: process.env.DEAL_OUTCOMES?.split(',').map(o => o.trim()).filter(Boolean) || [],
   },
   redis: {
     enabled: process.env.REDIS_ENABLED === 'true',

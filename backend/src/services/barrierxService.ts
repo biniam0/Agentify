@@ -184,6 +184,10 @@ export const getUserDeals = async (userId: string): Promise<Deal[]> => {
           ...(config.automation.dealPipelines.length > 0 && {
             deal_pipeline: config.automation.dealPipelines.join(',')
           }),
+          // Add deal_outcome filter if configured (e.g., "open" to skip won/lost)
+          ...(config.automation.dealOutcomes.length > 0 && {
+            deal_outcome: config.automation.dealOutcomes.join(',')
+          }),
         },
         headers: {
           'Authorization': `Bearer ${config.barrierx.apiKey}`,
@@ -255,6 +259,10 @@ export const getBatchUserDeals = async (userIds: string[]): Promise<Map<string, 
           // Add deal_pipeline filter if configured
           ...(config.automation.dealPipelines.length > 0 && {
             deal_pipeline: config.automation.dealPipelines.join(',')
+          }),
+          // Add deal_outcome filter if configured (e.g., "open" to skip won/lost)
+          ...(config.automation.dealOutcomes.length > 0 && {
+            deal_outcome: config.automation.dealOutcomes.join(',')
           }),
         },
         headers: {
@@ -334,6 +342,10 @@ export const getAllDealsWildcard = async (): Promise<Map<string, Deal[]>> => {
           // Add deal_pipeline filter if configured
           ...(config.automation.dealPipelines.length > 0 && {
             deal_pipeline: config.automation.dealPipelines.join(',')
+          }),
+          // Add deal_outcome filter if configured (e.g., "open" to skip won/lost)
+          ...(config.automation.dealOutcomes.length > 0 && {
+            deal_outcome: config.automation.dealOutcomes.join(',')
           }),
         },
         headers: {
