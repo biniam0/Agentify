@@ -259,7 +259,7 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
         callsInitiated: 0,
         callsCompleted: 0,
         callsFailed: 0,
-        batchId: persisted.batchId,
+        callsCancelled: 0,
         startedAt: persisted.startedAt,
         createdAt: persisted.startedAt,
       });
@@ -273,7 +273,8 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
 
   useEffect(() => {
     if (!workflowExec) return;
-    const interval = setInterval(fetchWorkflowExec, 8000);
+    // Matches backend calling hours / Info Gathering status cadence
+    const interval = setInterval(fetchWorkflowExec, 5000);
     return () => clearInterval(interval);
   }, [workflowExec, fetchWorkflowExec]);
 
@@ -281,14 +282,14 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
     if (!workflowExec || wfCancelling) return;
     setWfCancelling(true);
     try {
-      await api.post('/workflows/execution/cancel-all');
-      toast.success('Workflow cancelled');
+      await api.post(`/workflows/execution/${workflowExec.id}/cancel`);
+      toast.success('Cancel requested — engine will stop between batches');
     } catch (err: any) {
       toast.error('Failed to cancel workflow', { description: err.response?.data?.error || err.message });
     } finally {
-      clearWorkflowExec();
-      setWorkflowExec(null);
       setWfCancelling(false);
+      // Let the next poll pick up the DB transition to CANCELLED and clear itself.
+      setTimeout(fetchWorkflowExec, 1000);
     }
   };
 
@@ -509,6 +510,12 @@ const WorkflowActions = ({ onAddWorkflow, onJobStatusChange, onViewWorkflowExec,
                 &bull; {workflowExec.callsCompleted}/{workflowExec.totalTargets} completed
                 {workflowExec.callsFailed > 0 && (
                   <span className="text-red-500 ml-1">&bull; {workflowExec.callsFailed} failed</span>
+                )}
+                {(workflowExec.callsCancelled ?? 0) > 0 && (
+                  <span className="text-gray-500 ml-1">&bull; {workflowExec.callsCancelled} cancelled</span>
+                )}
+                {workflowExec.live && (
+                  <span className="text-brand ml-1 font-medium">&bull; Batch {workflowExec.live.currentBatch}/{workflowExec.live.totalBatches}</span>
                 )}
               </span>
             </div>

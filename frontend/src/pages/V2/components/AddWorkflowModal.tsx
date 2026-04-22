@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   X,
   Sparkles,
@@ -17,6 +17,9 @@ import {
   ChevronDown,
   ChevronUp,
   Square,
+  XCircle,
+  PhoneCall,
+  Ban,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -52,6 +55,38 @@ interface ApprovalData {
   requiresApproval: boolean;
 }
 
+export type LiveTargetStatus =
+  | 'PENDING'
+  | 'CALLING'
+  | 'INITIATED'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED';
+
+export interface LiveTargetInfo {
+  name: string;
+  phone: string;
+  dealName?: string;
+  company?: string;
+  status: LiveTargetStatus;
+  conversationId?: string;
+  error?: string;
+}
+
+export interface WorkflowLiveState {
+  isRunning: boolean;
+  currentBatch: number;
+  totalBatches: number;
+  processedTargets: number;
+  successfulCalls: number;
+  failedCalls: number;
+  skippedTargets: number;
+  cancelledTargets: number;
+  currentTargets: LiveTargetInfo[];
+  recentLogs: string[];
+  lastError: string | null;
+}
+
 export interface WorkflowExecStatus {
   id: string;
   workflowId: string;
@@ -62,9 +97,10 @@ export interface WorkflowExecStatus {
   callsInitiated: number;
   callsCompleted: number;
   callsFailed: number;
-  batchId: string | null;
+  callsCancelled?: number;
   startedAt: string | null;
   createdAt: string;
+  live?: WorkflowLiveState | null;
 }
 
 type Step = 'prompt' | 'processing' | 'no-targets' | 'approval' | 'executing' | 'success' | 'live-progress';
@@ -76,7 +112,14 @@ interface SubStep {
 
 const WF_STORAGE_KEY = 'agentx_workflow_exec';
 
-function persistWorkflowExec(data: { executionId: string; batchId: string; totalTargets: number; workflowName: string; startedAt: string }) {
+export interface PersistedWorkflowExec {
+  executionId: string;
+  totalTargets: number;
+  workflowName: string;
+  startedAt: string;
+}
+
+function persistWorkflowExec(data: PersistedWorkflowExec) {
   try { localStorage.setItem(WF_STORAGE_KEY, JSON.stringify(data)); } catch { /* ignore */ }
 }
 
@@ -84,7 +127,7 @@ export function clearWorkflowExec() {
   try { localStorage.removeItem(WF_STORAGE_KEY); } catch { /* ignore */ }
 }
 
-export function getPersistedWorkflowExec(): { executionId: string; batchId: string; totalTargets: number; workflowName: string; startedAt: string } | null {
+export function getPersistedWorkflowExec(): PersistedWorkflowExec | null {
   try {
     const raw = localStorage.getItem(WF_STORAGE_KEY);
     if (!raw) return null;
@@ -113,12 +156,13 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
     suggestions?: string[];
   } | null>(null);
   const [approvalData, setApprovalData] = useState<ApprovalData | null>(null);
-  const [execution, setExecution] = useState<{ id: string; batchId: string } | null>(
-    hasActiveExec ? { id: activeExecution!.id, batchId: activeExecution!.batchId || '' } : null
+  const [execution, setExecution] = useState<{ id: string } | null>(
+    hasActiveExec ? { id: activeExecution!.id } : null
   );
 
   const [liveStatus, setLiveStatus] = useState<WorkflowExecStatus | null>(activeExecution || null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const logsEndRef = useRef<HTMLDivElement>(null);
 
   const [substeps, setSubsteps] = useState<Record<string, SubStep>>({
     parsing: { status: 'pending', message: 'Analyzing your request...' },
@@ -242,15 +286,11 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
         estimatedCost: approvalData.estimatedCost,
       });
 
-      const execData = {
-        id: response.data.execution.id,
-        batchId: response.data.execution.batchId,
-      };
+      const execData = { id: response.data.execution.id as string };
       setExecution(execData);
 
       persistWorkflowExec({
         executionId: execData.id,
-        batchId: execData.batchId,
         totalTargets: approvalData.targets.count,
         workflowName,
         startedAt: new Date().toISOString(),
@@ -260,16 +300,21 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
 
       setSubsteps((prev) => ({
         ...prev,
-        executing: { status: 'complete', message: 'Calls initiated successfully!' },
+        executing: { status: 'complete', message: 'Engine started — calls will run in scheduled batches' },
       }));
-      setStep('success');
+      // Switch straight into live-progress so the user sees real-time batches
+      setStep('live-progress');
     } catch (err: any) {
+      const isWarning = err.response?.status === 409 || err.response?.data?.warning;
       const msg = err.response?.data?.error || err.message;
       setStep('approval');
-      setError({ title: 'Failed to execute the workflow.', suggestion: msg || 'Please try again.' });
+      setError({
+        title: isWarning ? 'Outside calling hours' : 'Failed to start the workflow.',
+        suggestion: msg || 'Please try again.',
+      });
       setSubsteps((prev) => ({
         ...prev,
-        executing: { status: 'error', message: 'Execution failed' },
+        executing: { status: isWarning ? 'warning' : 'error', message: isWarning ? 'Calling hours closed' : 'Execution failed' },
       }));
     }
   };
@@ -278,18 +323,28 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
     if (isCancelling) return;
     setIsCancelling(true);
 
+    const targetId = liveStatus?.id || execution?.id;
     try {
-      await api.post('/workflows/execution/cancel-all');
-      toast.success('Workflow cancelled');
+      if (targetId) {
+        await api.post(`/workflows/execution/${targetId}/cancel`);
+      } else {
+        await api.post('/workflows/execution/cancel-all');
+      }
+      toast.success('Cancel requested — engine will stop between batches');
     } catch (err: any) {
       toast.error('Failed to cancel', { description: err.response?.data?.error || err.message });
     } finally {
-      clearWorkflowExec();
-      onExecutionChange?.();
       setIsCancelling(false);
-      onClose();
+      // Don't clear state yet — let the live poller reflect status transitions,
+      // then it'll flip to SUCCESS when status leaves RUNNING/PENDING.
+      onExecutionChange?.();
     }
   };
+
+  // Auto-scroll logs to bottom as new lines stream in
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [liveStatus?.live?.recentLogs?.length]);
 
   const reset = () => {
     setPrompt('');
@@ -628,9 +683,12 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
               <div className="flex items-center gap-4 p-4 bg-brand/5 border border-brand/20 rounded-xl">
                 <Loader2 className="h-8 w-8 text-brand animate-spin shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-semibold text-heading">{liveStatus?.workflowName || 'Workflow Running'}</p>
+                  <p className="text-base font-semibold text-heading truncate">{liveStatus?.workflowName || 'Workflow Running'}</p>
                   <p className="text-xs text-subtle mt-0.5">
                     Started {liveStatus?.startedAt ? formatRelativeTime(liveStatus.startedAt) : 'recently'}
+                    {liveStatus?.live && (
+                      <> &middot; Batch <span className="font-semibold text-heading">{liveStatus.live.currentBatch}</span> / {liveStatus.live.totalBatches}</>
+                    )}
                   </p>
                 </div>
                 <span className="inline-flex px-2.5 py-1 bg-brand/10 text-brand text-xs font-semibold rounded-lg">
@@ -638,20 +696,31 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
                 </span>
               </div>
 
+              {liveStatus?.live?.lastError && (
+                <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl">
+                  <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700">{liveStatus.live.lastError}</p>
+                </div>
+              )}
+
               {liveStatus && (
                 <>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="text-center p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                      <p className="text-2xl font-bold text-blue-700">{liveStatus.totalTargets}</p>
-                      <p className="text-[11px] text-blue-500 font-medium">Total Targets</p>
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="text-center p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                      <p className="text-xl font-bold text-blue-700">{liveStatus.totalTargets}</p>
+                      <p className="text-[10px] text-blue-500 font-medium uppercase tracking-wider">Total</p>
                     </div>
-                    <div className="text-center p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
-                      <p className="text-2xl font-bold text-emerald-700">{liveStatus.callsCompleted}</p>
-                      <p className="text-[11px] text-emerald-500 font-medium">Completed</p>
+                    <div className="text-center p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+                      <p className="text-xl font-bold text-emerald-700">{liveStatus.callsCompleted}</p>
+                      <p className="text-[10px] text-emerald-500 font-medium uppercase tracking-wider">Completed</p>
                     </div>
-                    <div className="text-center p-4 bg-red-50 border border-red-100 rounded-xl">
-                      <p className="text-2xl font-bold text-red-700">{liveStatus.callsFailed}</p>
-                      <p className="text-[11px] text-red-500 font-medium">Failed</p>
+                    <div className="text-center p-3 bg-red-50 border border-red-100 rounded-xl">
+                      <p className="text-xl font-bold text-red-700">{liveStatus.callsFailed}</p>
+                      <p className="text-[10px] text-red-500 font-medium uppercase tracking-wider">Failed</p>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                      <p className="text-xl font-bold text-gray-700">{liveStatus.callsCancelled ?? liveStatus.live?.cancelledTargets ?? 0}</p>
+                      <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Cancelled</p>
                     </div>
                   </div>
 
@@ -659,31 +728,48 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
                     <div>
                       <div className="flex items-center justify-between text-xs text-subtle mb-1.5">
                         <span>Progress</span>
-                        <span>{Math.round(((liveStatus.callsCompleted + liveStatus.callsFailed) / liveStatus.totalTargets) * 100)}%</span>
+                        <span>
+                          {liveStatus.callsCompleted + liveStatus.callsFailed + (liveStatus.callsCancelled || 0)} / {liveStatus.totalTargets}
+                        </span>
                       </div>
                       <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                         <div
                           className="bg-brand h-2.5 rounded-full transition-all duration-500"
-                          style={{ width: `${Math.round(((liveStatus.callsCompleted + liveStatus.callsFailed) / liveStatus.totalTargets) * 100)}%` }}
+                          style={{ width: `${Math.min(100, Math.round(((liveStatus.callsCompleted + liveStatus.callsFailed + (liveStatus.callsCancelled || 0)) / liveStatus.totalTargets) * 100))}%` }}
                         />
                       </div>
                     </div>
                   )}
 
-                  {liveStatus.batchId && (
-                    <div className="bg-gray-50 border border-default rounded-xl p-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Execution ID</p>
-                          <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{liveStatus.id}</code>
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Batch ID</p>
-                          <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{liveStatus.batchId}</code>
-                        </div>
+                  {/* Per-target status list */}
+                  {liveStatus.live?.currentTargets && liveStatus.live.currentTargets.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">TARGETS</p>
+                      <div className="bg-white border border-default rounded-xl divide-y divide-default max-h-56 overflow-y-auto">
+                        {liveStatus.live.currentTargets.map((t, i) => (
+                          <TargetRow key={`${t.phone}-${i}`} target={t} />
+                        ))}
                       </div>
                     </div>
                   )}
+
+                  {/* Recent engine logs */}
+                  {liveStatus.live?.recentLogs && liveStatus.live.recentLogs.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold text-subtle uppercase tracking-wider mb-2">ENGINE LOG</p>
+                      <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 max-h-48 overflow-y-auto font-mono text-[11px] leading-relaxed text-gray-200">
+                        {liveStatus.live.recentLogs.map((line, i) => (
+                          <div key={i} className="whitespace-pre-wrap break-all">{line}</div>
+                        ))}
+                        <div ref={logsEndRef} />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-gray-50 border border-default rounded-xl p-3">
+                    <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Execution ID</p>
+                    <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{liveStatus.id}</code>
+                  </div>
                 </>
               )}
             </div>
@@ -721,16 +807,8 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
 
               {execution && (
                 <div className="bg-gray-50 border border-default rounded-xl p-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Execution ID</p>
-                      <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{execution.id}</code>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Batch ID</p>
-                      <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{execution.batchId}</code>
-                    </div>
-                  </div>
+                  <p className="text-[11px] font-medium text-subtle uppercase tracking-wider">Execution ID</p>
+                  <code className="text-[11px] font-mono text-heading mt-0.5 block truncate">{execution.id}</code>
                 </div>
               )}
             </div>
@@ -794,5 +872,44 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
     </div>
   );
 };
+
+const TARGET_STATUS_META: Record<
+  LiveTargetStatus,
+  { label: string; icon: React.ElementType; cls: string; pulse?: boolean }
+> = {
+  PENDING: { label: 'Queued', icon: Circle, cls: 'text-gray-400 bg-gray-50 border-gray-200' },
+  CALLING: { label: 'Dialing', icon: PhoneCall, cls: 'text-brand bg-brand/10 border-brand/20', pulse: true },
+  INITIATED: { label: 'In call', icon: PhoneCall, cls: 'text-amber-600 bg-amber-50 border-amber-200', pulse: true },
+  COMPLETED: { label: 'Completed', icon: CheckCircle2, cls: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+  FAILED: { label: 'Failed', icon: XCircle, cls: 'text-red-600 bg-red-50 border-red-200' },
+  CANCELLED: { label: 'Cancelled', icon: Ban, cls: 'text-gray-500 bg-gray-50 border-gray-200' },
+};
+
+function TargetRow({ target }: { target: LiveTargetInfo }) {
+  const meta = TARGET_STATUS_META[target.status] || TARGET_STATUS_META.PENDING;
+  const Icon = meta.icon;
+  return (
+    <div className="flex items-center justify-between px-4 py-2.5 gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+          <span className="text-xs font-bold text-heading">{(target.name || '?').charAt(0).toUpperCase()}</span>
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-heading truncate">{target.name || 'Unknown'}</p>
+          <p className="text-[11px] text-subtle truncate">
+            {target.dealName || '—'}
+            {target.company ? ` · ${target.company}` : ''}
+            {target.phone ? ` · ${target.phone}` : ''}
+          </p>
+          {target.error && <p className="text-[11px] text-red-500 truncate mt-0.5">{target.error}</p>}
+        </div>
+      </div>
+      <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 border rounded-md text-[11px] font-medium shrink-0', meta.cls)}>
+        <Icon className={cn('h-3 w-3', meta.pulse && 'animate-pulse')} />
+        {meta.label}
+      </span>
+    </div>
+  );
+}
 
 export default AddWorkflowModal;
