@@ -102,14 +102,18 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
     const dynamicCallType = data.conversation_initiation_client_data?.dynamic_variables?.call_type;
     const isBarrierXInfoCall = agentId === config.elevenlabs.infoGatheringAgentId ||
       ['BARRIERX_INFO_GATHERING', 'LOST_DEAL_QUESTIONNAIRE', 'INACTIVITY_CHECK'].includes(dynamicCallType);
+    const isNlWorkflowCall = agentId === config.elevenlabs.nlWorkflowAgentId ||
+      dynamicCallType === 'NL_WORKFLOW';
 
     const callType = isBarrierXInfoCall
       ? 'BARRIERX_INFO_GATHERING'
-      : isPreMeetingCall
-        ? 'PRE-MEETING'
-        : isPostMeetingCall
-          ? 'POST-MEETING'
-          : 'UNKNOWN';
+      : isNlWorkflowCall
+        ? 'NL_WORKFLOW'
+        : isPreMeetingCall
+          ? 'PRE-MEETING'
+          : isPostMeetingCall
+            ? 'POST-MEETING'
+            : 'UNKNOWN';
 
     console.log(`📋 Type: ${type}`);
     console.log(`📋 Call Type: ${callType} 🎯`);
@@ -143,6 +147,20 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
         conversationId,
       });
       return;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // NL WORKFLOW CALL — update WorkflowCallOutcome status so the
+    // scheduled engine's `waitForBatchCompletion` poll can progress.
+    // Runs on end events only; we still fall through to the normal
+    // webhook-processing logic below (logs, notes, etc.).
+    // ═══════════════════════════════════════════════════════════════
+    if (isNlWorkflowCall && isEndEvent) {
+      try {
+        await updateWorkflowOutcomeFromWebhook(req.body);
+      } catch (err: any) {
+        console.error('⚠️ Failed to update WorkflowCallOutcome from webhook:', err?.message || err);
+      }
     }
 
     // Save webhook payload to file (overwrite if exists)
@@ -1286,6 +1304,79 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     });
   }
 };
+
+/**
+ * Update `WorkflowCallOutcome` status + summary from an NL-workflow end event.
+ *
+ * Matches on conversationId (unique). If the record isn't found (race or
+ * out-of-order webhooks), we fall back to `workflow_execution_id` +
+ * target_phone/deal_id from dynamic_variables.
+ *
+ * Status mapping:
+ *   - no-answer / busy / failed -> NO_ANSWER / BUSY / FAILED
+ *   - otherwise -> COMPLETED
+ */
+async function updateWorkflowOutcomeFromWebhook(webhookData: any): Promise<void> {
+  const data = webhookData.data || {};
+  const conversationId = data.conversation_id as string | undefined;
+  const metadata = data.metadata || {};
+  const analysis = data.analysis || {};
+  const callDuration = metadata.call_duration_secs || 0;
+  const transcriptSummary = analysis.transcript_summary || '';
+  const terminationReason: string = metadata.termination_reason || '';
+  const dynamicVars = data.conversation_initiation_client_data?.dynamic_variables || {};
+  const executionId = dynamicVars.workflow_execution_id || dynamicVars.workflowExecutionId;
+
+  const lowerTerm = terminationReason.toLowerCase();
+  let nextStatus: 'COMPLETED' | 'FAILED' | 'NO_ANSWER' | 'BUSY';
+  if (lowerTerm.includes('no_answer') || lowerTerm.includes('no answer') || data.status === 'no-answer') {
+    nextStatus = 'NO_ANSWER';
+  } else if (lowerTerm.includes('busy') || data.status === 'busy') {
+    nextStatus = 'BUSY';
+  } else if (data.status === 'failed' || lowerTerm.includes('failed')) {
+    nextStatus = 'FAILED';
+  } else {
+    nextStatus = 'COMPLETED';
+  }
+
+  let record = null;
+  if (conversationId) {
+    record = await prisma.workflowCallOutcome.findUnique({ where: { conversationId } });
+  }
+
+  if (!record && executionId) {
+    record = await prisma.workflowCallOutcome.findFirst({
+      where: {
+        executionId,
+        targetPhone: dynamicVars.target_phone || dynamicVars.targetPhone || undefined,
+        dealId: dynamicVars.deal_id || undefined,
+        status: { notIn: ['COMPLETED', 'FAILED', 'NO_ANSWER', 'BUSY', 'CANCELLED'] },
+      },
+      orderBy: { initiatedAt: 'desc' },
+    });
+  }
+
+  if (!record) {
+    console.log(`   ⚠️ No WorkflowCallOutcome found for conversation=${conversationId} execution=${executionId}`);
+    return;
+  }
+
+  await prisma.workflowCallOutcome.update({
+    where: { id: record.id },
+    data: {
+      status: nextStatus,
+      conversationId: conversationId || record.conversationId,
+      completedAt: new Date(),
+      duration: callDuration || record.duration,
+      transcriptSummary: transcriptSummary || record.transcriptSummary,
+      answeredAt: callDuration > 0 ? new Date(Date.now() - callDuration * 1000) : record.answeredAt,
+    },
+  });
+
+  console.log(
+    `   ✅ WorkflowCallOutcome ${record.id} → ${nextStatus} (conversation=${conversationId})`,
+  );
+}
 
 /**
  * Handle BarrierX Info Gathering Webhook

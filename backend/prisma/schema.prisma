@@ -747,6 +747,7 @@ enum CallStatus {
   FAILED
   NO_ANSWER
   BUSY
+  CANCELLED
 }
 
 enum TriggerSource {

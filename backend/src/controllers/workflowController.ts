@@ -4,15 +4,14 @@
  */
 
 import { Request, Response } from 'express';
-import { 
+import {
   parseIntent,
   validateIntent,
-  generateIntentSummary 
+  generateIntentSummary
 } from '../services/llm/promptParserService';
 import * as loggingService from '../services/loggingService';
 import * as workflowService from '../services/workflowService';
 import { previewTargets } from '../services/targetFinderService';
-import { AuthRequest } from '../middlewares/auth';
 import { getCachedUser } from '../utils/userCache';
 import prisma from '../config/database';
 import { WorkflowConfig } from '../types/workflow';
@@ -336,47 +335,6 @@ export const previewWorkflow = async (req: AuthenticatedRequest, res: Response) 
   }
 };
 
-/**
- * Execute a workflow (start batch calls)
- * POST /api/workflows/:id/execute
- */
-export const executeWorkflow = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    // Handle both User (JWT) and Service (API Key) authentication
-    let userId = req.user?.userId;
-    if (!userId && req.service) {
-      userId = 'service-account-id'; 
-    }
-
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    console.log(`🚀 Executing workflow ${id} for user ${userId}`);
-
-    // TODO: Implement execution for old workflow system if needed
-    const result = { success: false, error: 'Old workflow system not implemented' };
-
-    if (!result.success) {
-      return res.status(500).json({
-        ok: false,
-        error: result.error || 'Failed to execute workflow',
-      });
-    }
-
-    return res.json({
-      ok: true,
-      message: 'Old workflow system not implemented',
-    });
-
-  } catch (error: any) {
-    console.error('❌ Execute workflow error:', error.message);
-    return res.status(500).json({ error: 'Failed to execute workflow' });
-  }
-};
-
 // ============================================
 // SIMPLIFIED MVP ENDPOINTS
 // ============================================
@@ -457,53 +415,6 @@ export const findTargetsEndpoint = async (req: AuthenticatedRequest, res: Respon
   } catch (error: any) {
     console.error('❌ Find targets error:', error.message);
     return res.status(500).json({ error: 'Failed to find targets' });
-  }
-};
-
-/**
- * Execute simple workflow directly from intent
- * POST /api/workflows/execute-simple
- */
-export const executeSimpleWorkflow = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { intent, workflowName } = req.body;
-
-    if (!intent) {
-      return res.status(400).json({ error: 'Intent is required' });
-    }
-
-    let userId = req.user?.userId;
-    if (!userId && req.service) {
-      userId = 'service-account';
-    }
-
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    const tenantSlug = (req.body?.tenantSlug || req.user?.tenantSlug) as string | undefined;
-    if (!tenantSlug) {
-      return res.status(400).json({ error: 'tenantSlug is required' });
-    }
-
-    console.log(`🚀 Executing simple workflow: ${intent.action} (tenant: ${tenantSlug})`);
-
-    const result = await workflowService.executeSimpleWorkflow(intent, userId, tenantSlug, workflowName);
-
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-
-    return res.json({
-      ok: true,
-      executionId: result.executionId,
-      batchId: result.batchId,
-      message: 'Simple workflow execution started successfully',
-    });
-
-  } catch (error: any) {
-    console.error('❌ Execute simple workflow error:', error.message);
-    return res.status(500).json({ error: 'Failed to execute simple workflow' });
   }
 };
 
@@ -691,34 +602,52 @@ export const approveAndExecuteWorkflow = async (req: AuthenticatedRequest, res: 
       });
     }
 
-    const result = await workflowService.executeSimpleWorkflow(intent, userId, tenantSlug, workflowName);
+    // Resolve requester display name (for the script's {{requester_name}})
+    let triggeredByName: string | undefined = req.user?.name;
+    if (!triggeredByName && userId !== 'service-account') {
+      const dbUser = await getCachedUser(userId, { name: true });
+      triggeredByName = dbUser?.name;
+    }
+    if (!triggeredByName && req.service) {
+      triggeredByName = `Service: ${req.service.name}`;
+    }
+
+    const result = await workflowService.startWorkflowExecution({
+      intent,
+      userId,
+      triggeredByName,
+      tenantSlug,
+      workflowName,
+    });
 
     if (!result.success) {
-      return res.status(400).json({ error: result.error });
+      const statusCode = result.warning ? 409 : 400;
+      return res.status(statusCode).json({
+        error: result.error,
+        warning: result.warning || false,
+      });
     }
 
     // Log the approval and execution for audit
-    console.log(`✅ Workflow approved and executed:`, {
+    console.log(`✅ Workflow approved and started:`, {
       userId,
       intent: intent.action,
       targetCount: preview.count,
       executionId: result.executionId,
-      batchId: result.batchId,
       estimatedCost,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     return res.json({
       ok: true,
       execution: {
         id: result.executionId,
-        batchId: result.batchId,
       },
       targets: {
         count: preview.count,
         summary: preview.summary,
       },
-      message: `Workflow approved and executed successfully for ${preview.count} target${preview.count === 1 ? '' : 's'}`,
+      message: `Workflow approved — engine started for ${preview.count} target${preview.count === 1 ? '' : 's'} (calls placed in batches of ${workflowService.getWorkflowConfig().batchSize})`,
     });
 
   } catch (error: any) {
@@ -730,6 +659,9 @@ export const approveAndExecuteWorkflow = async (req: AuthenticatedRequest, res: 
 /**
  * Get the latest active workflow execution status
  * GET /api/workflows/execution-status
+ *
+ * Merges DB state (`WorkflowExecution` + outcome counts) with the live
+ * in-memory engine state (currentBatch, recentLogs, per-target status).
  */
 export const getExecutionStatus = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -760,7 +692,7 @@ export const getExecutionStatus = async (req: AuthenticatedRequest, res: Respons
     const outcomeMap: Record<string, number> = {};
     outcomes.forEach((o) => { outcomeMap[o.status] = o._count.status; });
 
-    const batchId = (execution.metadata as any)?.batchId || null;
+    const liveState = workflowService.getWorkflowJobState(execution.id);
 
     return res.json({
       active: true,
@@ -772,11 +704,28 @@ export const getExecutionStatus = async (req: AuthenticatedRequest, res: Respons
         status: execution.status,
         totalTargets: execution.totalTargets,
         callsInitiated: outcomeMap['INITIATED'] || 0,
-        callsCompleted: (outcomeMap['COMPLETED'] || 0) + (outcomeMap['SUCCESSFUL'] || 0),
-        callsFailed: outcomeMap['FAILED'] || 0,
-        batchId,
+        callsCompleted: (outcomeMap['COMPLETED'] || 0) + (outcomeMap['ANSWERED'] || 0),
+        callsFailed: (outcomeMap['FAILED'] || 0) + (outcomeMap['NO_ANSWER'] || 0) + (outcomeMap['BUSY'] || 0),
+        callsCancelled: outcomeMap['CANCELLED'] || 0,
         startedAt: execution.startedAt,
         createdAt: execution.createdAt,
+
+        // Live engine state (may be null if server restarted or job GC'd)
+        live: liveState
+          ? {
+              isRunning: liveState.isRunning,
+              currentBatch: liveState.currentBatch,
+              totalBatches: liveState.totalBatches,
+              processedTargets: liveState.processedTargets,
+              successfulCalls: liveState.successfulCalls,
+              failedCalls: liveState.failedCalls,
+              skippedTargets: liveState.skippedTargets,
+              cancelledTargets: liveState.cancelledTargets,
+              currentTargets: liveState.currentTargets,
+              recentLogs: liveState.recentLogs,
+              lastError: liveState.lastError,
+            }
+          : null,
       },
     });
   } catch (error: any) {
@@ -788,6 +737,15 @@ export const getExecutionStatus = async (req: AuthenticatedRequest, res: Respons
 /**
  * Cancel a running workflow execution
  * POST /api/workflows/execution/:id/cancel
+ *
+ * Flips the engine's `shouldStop` flag so the loop exits between batches.
+ * Remaining PENDING/INITIATED outcomes are marked CANCELLED by the engine
+ * itself when it unwinds. In-flight calls continue — we don't terminate
+ * ElevenLabs conversations mid-call.
+ *
+ * Fallback: if the execution exists in DB but not in the live Map (e.g. the
+ * server was restarted mid-run), we still mark the DB row CANCELLED so it
+ * no longer shows up as active.
  */
 export const cancelExecution = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -803,23 +761,35 @@ export const cancelExecution = async (req: AuthenticatedRequest, res: Response) 
       return res.status(400).json({ error: `Execution is already ${execution.status}` });
     }
 
-    await prisma.workflowExecution.update({
-      where: { id },
-      data: {
-        status: 'CANCELLED',
-        completedAt: new Date(),
-        errorMessage: `Cancelled by user ${userId}`,
-      },
+    const liveCancelled = workflowService.requestCancel(id);
+
+    if (!liveCancelled) {
+      // No live engine — likely orphaned from a restart. Clean up directly.
+      await prisma.workflowExecution.update({
+        where: { id },
+        data: {
+          status: 'CANCELLED',
+          completedAt: new Date(),
+          errorMessage: `Cancelled by user ${userId} (no live engine)`,
+        },
+      });
+      await prisma.workflowCallOutcome.updateMany({
+        where: {
+          executionId: id,
+          status: { notIn: ['COMPLETED', 'FAILED', 'NO_ANSWER', 'BUSY', 'CANCELLED'] },
+        },
+        data: { status: 'CANCELLED' },
+      });
+    }
+
+    console.log(`⛔ Workflow execution ${id} cancel requested by ${userId} (live=${liveCancelled})`);
+
+    return res.json({
+      ok: true,
+      message: liveCancelled
+        ? 'Cancel requested — engine will stop between batches, remaining calls will be marked CANCELLED'
+        : 'Execution cancelled (no live engine; marked directly)',
     });
-
-    await prisma.workflowCallOutcome.updateMany({
-      where: { executionId: id, status: 'INITIATED' },
-      data: { status: 'FAILED' },
-    });
-
-    console.log(`⛔ Workflow execution ${id} cancelled by ${userId}`);
-
-    return res.json({ ok: true, message: 'Execution cancelled' });
   } catch (error: any) {
     console.error('❌ Cancel execution error:', error.message);
     return res.status(500).json({ error: 'Failed to cancel execution' });
@@ -845,25 +815,45 @@ export const cancelAllExecutions = async (req: AuthenticatedRequest, res: Respon
       return res.json({ ok: true, cancelled: 0, message: 'No active executions found' });
     }
 
-    const ids = staleExecutions.map((e) => e.id);
+    // Signal any live engines to stop (they'll update DB themselves).
+    const liveCount = workflowService.requestCancelAll();
 
-    await prisma.workflowExecution.updateMany({
-      where: { id: { in: ids } },
-      data: {
-        status: 'CANCELLED',
-        completedAt: new Date(),
-        errorMessage: `Bulk cancelled by user ${userId}`,
-      },
+    // Orphan cleanup: any DB rows with no live engine need manual cleanup.
+    const liveIds = new Set<string>();
+    for (const e of staleExecutions) {
+      if (workflowService.getWorkflowJobState(e.id)?.isRunning) liveIds.add(e.id);
+    }
+    const orphanIds = staleExecutions.map((e) => e.id).filter((id) => !liveIds.has(id));
+
+    if (orphanIds.length > 0) {
+      await prisma.workflowExecution.updateMany({
+        where: { id: { in: orphanIds } },
+        data: {
+          status: 'CANCELLED',
+          completedAt: new Date(),
+          errorMessage: `Bulk cancelled by user ${userId} (no live engine)`,
+        },
+      });
+      await prisma.workflowCallOutcome.updateMany({
+        where: {
+          executionId: { in: orphanIds },
+          status: { notIn: ['COMPLETED', 'FAILED', 'NO_ANSWER', 'BUSY', 'CANCELLED'] },
+        },
+        data: { status: 'CANCELLED' },
+      });
+    }
+
+    console.log(
+      `⛔ Cancel-all by ${userId}: ${liveCount} live engine(s) signalled, ${orphanIds.length} orphan(s) cleaned`,
+    );
+
+    return res.json({
+      ok: true,
+      cancelled: staleExecutions.length,
+      liveEnginesSignalled: liveCount,
+      orphansCleaned: orphanIds.length,
+      message: `${staleExecutions.length} execution(s) cancelled`,
     });
-
-    await prisma.workflowCallOutcome.updateMany({
-      where: { executionId: { in: ids }, status: 'INITIATED' },
-      data: { status: 'FAILED' },
-    });
-
-    console.log(`⛔ Cancelled ${ids.length} workflow execution(s) by ${userId}`);
-
-    return res.json({ ok: true, cancelled: ids.length, message: `${ids.length} execution(s) cancelled` });
   } catch (error: any) {
     console.error('❌ Cancel all executions error:', error.message);
     return res.status(500).json({ error: 'Failed to cancel executions' });
