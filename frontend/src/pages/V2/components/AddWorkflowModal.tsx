@@ -34,6 +34,8 @@ import {
   Check,
   Info,
   Inbox,
+  Brain,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -135,6 +137,41 @@ interface SubStep {
   message: string;
 }
 
+/**
+ * Visual metadata for each stage shown in the "processing" stepper.
+ * Title/description are static so the UI stays clear even as dynamic
+ * status messages in `substeps` change.
+ */
+const PROCESSING_STEPS: ReadonlyArray<{
+  key: 'parsing' | 'finding' | 'executing';
+  title: string;
+  description: string;
+  doneDescription: string;
+  Icon: typeof Brain;
+}> = [
+  {
+    key: 'parsing',
+    title: 'Understanding your intent',
+    description: 'Parsing the request with AI',
+    doneDescription: 'Intent extracted',
+    Icon: Brain,
+  },
+  {
+    key: 'finding',
+    title: 'Locating matching contacts',
+    description: 'Searching your CRM for targets',
+    doneDescription: 'Targets identified',
+    Icon: Search,
+  },
+  {
+    key: 'executing',
+    title: 'Preparing for review',
+    description: 'Finalizing the workflow plan',
+    doneDescription: 'Ready for approval',
+    Icon: ShieldCheck,
+  },
+];
+
 const WF_STORAGE_KEY = 'agentx_workflow_exec';
 
 export interface PersistedWorkflowExec {
@@ -212,8 +249,14 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
 
   // Preload tenant deals for combobox slots. Only when modal is open on
   // the prompt step — no point wasting a network call during live-progress.
-  const { deals: tenantDeals, facets: tenantFacets, initialLoading: dealsLoading, error: dealsError, refresh: refreshDeals } =
-    useTenantDeals(step === 'prompt');
+  const {
+    deals: tenantDeals,
+    facets: tenantFacets,
+    initialLoading: dealsLoading,
+    loading: dealsRefreshing,
+    error: dealsError,
+    refresh: refreshDeals,
+  } = useTenantDeals(step === 'prompt');
 
   const handleTemplateSelect = (tpl: WorkflowTemplate) => {
     if (selectedTemplateId === tpl.id) {
@@ -471,16 +514,6 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
     });
   };
 
-  const StepIcon = ({ status }: { status: SubStep['status'] }) => {
-    switch (status) {
-      case 'complete': return <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />;
-      case 'running': return <Loader2 className="h-4 w-4 text-brand animate-spin shrink-0" />;
-      case 'error': return <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />;
-      case 'warning': return <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />;
-      default: return <Circle className="h-4 w-4 text-gray-300 shrink-0" />;
-    }
-  };
-
   const formatRelativeTime = (ts: string) => {
     const mins = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
     if (mins < 1) return 'just now';
@@ -628,13 +661,16 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
                         <span className="text-amber-600">Deals unavailable — typing still works</span>
                       ) : (
                         <>
-                          {tenantDeals.length} deal{tenantDeals.length === 1 ? '' : 's'} loaded
+                          {dealsRefreshing
+                            ? 'Refreshing deals...'
+                            : `${tenantDeals.length} deal${tenantDeals.length === 1 ? '' : 's'} loaded`}
                           <button
                             onClick={() => refreshDeals()}
-                            className="p-0.5 hover:text-heading transition-colors"
-                            title="Refresh deals"
+                            disabled={dealsRefreshing}
+                            className="p-0.5 hover:text-heading transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                            title={dealsRefreshing ? 'Refreshing…' : 'Refresh deals'}
                           >
-                            <RefreshCw className="h-3 w-3" />
+                            <RefreshCw className={cn('h-3 w-3', dealsRefreshing && 'animate-spin text-brand')} />
                           </button>
                         </>
                       )}
@@ -804,29 +840,141 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
           )}
 
           {/* ──── STEP: PROCESSING ──── */}
-          {step === 'processing' && (
-            <div className="py-6 space-y-6">
-              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                <div className="bg-brand h-2 rounded-full transition-all duration-700 ease-out animate-pulse" style={{ width: '60%' }} />
-              </div>
-              <div className="space-y-3">
-                {Object.entries(substeps).map(([key, info]) => (
-                  <div key={key} className="flex items-center gap-3">
-                    <StepIcon status={info.status} />
-                    <span className={cn(
-                      'text-sm',
-                      info.status === 'complete' && 'text-emerald-700 font-medium',
-                      info.status === 'running' && 'text-heading font-medium',
-                      info.status === 'error' && 'text-red-600',
-                      info.status === 'pending' && 'text-subtle',
-                    )}>
-                      {info.message}
-                    </span>
+          {step === 'processing' && (() => {
+            const total = PROCESSING_STEPS.length;
+            const completed = PROCESSING_STEPS.filter((s) => substeps[s.key]?.status === 'complete').length;
+            const hasRunning = PROCESSING_STEPS.some((s) => substeps[s.key]?.status === 'running');
+            const runningIdx = PROCESSING_STEPS.findIndex((s) => substeps[s.key]?.status === 'running');
+            const activeIdx = runningIdx >= 0 ? runningIdx : Math.min(completed, total - 1);
+            const progressPct = Math.min(100, ((completed + (hasRunning ? 0.5 : 0)) / total) * 100);
+
+            return (
+              <div className="py-2 space-y-6">
+                {/* ── Progress header ── */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-brand/10 text-brand text-[11px] font-semibold tracking-wide">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
+                        PROCESSING
+                      </span>
+                      <span className="text-xs text-subtle">
+                        Step <span className="font-semibold text-heading tabular-nums">{Math.min(activeIdx + 1, total)}</span> of <span className="tabular-nums">{total}</span>
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-heading tabular-nums">{Math.round(progressPct)}%</span>
                   </div>
-                ))}
+
+                  {/* Progress bar w/ shimmer sweep */}
+                  <div className="relative w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-brand/80 via-brand to-brand/80 transition-[width] duration-700 ease-out"
+                      style={{ width: `${progressPct}%` }}
+                    >
+                      <div className="absolute inset-y-0 -inset-x-4 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Vertical stepper ── */}
+                <ol className="relative">
+                  {PROCESSING_STEPS.map((s, i) => {
+                    const info = substeps[s.key];
+                    const status = info?.status ?? 'pending';
+                    const isLast = i === PROCESSING_STEPS.length - 1;
+                    const Icon = s.Icon;
+
+                    return (
+                      <li key={s.key} className="relative flex items-start gap-4 pb-5 last:pb-0">
+                        {/* Connector line between bubbles */}
+                        {!isLast && (
+                          <span
+                            className={cn(
+                              'absolute left-[17px] top-9 bottom-0 w-px transition-colors',
+                              status === 'complete' ? 'bg-brand/40' : 'bg-gray-200',
+                            )}
+                          />
+                        )}
+
+                        {/* Icon bubble */}
+                        <div className="relative shrink-0">
+                          {status === 'running' && (
+                            <span className="absolute inset-0 rounded-full bg-brand/20 animate-ping" />
+                          )}
+                          <div
+                            className={cn(
+                              'relative z-10 w-[34px] h-[34px] rounded-full flex items-center justify-center border transition-all duration-300',
+                              status === 'complete' && 'bg-brand border-brand text-white shadow-sm shadow-brand/20',
+                              status === 'running' && 'bg-brand/10 border-brand/40 text-brand ring-4 ring-brand/5',
+                              status === 'error' && 'bg-red-50 border-red-200 text-red-500',
+                              status === 'warning' && 'bg-amber-50 border-amber-200 text-amber-600',
+                              status === 'pending' && 'bg-white border-gray-200 text-gray-300',
+                            )}
+                          >
+                            {status === 'complete' ? (
+                              <Check className="h-4 w-4" strokeWidth={2.5} />
+                            ) : status === 'running' ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : status === 'error' ? (
+                              <AlertCircle className="h-4 w-4" />
+                            ) : status === 'warning' ? (
+                              <AlertTriangle className="h-4 w-4" />
+                            ) : (
+                              <Icon className="h-[15px] w-[15px]" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Text content */}
+                        <div className="flex-1 min-w-0 pt-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className={cn(
+                              'text-sm font-semibold transition-colors',
+                              status === 'complete' && 'text-heading',
+                              status === 'running' && 'text-heading',
+                              status === 'error' && 'text-red-700',
+                              status === 'warning' && 'text-amber-700',
+                              status === 'pending' && 'text-gray-400',
+                            )}>
+                              {s.title}
+                            </p>
+                            {status === 'complete' && (
+                              <span className="text-[10px] font-semibold tracking-wide text-brand uppercase">Done</span>
+                            )}
+                            {status === 'running' && (
+                              <span className="text-[10px] font-semibold tracking-wide text-brand uppercase">In progress</span>
+                            )}
+                          </div>
+                          <p className={cn(
+                            'text-xs mt-0.5 transition-colors',
+                            status === 'complete' && 'text-subtle',
+                            status === 'running' && 'text-subtle',
+                            status === 'error' && 'text-red-600',
+                            status === 'warning' && 'text-amber-600',
+                            status === 'pending' && 'text-gray-400',
+                          )}>
+                            {status === 'complete'
+                              ? (info?.message && info.message !== 'Analyzing prompt with AI...' && !info.message.endsWith('...')
+                                  ? info.message
+                                  : s.doneDescription)
+                              : status === 'pending'
+                                ? s.description
+                                : info?.message || s.description}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+
+                {/* Subtle footer reassurance */}
+                <div className="flex items-center justify-center gap-2 pt-1 text-[11px] text-subtle">
+                  <Sparkles className="h-3 w-3 text-brand/70" />
+                  <span>This usually takes just a few seconds</span>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ──── STEP: NO TARGETS ──── */}
           {step === 'no-targets' && (

@@ -86,6 +86,10 @@ export default {
 				from: { transform: 'rotate(0deg)' },
 				to: { transform: 'rotate(360deg)' },
 			},
+			shimmer: {
+				'0%': { transform: 'translateX(-120%)' },
+				'100%': { transform: 'translateX(220%)' },
+			},
 			'accordion-down': {
   				from: {
   					height: '0'
@@ -106,6 +110,7 @@ export default {
 		animation: {
 			'spin-slow': 'spin-slow 20s linear infinite',
 			'spin-slow-reverse': 'spin-slow 20s linear infinite reverse',
+			shimmer: 'shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite',
 			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
   		}
