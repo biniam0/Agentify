@@ -50,7 +50,6 @@ export default function SimpleWorkflow() {
   } | null>(null);
   const [execution, setExecution] = useState<{
     id: string;
-    batchId: string;
   } | null>(null);
 
   const [approvalData, setApprovalData] = useState<{
@@ -321,7 +320,6 @@ export default function SimpleWorkflow() {
 
       setExecution({
         id: response.data.execution.id,
-        batchId: response.data.execution.batchId,
       });
 
       setProgress(prev => ({
@@ -904,26 +902,18 @@ export default function SimpleWorkflow() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-semibold mb-2">Execution ID</h4>
-                <code className="text-sm bg-muted p-2 rounded block break-all">
-                  {execution.id}
-                </code>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">ElevenLabs Batch ID</h4>
-                <code className="text-sm bg-muted p-2 rounded block break-all">
-                  {execution.batchId}
-                </code>
-              </div>
+            <div>
+              <h4 className="font-semibold mb-2">Execution ID</h4>
+              <code className="text-sm bg-muted p-2 rounded block break-all">
+                {execution.id}
+              </code>
             </div>
 
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg dark:bg-green-950/30 dark:border-green-500/30">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse dark:bg-green-400"></div>
                 <span className="text-green-800 font-medium dark:text-green-200">
-                  Workflow started successfully! Calls are being made to {targets?.count} target{targets?.count === 1 ? '' : 's'}.
+                  Engine started — calls are placed in scheduled batches of 2 to {targets?.count} target{targets?.count === 1 ? '' : 's'}.
                 </span>
               </div>
               <p className="text-green-700 text-sm mt-1 dark:text-green-300/80">

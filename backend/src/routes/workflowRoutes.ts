@@ -5,9 +5,7 @@
 
 import express from 'express';
 import { authenticate } from '../middlewares/auth';
-import { requireSuperAdmin } from '../middlewares/adminAuth';
 import * as workflowController from '../controllers/workflowController';
-import { authenticateService } from '../middlewares/serviceAuth';
 
 const router = express.Router();
 
@@ -38,12 +36,6 @@ router.post('/', authenticate, workflowController.createWorkflow);
  */
 router.post('/:id/preview', authenticate, workflowController.previewWorkflow);
 
-/**
- * POST /api/workflows/:id/execute
- * Execute a workflow (start batch calls)
- */
-router.post('/:id/execute', authenticate, workflowController.executeWorkflow);
-
 // ============================================
 // SIMPLIFIED MVP ENDPOINTS
 // ============================================
@@ -55,16 +47,16 @@ router.post('/:id/execute', authenticate, workflowController.executeWorkflow);
 router.post('/parse-intent', authenticate, workflowController.parseIntentEndpoint);
 
 /**
+ * GET /api/workflows/tenant-deals
+ * List the tenant's deals in a slim shape for the template-slot dropdowns.
+ */
+router.get('/tenant-deals', authenticate, workflowController.listTenantDeals);
+
+/**
  * POST /api/workflows/find-targets
  * Find targets based on intent criteria
  */
 router.post('/find-targets', authenticate, workflowController.findTargetsEndpoint);
-
-/**
- * POST /api/workflows/execute-simple
- * Execute simple workflow directly from intent
- */
-router.post('/execute-simple', authenticate, workflowController.executeSimpleWorkflow);
 
 /**
  * POST /api/workflows/run-simple
