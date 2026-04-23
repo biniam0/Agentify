@@ -161,6 +161,16 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
       } catch (err: any) {
         console.error('⚠️ Failed to update WorkflowCallOutcome from webhook:', err?.message || err);
       }
+
+      // Phase 2 — fire-and-forget classification + (optional) BarrierX
+      // write-back. Deliberately NOT awaited: the webhook must always
+      // respond fast. Errors are logged inside the service.
+      const { processOutcome: processWorkflowWriteBack } = await import(
+        '../services/workflowWriteBackService'
+      );
+      processWorkflowWriteBack({ conversationId }).catch((err: any) => {
+        console.error('⚠️ workflow write-back background task failed:', err?.message || err);
+      });
     }
 
     // Save webhook payload to file (overwrite if exists)

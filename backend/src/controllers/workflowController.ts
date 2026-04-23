@@ -746,14 +746,56 @@ export const getExecutionStatus = async (req: AuthenticatedRequest, res: Respons
       return res.json({ active: false });
     }
 
-    const outcomes = await prisma.workflowCallOutcome.groupBy({
-      by: ['status'],
-      where: { executionId: execution.id },
-      _count: { status: true },
-    });
+    const [outcomes, classifiedOutcomes, writeBackBreakdown] = await Promise.all([
+      prisma.workflowCallOutcome.groupBy({
+        by: ['status'],
+        where: { executionId: execution.id },
+        _count: { status: true },
+      }),
+      prisma.workflowCallOutcome.groupBy({
+        by: ['outcome'],
+        where: { executionId: execution.id, outcome: { not: null } },
+        _count: { outcome: true },
+      }),
+      prisma.workflowCallOutcome.groupBy({
+        by: ['writeBackStatus'],
+        where: { executionId: execution.id },
+        _count: { writeBackStatus: true },
+      }),
+    ]);
 
     const outcomeMap: Record<string, number> = {};
     outcomes.forEach((o) => { outcomeMap[o.status] = o._count.status; });
+
+    // Classified outcome counts (ACCEPTED / DECLINED / DEFERRED / PARTIAL /
+    // VOICEMAIL / NO_ANSWER / BUSY / FAILED). Keys always present at zero so
+    // the UI can render a stable chart.
+    const outcomeCounts: Record<string, number> = {
+      ACCEPTED: 0,
+      DECLINED: 0,
+      DEFERRED: 0,
+      PARTIAL: 0,
+      VOICEMAIL: 0,
+      NO_ANSWER: 0,
+      BUSY: 0,
+      FAILED: 0,
+    };
+    classifiedOutcomes.forEach((o) => {
+      if (o.outcome && o.outcome in outcomeCounts) {
+        outcomeCounts[o.outcome] = o._count.outcome;
+      }
+    });
+
+    const writeBackCounts: Record<string, number> = {
+      PENDING: 0,
+      IN_PROGRESS: 0,
+      SUCCESS: 0,
+      FAILED: 0,
+      SKIPPED: 0,
+    };
+    writeBackBreakdown.forEach((w) => {
+      writeBackCounts[w.writeBackStatus] = w._count.writeBackStatus;
+    });
 
     const liveState = workflowService.getWorkflowJobState(execution.id);
 
@@ -770,6 +812,9 @@ export const getExecutionStatus = async (req: AuthenticatedRequest, res: Respons
         callsCompleted: (outcomeMap['COMPLETED'] || 0) + (outcomeMap['ANSWERED'] || 0),
         callsFailed: (outcomeMap['FAILED'] || 0) + (outcomeMap['NO_ANSWER'] || 0) + (outcomeMap['BUSY'] || 0),
         callsCancelled: outcomeMap['CANCELLED'] || 0,
+        // Phase 2 breakdown — classified outcomes + write-back status
+        outcomeCounts,
+        writeBackCounts,
         startedAt: execution.startedAt,
         createdAt: execution.createdAt,
 
