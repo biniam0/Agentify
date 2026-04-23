@@ -661,20 +661,24 @@ export const approveAndExecuteWorkflow = async (req: AuthenticatedRequest, res: 
       });
     }
 
-    // Resolve requester display name (for the script's {{requester_name}})
+    // Resolve requester display name + email for script + CallLog parity.
     let triggeredByName: string | undefined = req.user?.name;
-    if (!triggeredByName && userId !== 'service-account') {
-      const dbUser = await getCachedUser(userId, { name: true });
-      triggeredByName = dbUser?.name;
+    let triggeredByEmail: string | undefined = req.user?.email;
+    if ((!triggeredByName || !triggeredByEmail) && userId !== 'service-account') {
+      const dbUser = await getCachedUser(userId, { name: true, email: true });
+      triggeredByName = triggeredByName || dbUser?.name;
+      triggeredByEmail = triggeredByEmail || dbUser?.email;
     }
     if (!triggeredByName && req.service) {
       triggeredByName = `Service: ${req.service.name}`;
+      triggeredByEmail = triggeredByEmail || 'service@agentx.ai';
     }
 
     const result = await workflowService.startWorkflowExecution({
       intent,
       userId,
       triggeredByName,
+      triggeredByEmail,
       tenantSlug,
       workflowName,
     });

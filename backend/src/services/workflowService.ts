@@ -60,6 +60,9 @@ export interface WorkflowJobState {
   tenantSlug: string;
   type: WorkflowType;
   triggeredBy: string;
+  // Identity of the caller (for CallLog parity)
+  triggeredByUserId: string;
+  triggeredByEmail: string;
 
   isRunning: boolean;
   shouldStop: boolean;
@@ -222,11 +225,15 @@ function buildDynamicVariables(args: {
     // Sales rep being called
     owner_name: target.name,
     owner_first_name: (target.name || '').split(' ')[0] || '',
+    owner_email: target.email || '',
 
     // Deal information
     deal_id: target.dealId,
     deal_name: target.dealName,
     company: target.company || '',
+    // Duplicate under `company_name` for parity with pre/post-call and info-
+    // gathering webhook contracts (they read `dynamicVariables.company_name`).
+    company_name: target.company || '',
     deal_amount: target.dealAmount?.toString() || '',
     deal_stage: target.dealStage || '',
 
@@ -243,6 +250,13 @@ function buildDynamicVariables(args: {
     execution_id: executionId,
     target_phone: target.phone,
     tenant_slug: target.tenantSlug || '',
+    // Use tenantSlug as a fallback tenant name — Target doesn't carry a
+    // separate display name today. Matches info-gathering fallback pattern.
+    tenant_name: target.tenantSlug || '',
+    // HubSpot owner id — required by the generic note-creation block in the
+    // ElevenLabs post-call webhook. Without this, workflow calls would log
+    // "Owner ID: MISSING" for every call.
+    hubspot_owner_id: target.hubspotOwnerId || '',
 
     // Time context
     current_timezone: 'UTC',
@@ -503,11 +517,43 @@ async function runEngine(state: WorkflowJobState, intent: SimpleIntent): Promise
               dealName: target.dealName,
               tenantSlug: target.tenantSlug,
               hubspotOwnerId: target.hubspotOwnerId,
+              agentId: config.elevenlabs.nlWorkflowAgentId,
               status: 'FAILED',
               errorMessage: result.error,
             },
           });
           outcomeIds.push(outcome.id);
+
+          // CallLog parity — even initiation failures get a row so they
+          // show up in the unified call-logs UI.
+          await loggingService
+            .logCallInitiation({
+              callType: 'NL_WORKFLOW',
+              userId: state.triggeredByUserId,
+              userName: state.triggeredBy,
+              userEmail: state.triggeredByEmail,
+              tenantSlug: target.tenantSlug,
+              tenantName: target.tenantSlug,
+              hubspotOwnerId: target.hubspotOwnerId,
+              dealId: target.dealId,
+              dealName: target.dealName,
+              phoneNumber: target.phone,
+              ownerName: target.name,
+              agentId: config.elevenlabs.nlWorkflowAgentId,
+              triggerSource: 'MANUAL',
+              triggerUserId: state.triggeredByUserId,
+              dynamicVariables: { executionId: state.executionId },
+            })
+            .then(async (row) => {
+              if (row?.id) {
+                await prisma.callLog.update({
+                  where: { id: row.id },
+                  data: { status: 'FAILED', failureReason: result.error },
+                }).catch(() => { /* best-effort */ });
+              }
+            })
+            .catch((e) => console.error('⚠️ failed CallLog (trigger-failed):', e?.message));
+
           continue;
         }
 
@@ -532,6 +578,30 @@ async function runEngine(state: WorkflowJobState, intent: SimpleIntent): Promise
           },
         });
         outcomeIds.push(outcome.id);
+
+        // CallLog parity — creates a row the generic webhook post-call
+        // flow and the admin Call Logs UI can both consume.
+        await loggingService
+          .logCallInitiation({
+            callType: 'NL_WORKFLOW',
+            userId: state.triggeredByUserId,
+            userName: state.triggeredBy,
+            userEmail: state.triggeredByEmail,
+            tenantSlug: target.tenantSlug,
+            tenantName: target.tenantSlug,
+            hubspotOwnerId: target.hubspotOwnerId,
+            dealId: target.dealId,
+            dealName: target.dealName,
+            phoneNumber: target.phone,
+            ownerName: target.name,
+            agentId: config.elevenlabs.nlWorkflowAgentId,
+            triggerSource: 'MANUAL',
+            triggerUserId: state.triggeredByUserId,
+            conversationId: result.conversationId,
+            callSid: result.callSid,
+            dynamicVariables: { executionId: state.executionId },
+          })
+          .catch((e) => console.error('⚠️ failed CallLog (initiated):', e?.message));
 
         state.successfulCalls++;
         state.processedTargets++;
@@ -657,6 +727,7 @@ export async function startWorkflowExecution(args: {
   intent: SimpleIntent;
   userId: string;
   triggeredByName?: string;
+  triggeredByEmail?: string;
   tenantSlug: string;
   workflowName?: string;
   type?: WorkflowType;
@@ -745,6 +816,8 @@ export async function startWorkflowExecution(args: {
     tenantSlug: args.tenantSlug,
     type,
     triggeredBy: requesterName,
+    triggeredByUserId: args.userId,
+    triggeredByEmail: args.triggeredByEmail || 'nl@workflow.local',
 
     isRunning: true,
     shouldStop: false,
