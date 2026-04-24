@@ -35,6 +35,12 @@ export const config = {
     // NL to Workflow Agent (calls sales reps on behalf of managers)
     nlWorkflowAgentId: process.env.ELEVENLABS_NL_WORKFLOW_AGENT_ID || '',
   },
+  workflow: {
+    // Gate for the workflow write-back service. When false, outcomes are
+    // classified but NOT pushed to BarrierX (writeBackStatus becomes SKIPPED).
+    // Set WORKFLOW_WRITEBACK_ENABLED=true in the environment to activate.
+    writeBackEnabled: process.env.WORKFLOW_WRITEBACK_ENABLED === 'true',
+  },
   callRetry: {
     enabled: process.env.ENABLE_CALL_RETRY === 'true',
     maxAttempts: parseInt(process.env.CALL_RETRY_MAX_ATTEMPTS || '3'),

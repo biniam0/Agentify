@@ -94,8 +94,10 @@ export const logCallInitiation = async (data: {
   tenantName?: string;
   dealId: string;
   dealName: string;
-  meetingId: string;
-  meetingTitle: string;
+  // Optional: NL workflow calls are not tied to a HubSpot meeting. Pre/post-
+  // meeting callers continue to pass these as strings.
+  meetingId?: string | null;
+  meetingTitle?: string | null;
   phoneNumber: string;
   ownerName?: string;
   agentId?: string;

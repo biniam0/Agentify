@@ -236,8 +236,10 @@ model CallLog {
   // Deal context
   dealId       String
   dealName     String
-  meetingId    String
-  meetingTitle String
+  // Meeting context — optional because NL workflow calls are not tied to a
+  // meeting. Pre/post-meeting calls still populate these.
+  meetingId    String?
+  meetingTitle String?
 
   // Call details
   phoneNumber String
@@ -737,6 +739,7 @@ enum CallType {
   PRE_CALL
   POST_CALL
   BARRIERX_INFO_GATHERING
+  NL_WORKFLOW
 }
 
 enum CallStatus {
@@ -747,6 +750,7 @@ enum CallStatus {
   FAILED
   NO_ANSWER
   BUSY
+  CANCELLED
 }
 
 enum TriggerSource {
@@ -947,6 +951,7 @@ model WorkflowCallOutcome {
 
   // Call result
   transcriptSummary String? @db.Text
+  rawTranscript     Json? // Full transcript array [{role, message, ...}] from ElevenLabs post-call webhook
   extractedData     Json? // Data extracted from the call (e.g., SQL, next steps, etc.)
 
   // Classification (LLM-based)

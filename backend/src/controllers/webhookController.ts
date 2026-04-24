@@ -102,14 +102,18 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
     const dynamicCallType = data.conversation_initiation_client_data?.dynamic_variables?.call_type;
     const isBarrierXInfoCall = agentId === config.elevenlabs.infoGatheringAgentId ||
       ['BARRIERX_INFO_GATHERING', 'LOST_DEAL_QUESTIONNAIRE', 'INACTIVITY_CHECK'].includes(dynamicCallType);
+    const isNlWorkflowCall = agentId === config.elevenlabs.nlWorkflowAgentId ||
+      dynamicCallType === 'NL_WORKFLOW';
 
     const callType = isBarrierXInfoCall
       ? 'BARRIERX_INFO_GATHERING'
-      : isPreMeetingCall
-        ? 'PRE-MEETING'
-        : isPostMeetingCall
-          ? 'POST-MEETING'
-          : 'UNKNOWN';
+      : isNlWorkflowCall
+        ? 'NL_WORKFLOW'
+        : isPreMeetingCall
+          ? 'PRE-MEETING'
+          : isPostMeetingCall
+            ? 'POST-MEETING'
+            : 'UNKNOWN';
 
     console.log(`📋 Type: ${type}`);
     console.log(`📋 Call Type: ${callType} 🎯`);
@@ -143,6 +147,30 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
         conversationId,
       });
       return;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // NL WORKFLOW CALL — update WorkflowCallOutcome status so the
+    // scheduled engine's `waitForBatchCompletion` poll can progress.
+    // Runs on end events only; we still fall through to the normal
+    // webhook-processing logic below (logs, notes, etc.).
+    // ═══════════════════════════════════════════════════════════════
+    if (isNlWorkflowCall && isEndEvent) {
+      try {
+        await updateWorkflowOutcomeFromWebhook(req.body);
+      } catch (err: any) {
+        console.error('⚠️ Failed to update WorkflowCallOutcome from webhook:', err?.message || err);
+      }
+
+      // Phase 2 — fire-and-forget classification + (optional) BarrierX
+      // write-back. Deliberately NOT awaited: the webhook must always
+      // respond fast. Errors are logged inside the service.
+      const { processOutcome: processWorkflowWriteBack } = await import(
+        '../services/workflowWriteBackService'
+      );
+      processWorkflowWriteBack({ conversationId }).catch((err: any) => {
+        console.error('⚠️ workflow write-back background task failed:', err?.message || err);
+      });
     }
 
     // Save webhook payload to file (overwrite if exists)
@@ -201,8 +229,14 @@ export const handleElevenLabsWebhook = async (req: Request, res: Response): Prom
       `${entry.role}: ${entry.message}`
     ).join('\n');
 
-    // Create note in HubSpot via BarrierX
-    if (dealId && tenantSlug && hubspotOwnerId) {
+    // Create note in HubSpot via BarrierX.
+    //
+    // NL-workflow calls skip this generic note path — the dedicated write-back
+    // service (Phase 2) owns classification + note composition for workflows
+    // and is gated behind `WORKFLOW_WRITEBACK_ENABLED`.
+    if (isNlWorkflowCall) {
+      console.log('⏭️  Skipping generic note creation for NL workflow — write-back service owns this.');
+    } else if (dealId && tenantSlug && hubspotOwnerId) {
       console.log('\n📝 Creating note in HubSpot via BarrierX...');
 
       const noteContent = `
@@ -281,8 +315,9 @@ Timestamp: ${new Date(event_timestamp * 1000).toISOString()}
       await loggingService.updateCallLog(conversationId, completionUpdate);
     }
 
-    // Log note creation as CRM action
-    if (dealId && tenantSlug && hubspotOwnerId) {
+    // Log note creation as CRM action — skipped for NL workflow calls since
+    // note creation itself was skipped above (handled by the write-back service).
+    if (!isNlWorkflowCall && dealId && tenantSlug && hubspotOwnerId) {
       await loggingService.logCrmAction({
         actionType: 'NOTE',
         conversationId: conversationId,
@@ -1286,6 +1321,187 @@ export const handleTwilioPersonalizationWebhook = async (req: Request, res: Resp
     });
   }
 };
+
+/**
+ * Deterministic voicemail detection from the ElevenLabs post-call payload.
+ *
+ * The agent's built-in `voicemail_detection` tool leaves one or more of
+ * these signals in the payload when a voicemail greeting is detected — we
+ * match on any of them so later agent-config changes can't silently break
+ * this detection.
+ */
+function detectVoicemailFromWebhook(data: any): { detected: boolean; reason?: string } {
+  const metadata = data?.metadata || {};
+  const terminationReason: string = (metadata.termination_reason || '').toLowerCase();
+
+  if (metadata?.voicemail_detection?.used === true) {
+    return { detected: true, reason: 'voicemail_detection.used=true' };
+  }
+  if (terminationReason.includes('voicemail')) {
+    return { detected: true, reason: `termination_reason="${metadata.termination_reason}"` };
+  }
+
+  const toolCalls: any[] = Array.isArray(metadata?.tool_calls)
+    ? metadata.tool_calls
+    : Array.isArray(data?.tool_calls)
+      ? data.tool_calls
+      : Array.isArray(data?.analysis?.tool_calls)
+        ? data.analysis.tool_calls
+        : [];
+  for (const tc of toolCalls) {
+    if (tc?.tool_name === 'voicemail_detection' && tc?.tool_has_been_called === true) {
+      return { detected: true, reason: 'tool_calls.voicemail_detection' };
+    }
+  }
+
+  return { detected: false };
+}
+
+/**
+ * Update `WorkflowCallOutcome` status + summary + transcript from an
+ * NL-workflow end event. This is the Phase 1 "data capture" hook — it
+ * persists everything the raw ElevenLabs payload carries. Classification
+ * and write-back happen separately in Phase 2.
+ *
+ * Matches on conversationId (unique). If the record isn't found (race or
+ * out-of-order webhooks), we fall back to `workflow_execution_id` +
+ * target_phone/deal_id from dynamic_variables.
+ *
+ * Status mapping (no LLM):
+ *   - voicemail signals present -> status COMPLETED, outcome VOICEMAIL
+ *   - no-answer / busy / failed -> matching terminal + outcome set directly
+ *   - otherwise                 -> COMPLETED (outcome left null for the
+ *                                  Phase 2 classifier to fill)
+ *
+ * Non-LLM outcomes (VOICEMAIL / NO_ANSWER / BUSY / FAILED) also pre-set
+ * `writeBackStatus: SKIPPED` so the Phase 2 service can skip them cheaply.
+ */
+async function updateWorkflowOutcomeFromWebhook(webhookData: any): Promise<void> {
+  const data = webhookData.data || {};
+  const conversationId = data.conversation_id as string | undefined;
+  const metadata = data.metadata || {};
+  const analysis = data.analysis || {};
+  const callDuration = metadata.call_duration_secs || 0;
+  const transcriptSummary = analysis.transcript_summary || '';
+  const rawTranscript = data.transcript || [];
+  const terminationReason: string = metadata.termination_reason || '';
+  const callSid: string | undefined = metadata?.phone_call?.call_sid;
+  const agentId: string | undefined = data.agent_id;
+  const dynamicVars = data.conversation_initiation_client_data?.dynamic_variables || {};
+  const executionId = dynamicVars.workflow_execution_id || dynamicVars.workflowExecutionId;
+
+  const voicemail = detectVoicemailFromWebhook(data);
+  const lowerTerm = terminationReason.toLowerCase();
+
+  let nextStatus: 'COMPLETED' | 'FAILED' | 'NO_ANSWER' | 'BUSY';
+  let directOutcome: 'VOICEMAIL' | 'NO_ANSWER' | 'BUSY' | 'FAILED' | null = null;
+
+  if (voicemail.detected) {
+    // Voicemail is a "successful" pickup from the network's perspective —
+    // keep status COMPLETED but mark the outcome so write-back can skip.
+    nextStatus = 'COMPLETED';
+    directOutcome = 'VOICEMAIL';
+  } else if (lowerTerm.includes('no_answer') || lowerTerm.includes('no answer') || data.status === 'no-answer') {
+    nextStatus = 'NO_ANSWER';
+    directOutcome = 'NO_ANSWER';
+  } else if (lowerTerm.includes('busy') || data.status === 'busy') {
+    nextStatus = 'BUSY';
+    directOutcome = 'BUSY';
+  } else if (data.status === 'failed' || lowerTerm.includes('failed')) {
+    nextStatus = 'FAILED';
+    directOutcome = 'FAILED';
+  } else {
+    nextStatus = 'COMPLETED';
+    directOutcome = null; // Phase 2 classifier fills ACCEPTED/DECLINED/etc.
+  }
+
+  let record = null;
+  if (conversationId) {
+    record = await prisma.workflowCallOutcome.findUnique({ where: { conversationId } });
+  }
+
+  if (!record && executionId) {
+    record = await prisma.workflowCallOutcome.findFirst({
+      where: {
+        executionId,
+        targetPhone: dynamicVars.target_phone || dynamicVars.targetPhone || undefined,
+        dealId: dynamicVars.deal_id || undefined,
+        status: { notIn: ['COMPLETED', 'FAILED', 'NO_ANSWER', 'BUSY', 'CANCELLED'] },
+      },
+      orderBy: { initiatedAt: 'desc' },
+    });
+  }
+
+  if (!record) {
+    console.log(`   ⚠️ No WorkflowCallOutcome found for conversation=${conversationId} execution=${executionId}`);
+    return;
+  }
+
+  // Build the update payload. We cast to `any` because the Prisma client
+  // may not yet have been regenerated with the new `rawTranscript` column;
+  // running `npx prisma generate` on deploy will restore full type safety.
+  const updateData: any = {
+    status: nextStatus,
+    conversationId: conversationId || record.conversationId,
+    callSid: callSid || record.callSid,
+    agentId: agentId || record.agentId,
+    completedAt: new Date(),
+    duration: callDuration || record.duration,
+    transcriptSummary: transcriptSummary || record.transcriptSummary,
+    rawTranscript: Array.isArray(rawTranscript) && rawTranscript.length > 0
+      ? JSON.parse(JSON.stringify(rawTranscript))
+      : record.rawTranscript,
+    answeredAt: callDuration > 0 ? new Date(Date.now() - callDuration * 1000) : record.answeredAt,
+    // Back-fill identity / tenant metadata that may be missing on older rows.
+    tenantName: record.tenantName || dynamicVars.tenant_name || record.tenantSlug || null,
+    barrierxUserId: record.barrierxUserId || dynamicVars.barrierx_user_id || null,
+  };
+
+  if (directOutcome) {
+    updateData.outcome = directOutcome;
+    updateData.writeBackStatus = 'SKIPPED';
+    updateData.writeBackAt = new Date();
+  }
+
+  if (nextStatus === 'FAILED' && !record.errorMessage) {
+    updateData.errorMessage = terminationReason || 'Call failed without a termination reason';
+  }
+
+  await prisma.workflowCallOutcome.update({
+    where: { id: record.id },
+    data: updateData,
+  });
+
+  console.log(
+    `   ✅ WorkflowCallOutcome ${record.id} → ${nextStatus}${directOutcome ? ` / ${directOutcome}` : ''} (conversation=${conversationId})${voicemail.detected ? ` [voicemail: ${voicemail.reason}]` : ''}`,
+  );
+
+  // Per-call activity log — mirrors the pre/post-call flow so dashboards
+  // that filter by activityType can surface individual completions.
+  try {
+    await loggingService.logActivity({
+      activityType: 'WORKFLOW_EXECUTION',
+      status: nextStatus === 'COMPLETED' ? 'SUCCESS' : 'FAILED',
+      userId: undefined,
+      conversationId,
+      dealId: record.dealId || undefined,
+      tenantSlug: record.tenantSlug || undefined,
+      metadata: JSON.parse(
+        JSON.stringify({
+          phase: 'post-call',
+          executionId: record.executionId,
+          outcomeId: record.id,
+          outcome: directOutcome,
+          voicemail: voicemail.detected,
+          duration: callDuration,
+          terminationReason,
+        }),
+      ),
+    });
+  } catch (e: any) {
+    console.error('⚠️ Failed to log workflow activity:', e?.message || e);
+  }
+}
 
 /**
  * Handle BarrierX Info Gathering Webhook

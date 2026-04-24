@@ -401,14 +401,16 @@ const AgentXInvestigations: React.FC = () => {
       </div>
 
       {/* ── Error ──────────────────────────────────────────────────── */}
-      {error && (
-        <div className="rounded-lg border border-red-200 dark:border-red-500/20 bg-red-50/50 dark:bg-red-950/10 p-4">
-          <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm">{error}</span>
+      {
+        error && (
+          <div className="rounded-lg border border-red-200 dark:border-red-500/20 bg-red-50/50 dark:bg-red-950/10 p-4">
+            <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span className="text-sm">{error}</span>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* ── Query Builder ──────────────────────────────────────────── */}
       <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
@@ -518,192 +520,194 @@ const AgentXInvestigations: React.FC = () => {
       </Card>
 
       {/* ── Results ────────────────────────────────────────────────── */}
-      {queryRan && (
-        <>
-          {/* Summary Stats Panel - always visible */}
-          {summary && (
-            <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
-              <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-brand dark:text-primary" />
-                <h2 className="text-sm font-semibold text-heading dark:text-foreground">Summary</h2>
-              </div>
-              <div className="p-5 space-y-4">
-                {/* Row 1: Core metrics */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
-                  <StatCard
-                    label="Total Deals"
-                    value={summary.totalDeals}
-                    color="border-[hsl(var(--app-brand-muted)/0.3)] dark:border-primary/20 bg-brand-light/50 dark:bg-primary/5 text-brand dark:text-primary"
-                  />
-                  <StatCard
-                    label="Pipeline Value"
-                    value={`$${summary.pipelineValue.toLocaleString()}`}
-                    color="border-purple-200 dark:border-purple-500/20 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400"
-                  />
-                  <StatCard
-                    label="With Meetings"
-                    value={summary.dealsWithMeetings}
-                    color="border-cyan-200 dark:border-cyan-500/20 bg-cyan-50 dark:bg-cyan-950/20 text-cyan-700 dark:text-cyan-400"
-                  />
-                  <StatCard
-                    label="Unique Owners"
-                    value={summary.uniqueOwners}
-                    color="border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400"
-                  />
+      {
+        queryRan && (
+          <>
+            {/* Summary Stats Panel - always visible */}
+            {summary && (
+              <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
+                <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-brand dark:text-primary" />
+                  <h2 className="text-sm font-semibold text-heading dark:text-foreground">Summary</h2>
                 </div>
-                {/* Row 2: Classification breakdown */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  <StatCard
-                    label="Lost"
-                    value={summary.lostDeals}
-                    color="border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400"
-                  />
-                  <StatCard
-                    label="Inactive (14d+)"
-                    value={summary.inactiveDeals}
-                    color="border-orange-200 dark:border-orange-500/20 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400"
-                  />
-                  <StatCard
-                    label="Zero Score"
-                    value={summary.zeroScoreDeals}
-                    color="border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400"
-                  />
-                  <StatCard
-                    label="Healthy"
-                    value={summary.healthyDeals}
-                    color="border-green-200 dark:border-green-500/20 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400"
-                  />
-                  <StatCard
-                    label="Action Needed"
-                    value={summary.actionNeeded}
-                    color="border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400"
-                  />
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {/* AI Insights */}
-          <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
-            <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-500" />
-                <h2 className="text-sm font-semibold text-heading dark:text-foreground">AI Insights</h2>
-                <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-mono text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-500/30">
-                  DeepSeek
-                </Badge>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={generateAiSummary}
-                disabled={true}
-                className="h-8 text-xs gap-1.5 border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
-              >
-                {aiLoading ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3 h-3" />
-                )}
-                {aiLoading ? 'Analyzing...' : aiSummary ? 'Regenerate' : 'Generate Summary'}
-              </Button>
-            </div>
-            <div className="px-5 py-4">
-              {aiLoading && (
-                <div className="flex items-center gap-3 text-subtle dark:text-muted-foreground py-6">
-                  <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
-                  <div>
-                    <p className="text-sm font-medium text-heading dark:text-foreground">Analyzing {resultCount} deals...</p>
-                    <p className="text-xs mt-0.5">DeepSeek is generating insights from your filtered data</p>
+                <div className="p-5 space-y-4">
+                  {/* Row 1: Core metrics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
+                    <StatCard
+                      label="Total Deals"
+                      value={summary.totalDeals}
+                      color="border-[hsl(var(--app-brand-muted)/0.3)] dark:border-primary/20 bg-brand-light/50 dark:bg-primary/5 text-brand dark:text-primary"
+                    />
+                    <StatCard
+                      label="Pipeline Value"
+                      value={`$${summary.pipelineValue.toLocaleString()}`}
+                      color="border-purple-200 dark:border-purple-500/20 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400"
+                    />
+                    <StatCard
+                      label="With Meetings"
+                      value={summary.dealsWithMeetings}
+                      color="border-cyan-200 dark:border-cyan-500/20 bg-cyan-50 dark:bg-cyan-950/20 text-cyan-700 dark:text-cyan-400"
+                    />
+                    <StatCard
+                      label="Unique Owners"
+                      value={summary.uniqueOwners}
+                      color="border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400"
+                    />
+                  </div>
+                  {/* Row 2: Classification breakdown */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    <StatCard
+                      label="Lost"
+                      value={summary.lostDeals}
+                      color="border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400"
+                    />
+                    <StatCard
+                      label="Inactive (14d+)"
+                      value={summary.inactiveDeals}
+                      color="border-orange-200 dark:border-orange-500/20 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400"
+                    />
+                    <StatCard
+                      label="Zero Score"
+                      value={summary.zeroScoreDeals}
+                      color="border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400"
+                    />
+                    <StatCard
+                      label="Healthy"
+                      value={summary.healthyDeals}
+                      color="border-green-200 dark:border-green-500/20 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400"
+                    />
+                    <StatCard
+                      label="Action Needed"
+                      value={summary.actionNeeded}
+                      color="border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400"
+                    />
                   </div>
                 </div>
-              )}
-              {!aiLoading && !aiSummary && (
-                <div className="text-center py-6 text-subtle dark:text-muted-foreground">
-                  <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">AI-powered insights coming soon</p>
-                  <p className="text-xs mt-1">DeepSeek will analyze your filtered deals and provide actionable recommendations</p>
-                </div>
-              )}
-              {!aiLoading && aiSummary && (
-                <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-body dark:text-foreground [&_ul]:space-y-1.5 [&_li]:leading-relaxed [&_strong]:text-heading dark:[&_strong]:text-foreground [&_p]:my-2">
-                  {aiSummary.split('\n').map((line, i) => {
-                    const trimmed = line.trim();
-                    if (!trimmed) return null;
-                    if (trimmed.startsWith('# ')) return <h3 key={i} className="text-base font-semibold mt-3 mb-1">{trimmed.slice(2)}</h3>;
-                    if (trimmed.startsWith('## ')) return <h4 key={i} className="text-sm font-semibold mt-3 mb-1">{trimmed.slice(3)}</h4>;
-                    if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
-                      const content = trimmed.slice(2);
-                      return (
-                        <div key={i} className="flex gap-2 py-0.5">
-                          <span className="text-amber-500 mt-0.5 shrink-0">•</span>
-                          <span dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-                        </div>
-                      );
-                    }
-                    return <p key={i} dangerouslySetInnerHTML={{ __html: trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />;
-                  })}
-                </div>
-              )}
-            </div>
-          </Card>
+              </Card>
+            )}
 
-          {/* Interactive JSON Viewer */}
-          <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
-            <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <h2 className="text-sm font-semibold text-heading dark:text-foreground">JSON Output</h2>
-                <Badge variant="outline" className="text-[11px] h-5 px-1.5 font-mono">
-                  {resultCount} {resultCount === 1 ? 'deal' : 'deals'}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
+            {/* AI Insights */}
+            <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
+              <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <h2 className="text-sm font-semibold text-heading dark:text-foreground">AI Insights</h2>
+                  <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-mono text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-500/30">
+                    DeepSeek
+                  </Badge>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={copyJson}
-                  disabled={!jsonString}
-                  className="h-8 text-xs gap-1.5 border-default dark:border-border"
+                  onClick={generateAiSummary}
+                  disabled={true}
+                  className="h-8 text-xs gap-1.5 border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
                 >
-                  {copied ? (
-                    <>
-                      <Check className="w-3 h-3 text-green-600" />
-                      Copied
-                    </>
+                  {aiLoading ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
                   ) : (
-                    <>
-                      <ClipboardCopy className="w-3 h-3" />
-                      Copy JSON
-                    </>
+                    <Sparkles className="w-3 h-3" />
                   )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={runQuery}
-                  disabled={!fetched}
-                  className="h-8 text-xs gap-1.5"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  Re-run
+                  {aiLoading ? 'Analyzing...' : aiSummary ? 'Regenerate' : 'Generate Summary'}
                 </Button>
               </div>
-            </div>
+              <div className="px-5 py-4">
+                {aiLoading && (
+                  <div className="flex items-center gap-3 text-subtle dark:text-muted-foreground py-6">
+                    <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
+                    <div>
+                      <p className="text-sm font-medium text-heading dark:text-foreground">Analyzing {resultCount} deals...</p>
+                      <p className="text-xs mt-0.5">DeepSeek is generating insights from your filtered data</p>
+                    </div>
+                  </div>
+                )}
+                {!aiLoading && !aiSummary && (
+                  <div className="text-center py-6 text-subtle dark:text-muted-foreground">
+                    <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">AI-powered insights coming soon</p>
+                    <p className="text-xs mt-1">DeepSeek will analyze your filtered deals and provide actionable recommendations</p>
+                  </div>
+                )}
+                {!aiLoading && aiSummary && (
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-body dark:text-foreground [&_ul]:space-y-1.5 [&_li]:leading-relaxed [&_strong]:text-heading dark:[&_strong]:text-foreground [&_p]:my-2">
+                    {aiSummary.split('\n').map((line, i) => {
+                      const trimmed = line.trim();
+                      if (!trimmed) return null;
+                      if (trimmed.startsWith('# ')) return <h3 key={i} className="text-base font-semibold mt-3 mb-1">{trimmed.slice(2)}</h3>;
+                      if (trimmed.startsWith('## ')) return <h4 key={i} className="text-sm font-semibold mt-3 mb-1">{trimmed.slice(3)}</h4>;
+                      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
+                        const content = trimmed.slice(2);
+                        return (
+                          <div key={i} className="flex gap-2 py-0.5">
+                            <span className="text-amber-500 mt-0.5 shrink-0">•</span>
+                            <span dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                          </div>
+                        );
+                      }
+                      return <p key={i} dangerouslySetInnerHTML={{ __html: trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />;
+                    })}
+                  </div>
+                )}
+              </div>
+            </Card>
 
-            <div className="overflow-auto max-h-[70vh] rounded-b-lg">
-              <JsonView
-                value={resultData as object}
-                style={jsonViewTheme}
-                collapsed={2}
-                displayDataTypes={false}
-                enableClipboard={true}
-              />
-            </div>
-          </Card>
-        </>
-      )}
-    </div>
+            {/* Interactive JSON Viewer */}
+            <Card className="bg-elevated dark:bg-card border border-subtle dark:border-border shadow-sm rounded-lg overflow-hidden">
+              <div className="px-5 py-3 border-b border-subtle dark:border-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                  <h2 className="text-sm font-semibold text-heading dark:text-foreground">JSON Output</h2>
+                  <Badge variant="outline" className="text-[11px] h-5 px-1.5 font-mono">
+                    {resultCount} {resultCount === 1 ? 'deal' : 'deals'}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyJson}
+                    disabled={!jsonString}
+                    className="h-8 text-xs gap-1.5 border-default dark:border-border"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-3 h-3 text-green-600" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <ClipboardCopy className="w-3 h-3" />
+                        Copy JSON
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={runQuery}
+                    disabled={!fetched}
+                    className="h-8 text-xs gap-1.5"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Re-run
+                  </Button>
+                </div>
+              </div>
+
+              <div className="overflow-auto max-h-[70vh] rounded-b-lg">
+                <JsonView
+                  value={resultData as object}
+                  style={jsonViewTheme}
+                  collapsed={2}
+                  displayDataTypes={false}
+                  enableClipboard={true}
+                />
+              </div>
+            </Card>
+          </>
+        )
+      }
+    </div >
   );
 };
 

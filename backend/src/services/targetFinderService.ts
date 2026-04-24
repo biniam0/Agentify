@@ -38,7 +38,7 @@ export interface UnreachableTarget {
 // PER-TENANT DATA FETCHING
 // ============================================
 
-async function getTenantDealsWildcard(tenantSlug: string): Promise<Deal[]> {
+export async function getTenantDealsWildcard(tenantSlug: string): Promise<Deal[]> {
   console.log(`📡 Fetching deals for tenant: ${tenantSlug}...`);
 
   const url = `${config.barrierx.baseUrl}/api/external/tenants/${tenantSlug}/deals`;
