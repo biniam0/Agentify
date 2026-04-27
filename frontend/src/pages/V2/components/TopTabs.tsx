@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 const TABS = [
-  { id: 'deals-overview', label: 'Deals overview' },
+  { id: 'overview', label: 'Overview' },
   { id: 'active-calls', label: 'Active calls' },
   { id: 'automations', label: 'Automations' },
 ] as const;

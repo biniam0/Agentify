@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
+import { PhoneIncoming, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import HeroSection from './components/HeroSection';
 import TopTabs, { type TopTabId } from './components/TopTabs';
@@ -20,6 +21,7 @@ import SmsDetailModal from './components/SmsDetailModal';
 import CrmActionsSection from './components/CrmActionsSection';
 import CrmActionDetailModal from './components/CrmActionDetailModal';
 import AddWorkflowModal from './components/AddWorkflowModal';
+import ComingSoon from './components/ComingSoon';
 import type { WorkflowExecStatus } from './components/AddWorkflowModal';
 import type { CallLog, SmsLog, CrmActionLog } from '@/services/loggingService';
 import type { BarrierXInfoRecord } from './components/InfoGatheringTable';
@@ -28,7 +30,7 @@ import type { Meeting } from '@/types';
 
 const V2DashboardPage = () => {
   const location = useLocation();
-  const [activeTopTab, setActiveTopTab] = useState<TopTabId>('deals-overview');
+  const [activeTopTab, setActiveTopTab] = useState<TopTabId>('overview');
   const [selectedCall, setSelectedCall] = useState<CallLog | null>(null);
   const [selectedInfoRecord, setSelectedInfoRecord] = useState<BarrierXInfoRecord | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
@@ -84,16 +86,49 @@ const V2DashboardPage = () => {
     <div>
       <HeroSection userName={user?.name?.split(' ')[0] || 'there'} />
       <TopTabs activeTab={activeTopTab} onTabChange={setActiveTopTab} />
-      <AlertBanner onViewDeal={setSelectedDeal} />
-      <StatsCards />
-      <WorkflowActions
-        onAddWorkflow={() => { setActiveWorkflowExec(null); setIsAddWorkflowOpen(true); }}
-        onJobStatusChange={handleJobStatusChange}
-        onViewWorkflowExec={handleViewWorkflowExec}
-        workflowExecRefreshKey={wfExecRefreshKey}
-      />
 
-      {renderActiveSection()}
+      {activeTopTab === 'overview' && (
+        <>
+          <AlertBanner onViewDeal={setSelectedDeal} />
+          <StatsCards />
+          <WorkflowActions
+            onAddWorkflow={() => { setActiveWorkflowExec(null); setIsAddWorkflowOpen(true); }}
+            onJobStatusChange={handleJobStatusChange}
+            onViewWorkflowExec={handleViewWorkflowExec}
+            workflowExecRefreshKey={wfExecRefreshKey}
+          />
+
+          {renderActiveSection()}
+        </>
+      )}
+
+      {activeTopTab === 'active-calls' && (
+        <ComingSoon
+          icon={PhoneIncoming}
+          title="Active calls"
+          description="A live control room for every call in flight — real-time transcripts, sentiment, and the ability to intervene before a conversation goes sideways."
+          highlights={[
+            'Live transcript with speaker diarization',
+            'Sentiment and objection detection as it happens',
+            'Whisper to the agent or take over the call',
+          ]}
+          eta="On the roadmap for an upcoming release"
+        />
+      )}
+
+      {activeTopTab === 'automations' && (
+        <ComingSoon
+          icon={Zap}
+          title="Automations"
+          description="Recurring, scheduled, and trigger-based workflows that run on autopilot — so AgentX keeps your pipeline moving while you focus on closing."
+          highlights={[
+            'Scheduled cadences (daily, weekly, monthly)',
+            'Trigger workflows from CRM events like stage changes',
+            'Conditional branching with approval gates',
+          ]}
+          eta="On the roadmap for an upcoming release"
+        />
+      )}
 
       {selectedCall && (
         <CallDetailModal log={selectedCall} onClose={() => setSelectedCall(null)} />
