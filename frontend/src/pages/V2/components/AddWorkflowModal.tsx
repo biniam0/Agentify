@@ -173,12 +173,45 @@ const PROCESSING_STEPS: ReadonlyArray<{
 ];
 
 const WF_STORAGE_KEY = 'agentx_workflow_exec';
+const WF_SESSION_KEY = 'agentx_workflow_session';
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export interface PersistedWorkflowExec {
   executionId: string;
   totalTargets: number;
   workflowName: string;
   startedAt: string;
+}
+
+export interface PersistedWorkflowSession {
+  // Execution state
+  executionId?: string;
+  step: Step;
+  
+  // Prompt/template state
+  promptTab: 'templates' | 'custom';
+  customPrompt?: string;
+  selectedTemplateId?: string | null;
+  slotValues?: SlotValues;
+  selectedQuestion?: string;
+  
+  // Processing results
+  intent?: SimpleIntent | null;
+  targets?: {
+    count: number;
+    sample: WorkflowTarget[];
+    summary: string;
+    suggestions?: string[];
+  } | null;
+  approvalData?: ApprovalData | null;
+  
+  // Execution metadata
+  workflowName?: string;
+  totalTargets?: number;
+  startedAt?: string;
+  
+  // Timestamp
+  persistedAt: string;
 }
 
 function persistWorkflowExec(data: PersistedWorkflowExec) {
@@ -199,6 +232,41 @@ export function getPersistedWorkflowExec(): PersistedWorkflowExec | null {
   return null;
 }
 
+function persistWorkflowSession(data: PersistedWorkflowSession) {
+  try {
+    localStorage.setItem(WF_SESSION_KEY, JSON.stringify(data));
+  } catch (err) {
+    console.error('Failed to persist workflow session:', err);
+    toast.error('Unable to save workflow session. Your progress may not be saved if you close this modal.');
+  }
+}
+
+export function clearWorkflowSession() {
+  try { localStorage.removeItem(WF_SESSION_KEY); } catch { /* ignore */ }
+}
+
+export function getPersistedWorkflowSession(): PersistedWorkflowSession | null {
+  try {
+    const raw = localStorage.getItem(WF_SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    if (!session?.persistedAt) return null;
+    
+    // Check TTL (24 hours)
+    const age = Date.now() - new Date(session.persistedAt).getTime();
+    if (age > SESSION_TTL_MS) {
+      clearWorkflowSession();
+      return null;
+    }
+    
+    return session;
+  } catch {
+    // Corrupted session
+    clearWorkflowSession();
+    return null;
+  }
+}
+
 interface AddWorkflowModalProps {
   onClose: () => void;
   activeExecution?: WorkflowExecStatus | null;
@@ -207,6 +275,10 @@ interface AddWorkflowModalProps {
 
 const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWorkflowModalProps) => {
   const hasActiveExec = !!activeExecution;
+  
+  // Check for persisted session (only if no active execution)
+  const persistedSession = !hasActiveExec ? getPersistedWorkflowSession() : null;
+  
   const [prompt, setPrompt] = useState('');
   const [step, setStep] = useState<Step>(hasActiveExec ? 'live-progress' : 'prompt');
 
@@ -224,6 +296,8 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
 
   const [liveStatus, setLiveStatus] = useState<WorkflowExecStatus | null>(activeExecution || null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showResumeBanner, setShowResumeBanner] = useState(!!persistedSession);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   // ── Template builder state ────────────────────────────────────────────
@@ -448,6 +522,9 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
         startedAt: new Date().toISOString(),
       });
 
+      // Clear session storage since we're now tracking in backend
+      clearWorkflowSession();
+
       onExecutionChange?.();
 
       setSubsteps((prev) => ({
@@ -498,6 +575,44 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [liveStatus?.live?.recentLogs?.length]);
 
+  // Persist session state when relevant state changes (debounced for prompt typing)
+  useEffect(() => {
+    // Don't persist during processing, executing, success, or live-progress
+    if (step === 'processing' || step === 'executing' || step === 'success' || step === 'live-progress') {
+      return;
+    }
+    
+    // Don't persist if we haven't moved past the initial prompt screen
+    if (step === 'prompt' && !intent && !targets && !approvalData && !prompt.trim() && !selectedTemplateId) {
+      return;
+    }
+
+    // Don't persist if showing resume banner (user hasn't chosen yet)
+    if (showResumeBanner) {
+      return;
+    }
+
+    const session: PersistedWorkflowSession = {
+      step,
+      promptTab,
+      customPrompt: prompt,
+      selectedTemplateId,
+      slotValues,
+      selectedQuestion,
+      intent,
+      targets,
+      approvalData,
+      persistedAt: new Date().toISOString(),
+    };
+
+    // Debounce persistence for prompt typing
+    const timeoutId = setTimeout(() => {
+      persistWorkflowSession(session);
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [step, promptTab, prompt, selectedTemplateId, slotValues, selectedQuestion, intent, targets, approvalData, showResumeBanner]);
+
   const reset = () => {
     setPrompt('');
     setStep('prompt');
@@ -512,6 +627,43 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
       finding: { status: 'pending', message: 'Searching for targets...' },
       executing: { status: 'pending', message: 'Starting workflow...' },
     });
+    setSelectedTemplateId(null);
+    setSlotValues({});
+    setPromptTab('templates');
+    setShowResumeBanner(false);
+  };
+
+  const restoreSession = () => {
+    if (!persistedSession) return;
+    
+    // Restore state from persisted session
+    setPromptTab(persistedSession.promptTab);
+    setPrompt(persistedSession.customPrompt || '');
+    setSelectedTemplateId(persistedSession.selectedTemplateId || null);
+    setSlotValues(persistedSession.slotValues || {});
+    setSelectedQuestion(persistedSession.selectedQuestion || '');
+    setIntent(persistedSession.intent || null);
+    setTargets(persistedSession.targets || null);
+    setApprovalData(persistedSession.approvalData || null);
+    setStep(persistedSession.step);
+    
+    setShowResumeBanner(false);
+    toast.success('Workflow session restored');
+  };
+
+  const handleDiscardSession = () => {
+    setShowDiscardConfirm(true);
+  };
+
+  const confirmDiscardSession = () => {
+    clearWorkflowSession();
+    setShowResumeBanner(false);
+    setShowDiscardConfirm(false);
+    toast.success('Starting fresh workflow');
+  };
+
+  const cancelDiscardSession = () => {
+    setShowDiscardConfirm(false);
   };
 
   const formatRelativeTime = (ts: string) => {
@@ -556,6 +708,75 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
 
         {/* Body */}
         <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
+
+          {/* Resume Session Banner */}
+          {showResumeBanner && persistedSession && (
+            <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+              <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-blue-900">
+                  Resume your workflow from {formatRelativeTime(persistedSession.persistedAt)}
+                </p>
+                <p className="text-xs text-blue-600 mt-0.5">
+                  {persistedSession.step === 'approval' 
+                    ? `${persistedSession.targets?.count || 0} targets ready for approval`
+                    : persistedSession.step === 'no-targets'
+                    ? 'No targets found in your last session'
+                    : 'Continue where you left off'
+                  }
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleDiscardSession}
+                    className="h-8 text-xs"
+                  >
+                    Start Fresh
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={restoreSession}
+                    className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Resume
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Discard Confirmation Dialog */}
+          {showDiscardConfirm && (
+            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-amber-900">
+                  Are you sure? This will discard your progress.
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Your saved workflow session will be permanently deleted.
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={cancelDiscardSession}
+                    className="h-8 text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={confirmDiscardSession}
+                    className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Discard
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Error Banner */}
           {error && (
@@ -1304,7 +1525,13 @@ const AddWorkflowModal = ({ onClose, activeExecution, onExecutionChange }: AddWo
                   <Sparkles className="h-3.5 w-3.5" />
                   New Workflow
                 </Button>
-                <Button onClick={onClose} className="h-9 text-sm bg-brand hover:bg-brand-hover text-white">
+                <Button 
+                  onClick={() => {
+                    clearWorkflowSession();
+                    onClose();
+                  }} 
+                  className="h-9 text-sm bg-brand hover:bg-brand-hover text-white"
+                >
                   Done
                 </Button>
               </>

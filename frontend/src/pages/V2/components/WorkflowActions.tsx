@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import api from '@/services/api';
 import type { WorkflowExecStatus } from './AddWorkflowModal';
 import { useTenant } from '@/contexts/TenantContext';
-import { getPersistedWorkflowExec, clearWorkflowExec } from './AddWorkflowModal';
+import { getPersistedWorkflowExec, clearWorkflowExec, clearWorkflowSession } from './AddWorkflowModal';
 
 export interface JobStatus {
   isRunning: boolean;
