@@ -18,6 +18,9 @@ router.patch('/toggle-enabled', userController.toggleEnabled);
 // Get tenant members from BarrierX
 router.get('/tenant-members', userController.getTenantMembers);
 
+// Invite team members to tenant
+router.post('/tenant-invites', userController.inviteTenantMembers);
+
 // Settings > Personal Information
 router.get('/profile', userController.getProfile);
 router.patch('/profile', userController.updateProfile);
