@@ -89,14 +89,14 @@ const LoginPage: React.FC = () => {
       <div className="w-full lg:w-1/2 relative z-[1] flex items-center justify-center p-4 overflow-y-auto overflow-x-hidden">
         <div className="relative z-10 w-full max-w-[460px]">
           {/* ── AgentX Logo + Tagline ── */}
-          <div className="flex flex-col items-center mb-10">
-            <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-[2.5rem] font-bold leading-none tracking-tight text-heading dark:text-foreground select-none">
+          <div className="flex flex-col items-center mb-6 2xl:mb-10">
+            <div className="flex items-center gap-2.5 mb-2 2xl:mb-3">
+              <span className="text-[2rem] 2xl:text-[2.5rem] font-bold leading-none tracking-tight text-heading dark:text-foreground select-none">
                 Agent
               </span>
-              <AgentXIcon className="h-[2.2rem] w-auto" />
+              <AgentXIcon className="h-[1.8rem] 2xl:h-[2.2rem] w-auto" />
             </div>
-            <p className="text-body dark:text-muted-foreground text-center text-[0.95rem] leading-relaxed">
+            <p className="text-body dark:text-muted-foreground text-center text-sm 2xl:text-[0.95rem] leading-relaxed">
               AI-Powered Sales Meeting Automation
             </p>
           </div>
@@ -106,9 +106,9 @@ const LoginPage: React.FC = () => {
             {/* Decorative top accent bar */}
             <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #2D6A4F, #53A17D, #2D6A4F)' }} />
 
-            <CardContent className="px-8 pt-8 pb-8">
+            <CardContent className="px-8 pt-6 pb-6 2xl:pt-8 2xl:pb-8">
               {/* Header */}
-              <div className="text-center mb-7">
+              <div className="text-center mb-5 2xl:mb-7">
                 <h2 className="text-2xl font-semibold text-heading dark:text-foreground mb-1.5">
                   Welcome back
                 </h2>
@@ -118,7 +118,7 @@ const LoginPage: React.FC = () => {
               </div>
 
               {/* BarrierX credential notice */}
-              <div className="mb-6 rounded-lg border border-[hsl(var(--app-brand))]/20 bg-[hsl(var(--app-brand))]/[0.04] dark:bg-[hsl(var(--app-brand))]/[0.06] px-4 py-3">
+              <div className="mb-4 2xl:mb-6 rounded-lg border border-[hsl(var(--app-brand))]/20 bg-[hsl(var(--app-brand))]/[0.04] dark:bg-[hsl(var(--app-brand))]/[0.06] px-4 py-3">
                 <div className="flex items-start gap-3">
                   <div className="text-[13px] leading-relaxed">
                     <span className="text-heading dark:text-foreground font-medium whitespace-nowrap">
@@ -130,7 +130,7 @@ const LoginPage: React.FC = () => {
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-4 2xl:space-y-5">
                 <div className="space-y-1.5">
                   <Label htmlFor="email" className="text-body dark:text-foreground font-medium text-sm">
                     Email Address
@@ -200,7 +200,7 @@ const LoginPage: React.FC = () => {
               </form>
 
               {/* Security badge inside card */}
-              <div className="flex items-center justify-center gap-1.5 mt-6 pt-5 border-t border-subtle dark:border-border">
+              <div className="flex items-center justify-center gap-1.5 mt-4 pt-4 2xl:mt-6 2xl:pt-5 border-t border-subtle dark:border-border">
                 <span className="text-xs text-subtle dark:text-muted-foreground">
                   Secured with enterprise-grade encryption
                 </span>
@@ -209,7 +209,7 @@ const LoginPage: React.FC = () => {
           </Card>
 
           {/* ── Registration CTA Footer ── */}
-          <div className="mt-8 text-center">
+          <div className="mt-5 2xl:mt-8 text-center">
             <p className="text-sm text-body dark:text-muted-foreground">
               Don't have a BarrierX account?
             </p>
@@ -222,7 +222,7 @@ const LoginPage: React.FC = () => {
               Create your account on BarrierX
               <ExternalLink className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </a>
-            <div className="flex items-center justify-center gap-2 mt-5">
+            <div className="flex items-center justify-center gap-2 mt-3 2xl:mt-5">
               <span className="text-[0.65rem] mt-1 text-subtle dark:text-muted-foreground tracking-[0.1em] uppercase font-medium leading-none">
                 Powered by
               </span>
@@ -248,17 +248,17 @@ const LoginPage: React.FC = () => {
           />
 
           {/* Content overlay */}
-          <div className="relative z-10 flex flex-col px-10 xl:px-14 py-12 h-full w-full overflow-y-auto">
+          <div className="relative z-10 flex flex-col px-6 lg:px-8 2xl:px-14 py-4 lg:py-6 2xl:py-12 h-full w-full overflow-y-auto">
             {/* Title + Description */}
-            <div className="mb-8">
+            <div className="mb-4 2xl:mb-8 shrink-0">
               <h2
-                className="text-[2.5rem] xl:text-[3rem] font-medium leading-tight mb-3"
+                className="text-[1.75rem] lg:text-[2rem] 2xl:text-[3rem] font-medium leading-tight mb-2 2xl:mb-3"
                 style={{ color: '#05603A' }}
               >
                 Your AI Sales Meeting Assistant
               </h2>
               <p
-                className="text-base font-medium leading-relaxed max-w-lg"
+                className="text-[13px] 2xl:text-base font-medium leading-relaxed max-w-lg"
                 style={{ color: '#05603A' }}
               >
                 AgentX automates your sales meetings — from prep to follow-up.
@@ -268,15 +268,15 @@ const LoginPage: React.FC = () => {
             </div>
 
             {/* Performance Metrics — glass card (large) */}
-            <div className="relative rounded-xl overflow-hidden mb-6 ml-2" style={{ maxWidth: 420 }}>
+            <div className="relative rounded-xl overflow-hidden mb-3 2xl:mb-6 ml-2 shrink-0" style={{ maxWidth: 420 }}>
               <div className="absolute inset-0 backdrop-blur-xl bg-white/25" />
               <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-white/10 to-transparent" />
               <div className="absolute inset-0 border border-white/40 rounded-xl" />
-              <div className="relative z-10 p-5">
-                <p className="text-[15px] font-semibold" style={{ color: '#414651' }}>Performance Metrics</p>
-                <p className="text-xs mt-0.5 mb-4" style={{ color: '#535862' }}>Key performance indicators for monitoring business growth.</p>
+              <div className="relative z-10 p-3 2xl:p-5">
+                <p className="text-sm 2xl:text-[15px] font-semibold" style={{ color: '#414651' }}>Performance Metrics</p>
+                <p className="text-[11px] 2xl:text-xs mt-0.5 mb-2 2xl:mb-4" style={{ color: '#535862' }}>Key performance indicators for monitoring business growth.</p>
                 {/* Simplified chart placeholder */}
-                <svg viewBox="0 0 360 140" className="w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg viewBox="0 0 360 140" className="w-full max-h-[130px] 2xl:max-h-none" preserveAspectRatio="xMidYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <line x1="40" y1="10" x2="40" y2="120" stroke="#e5e7eb" strokeWidth="0.5" />
                   <line x1="40" y1="120" x2="350" y2="120" stroke="#e5e7eb" strokeWidth="0.5" />
                   {/* Y-axis labels */}
@@ -324,65 +324,65 @@ const LoginPage: React.FC = () => {
             </div>
 
             {/* Discovery card — glass card (small, offset right) */}
-            <div className="relative rounded-xl overflow-hidden mb-6 ml-auto mr-4" style={{ maxWidth: 340 }}>
+            <div className="relative rounded-xl overflow-hidden mb-3 2xl:mb-6 ml-auto mr-4 shrink-0" style={{ maxWidth: 340 }}>
               <div className="absolute inset-0 backdrop-blur-xl bg-white/25" />
               <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-white/10 to-transparent" />
               <div className="absolute inset-0 border border-white/40 rounded-xl" />
-              <div className="relative z-10 p-5">
+              <div className="relative z-10 p-3 2xl:p-5">
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-[15px] font-semibold" style={{ color: '#414651' }}>Meeting Analysis</p>
-                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#53A17D]/15 text-[#2D6A4F]">Completed</span>
+                  <p className="text-sm 2xl:text-[15px] font-semibold" style={{ color: '#414651' }}>Meeting Analysis</p>
+                  <span className="text-[10px] 2xl:text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#53A17D]/15 text-[#2D6A4F]">Completed</span>
                 </div>
-                <p className="text-xs mb-3" style={{ color: '#535862' }}>May 29, 2025 &middot; 6:28 AM &middot; 59 Minutes</p>
-                <div className="flex gap-6">
+                <p className="text-[11px] 2xl:text-xs mb-2.5 2xl:mb-3" style={{ color: '#535862' }}>May 29, 2025 &middot; 6:28 AM &middot; 59 Minutes</p>
+                <div className="flex gap-4 2xl:gap-6">
                   <div>
-                    <span className="text-xs font-semibold text-[#6366f1]">Talk : 60%</span>
-                    <div className="w-16 h-1.5 rounded-full bg-gray-200 mt-1"><div className="h-full rounded-full bg-[#6366f1]" style={{ width: '60%' }} /></div>
+                    <span className="text-[11px] 2xl:text-xs font-semibold text-[#6366f1]">Talk : 60%</span>
+                    <div className="w-14 2xl:w-16 h-1.5 rounded-full bg-gray-200 mt-1"><div className="h-full rounded-full bg-[#6366f1]" style={{ width: '60%' }} /></div>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-[#ef4444]">Listen : 41%</span>
-                    <div className="w-16 h-1.5 rounded-full bg-gray-200 mt-1"><div className="h-full rounded-full bg-[#ef4444]" style={{ width: '41%' }} /></div>
+                    <span className="text-[11px] 2xl:text-xs font-semibold text-[#ef4444]">Listen : 41%</span>
+                    <div className="w-14 2xl:w-16 h-1.5 rounded-full bg-gray-200 mt-1"><div className="h-full rounded-full bg-[#ef4444]" style={{ width: '41%' }} /></div>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-[#14b8a6]">Score : 10%</span>
-                    <div className="w-16 h-1.5 rounded-full bg-gray-200 mt-1"><div className="h-full rounded-full bg-[#14b8a6]" style={{ width: '10%' }} /></div>
+                    <span className="text-[11px] 2xl:text-xs font-semibold text-[#14b8a6]">Score : 10%</span>
+                    <div className="w-14 2xl:w-16 h-1.5 rounded-full bg-gray-200 mt-1"><div className="h-full rounded-full bg-[#14b8a6]" style={{ width: '10%' }} /></div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Testimonial — glass card (bottom) */}
-            <div className="relative rounded-xl overflow-hidden mt-auto">
+            <div className="relative rounded-xl overflow-hidden mt-auto shrink-0">
               <div className="absolute inset-0 backdrop-blur-xl bg-white/25" />
               <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-white/10 to-transparent" />
               <div className="absolute inset-0 border border-white/40 rounded-xl" />
-              <div className="relative z-10 p-6">
+              <div className="relative z-10 p-3 lg:p-4 2xl:p-6">
                 {/* Stars */}
-                <div className="flex gap-1 mb-3">
+                <div className="flex gap-1 mb-2 2xl:mb-3">
                   {[...Array(5)].map((_, i) => (
-                    <svg key={i} className="w-5 h-5" viewBox="0 0 20 20" fill="#f59e0b">
+                    <svg key={i} className="w-4 h-4 2xl:w-5 2xl:h-5" viewBox="0 0 20 20" fill="#f59e0b">
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
                   ))}
                 </div>
                 {/* Quote */}
-                <p className="text-base font-medium leading-relaxed mb-4" style={{ color: '#05603A' }}>
+                <p className="text-[13px] lg:text-[13px] 2xl:text-base font-medium leading-relaxed mb-3 2xl:mb-4" style={{ color: '#05603A' }}>
                   "Since we started using AgentX, our reps save 5+ hours per week on meeting prep and follow-ups. It's like having a personal coach for every rep — without the overhead."
                 </p>
                 {/* Footer */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: '#05603A' }}>Sohrab - Orq</p>
-                    <p className="text-xs font-semibold" style={{ color: '#05603A' }}>Founder & CEO</p>
+                    <p className="text-xs 2xl:text-sm font-semibold" style={{ color: '#05603A' }}>Sohrab - Orq</p>
+                    <p className="text-[10px] 2xl:text-xs font-semibold" style={{ color: '#05603A' }}>Founder & CEO</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5 2xl:gap-2">
                     <button type="button" className="opacity-90 hover:opacity-100 transition-opacity" tabIndex={-1}>
-                      <svg width="23" height="23" viewBox="0 0 28 28" stroke="#05603A" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-5 h-5 2xl:w-[23px] 2xl:h-[23px]" viewBox="0 0 28 28" stroke="#05603A" fill="none" strokeLinecap="round" strokeLinejoin="round">
                         <path strokeWidth="1.5" d="M14 9.333 9.335 14m0 0 4.667 4.667M9.334 14h9.333m7 0c0 6.443-5.223 11.667-11.666 11.667S2.334 20.443 2.334 14 7.557 2.333 14.001 2.333c6.443 0 11.666 5.224 11.666 11.667" opacity="0.9" />
                       </svg>
                     </button>
                     <button type="button" className="opacity-90 hover:opacity-100 transition-opacity" tabIndex={-1}>
-                      <svg width="23" height="23" viewBox="0 0 28 28" stroke="#05603A" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
+                      <svg className="w-5 h-5 2xl:w-[23px] 2xl:h-[23px]" viewBox="0 0 28 28" stroke="#05603A" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
                         <path strokeWidth="1.5" d="M14 9.333 9.335 14m0 0 4.667 4.667M9.334 14h9.333m7 0c0 6.443-5.223 11.667-11.666 11.667S2.334 20.443 2.334 14 7.557 2.333 14.001 2.333c6.443 0 11.666 5.224 11.666 11.667" opacity="0.9" />
                       </svg>
                     </button>

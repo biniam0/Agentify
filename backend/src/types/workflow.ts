@@ -203,22 +203,6 @@ export interface OutcomeClassification {
 }
 
 // ============================================
-// SUGGESTED TASK CONFIG
-// ============================================
-
-/**
- * Pre-built workflow config for suggested tasks
- */
-export interface SuggestedTaskConfig {
-  taskType: 'MISSING_SQL' | 'POST_MEETING_NOTES' | 'MEDDIC_GAP' | 'STALE_DEAL' | 'NEXT_STEP' | 'FORECAST_NUDGE' | 'CONTACT_HYGIENE';
-  workflowConfig: WorkflowConfig;
-  triggerCondition: {
-    description: string;
-    dataQuery: AudienceQuery;
-  };
-}
-
-// ============================================
 // EXECUTION SUMMARY
 // ============================================
 

@@ -836,8 +836,8 @@ model Workflow {
   // Status
   status WorkflowStatus @default(DRAFT)
 
-  // Workflow type
-  workflowType WorkflowType @default(CUSTOM) // CUSTOM or SUGGESTED
+  // Workflow type (reserved for future expansion; currently always CUSTOM)
+  workflowType WorkflowType @default(CUSTOM)
 
   // Approval tracking
   approvedAt DateTime?
@@ -978,46 +978,6 @@ model WorkflowCallOutcome {
   @@index([initiatedAt])
 }
 
-// Suggested Task - Proactive workflow suggestions based on BarrierX data
-model SuggestedTask {
-  id String @id @default(uuid())
-
-  // Task metadata
-  taskType    SuggestedTaskType
-  title       String
-  description String            @db.Text
-
-  // Trigger condition (from BarrierX data)
-  triggerCondition String @db.Text
-
-  // Affected deals/users
-  affectedCount Int   @default(0)
-  affectedDeals Json? // Array of deal IDs
-
-  // Task configuration
-  workflowConfig Json // Pre-built workflow config ready to launch
-
-  // Priority
-  priority TaskPriority @default(MEDIUM)
-
-  // Status
-  status      SuggestedTaskStatus @default(ACTIVE)
-  launchedAt  DateTime?
-  launchedBy  String?
-  dismissedAt DateTime?
-  dismissedBy String?
-
-  // Timestamps
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  expiresAt DateTime? // Auto-dismiss after this date
-
-  @@index([taskType])
-  @@index([status])
-  @@index([priority])
-  @@index([createdAt])
-}
-
 // ============================================
 // WORKFLOW ENUMS
 // ============================================
@@ -1031,7 +991,6 @@ enum WorkflowStatus {
 
 enum WorkflowType {
   CUSTOM // User-created from NL prompt
-  SUGGESTED // System-suggested task
 }
 
 enum WorkflowExecutionStatus {
@@ -1059,28 +1018,4 @@ enum WriteBackStatus {
   SUCCESS // Successfully written to BarrierX
   FAILED // Write-back failed
   SKIPPED // Skipped (e.g., no data to write)
-}
-
-enum SuggestedTaskType {
-  MISSING_SQL // Chase missing SQLs
-  POST_MEETING_NOTES // Collect post-meeting notes
-  MEDDIC_GAP // MEDDIC gap follow-up
-  STALE_DEAL // Stale deal check-in
-  NEXT_STEP // Next-step confirmation
-  FORECAST_NUDGE // Forecast accuracy nudge
-  CONTACT_HYGIENE // Contact data hygiene
-}
-
-enum TaskPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-enum SuggestedTaskStatus {
-  ACTIVE // Currently suggested
-  LAUNCHED // User launched this task
-  DISMISSED // User dismissed
-  EXPIRED // Auto-expired
 }
