@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useState } from 'react';
 
 import { ExternalLinkIcon, SettingsIcon } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,27 +7,13 @@ import { Switch } from '@/components/ui/switch';
 
 import api from '@/services/api';
 
-type IntegrationStatus = 'CONNECTED' | 'DISCONNECTED' | 'ERROR' | 'PENDING';
-
 interface AppItem {
-  // Backend provider enum value (e.g., "HUBSPOT")
   providerId: string;
   name: string;
   iconUrl: string;
   websiteUrl: string;
   websiteLabel: string;
   description: string;
-}
-
-interface IntegrationRecord {
-  id: string;
-  provider: string;
-  status: IntegrationStatus;
-}
-
-interface IntegrationsResponse {
-  success: boolean;
-  integrations: IntegrationRecord[];
 }
 
 // Catalog of apps that can be connected. Add more entries here as integrations are built.
@@ -42,42 +28,19 @@ const apps: AppItem[] = [
   },
 ];
 
-const ConnectAccount = () => {
-  const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+export interface ConnectAccountProps {
+  connectedProviders: Set<string>;
+  setConnectedProviders: Dispatch<SetStateAction<Set<string>>>;
+  loading: boolean;
+}
+
+const ConnectAccount = ({ connectedProviders, setConnectedProviders, loading }: ConnectAccountProps) => {
   const [pending, setPending] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        const { data } = await api.get<IntegrationsResponse>('/user/integrations');
-        if (cancelled || !data?.success) return;
-        const next = new Set<string>();
-        data.integrations.forEach((i) => {
-          if (i.status === 'CONNECTED') next.add(i.provider);
-        });
-        setConnectedProviders(next);
-      } catch (err) {
-        console.error('Failed to load integrations:', err);
-        toast.error('Failed to load connected accounts');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const toggleConnection = async (providerId: string, nextChecked: boolean) => {
     if (pending[providerId]) return;
     setPending((prev) => ({ ...prev, [providerId]: true }));
 
-    // Optimistic update — revert on failure.
     setConnectedProviders((prev) => {
       const next = new Set(prev);
       if (nextChecked) next.add(providerId);

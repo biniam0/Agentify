@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import api from '@/services/api';
+
 type InviteRole = 'READ_ONLY' | 'EDITOR' | 'ADMIN';
 
 interface InviteRow {
@@ -73,12 +75,15 @@ const InviteTeam = () => {
 
     setSending(true);
     try {
-      // TODO: Wire to backend once the invites API is available.
-      // Expected endpoint: POST /api/user/team/invites  { invites: [{ email, role }] }
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      toast.success(`Sent ${invites.length} invite${invites.length === 1 ? '' : 's'}`);
-      setRows(createInitialRows());
-      setNextId(5);
+      const response = await api.post('/user/tenant-invites', { invites });
+      
+      if (response.data?.success) {
+        toast.success(`Sent ${invites.length} invite${invites.length === 1 ? '' : 's'}`);
+        setRows(createInitialRows());
+        setNextId(5);
+      } else {
+        toast.error(response.data?.error || 'Failed to send invites');
+      }
     } catch (err) {
       console.error('Failed to send invites:', err);
       const message =
