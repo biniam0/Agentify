@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import api from '@/services/api';
+
 type InviteRole = 'READ_ONLY' | 'EDITOR' | 'ADMIN';
 
 interface InviteRow {
@@ -73,7 +75,6 @@ const InviteTeam = () => {
 
     setSending(true);
     try {
-      const { default: api } = await import('@/services/api');
       const response = await api.post('/user/tenant-invites', { invites });
       
       if (response.data?.success) {
