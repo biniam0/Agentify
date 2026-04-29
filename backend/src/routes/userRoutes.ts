@@ -21,6 +21,9 @@ router.get('/tenant-members', userController.getTenantMembers);
 // Invite team members to tenant
 router.post('/tenant-invites', userController.inviteTenantMembers);
 
+// Resync HubSpot data for tenant
+router.post('/hubspot/resync', userController.resyncHubSpot);
+
 // Settings > Personal Information
 router.get('/profile', userController.getProfile);
 router.patch('/profile', userController.updateProfile);

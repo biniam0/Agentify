@@ -391,3 +391,65 @@ export const inviteTenantMembers = async (req: AuthRequest, res: Response): Prom
   }
 };
 
+export const resyncHubSpot = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { tenantSlug: true },
+    });
+
+    if (!user?.tenantSlug) {
+      res.status(404).json({ error: 'Tenant not found for this user' });
+      return;
+    }
+
+    console.log(`🔄 Triggering HubSpot resync for tenant: ${user.tenantSlug}`);
+
+    const response = await axios.post(
+      `${config.barrierx.baseUrl}/api/external/tenants/${user.tenantSlug}/hubspot/resync`,
+      {},
+      {
+        headers: {
+          'Authorization': `Bearer ${config.barrierx.apiKey}`,
+          'Accept': 'application/json',
+        },
+        timeout: 15000,
+      }
+    );
+
+    if (!response.data || response.data.ok === false) {
+      res.status(502).json({ 
+        error: response.data?.error || 'Failed to start HubSpot resync' 
+      });
+      return;
+    }
+
+    console.log(`✅ HubSpot resync started for tenant ${user.tenantSlug}`);
+
+    res.json({
+      success: true,
+      message: response.data.message || 'Full HubSpot resync started',
+    });
+  } catch (error: any) {
+    console.error('HubSpot resync error:', error.response?.data || error.message);
+    
+    const status = error.response?.status;
+    const errorMsg = error.response?.data?.error || error.message;
+
+    if (status === 401) {
+      res.status(401).json({ error: 'Not authorized. Please reconnect HubSpot.' });
+    } else if (status === 404) {
+      res.status(404).json({ error: 'HubSpot integration not found. Please connect first.' });
+    } else {
+      res.status(500).json({ error: errorMsg || 'Failed to start HubSpot resync. Please try again later.' });
+    }
+  }
+};
+
