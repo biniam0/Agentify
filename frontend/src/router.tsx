@@ -40,6 +40,8 @@ import ClientsDeals from './pages/Admin/ClientsDeals';
 import AgentXInvestigations from './pages/Admin/AgentXInvestigations';
 import AdminSettingsPage from './pages/Admin/AdminSettingsPage';
 import SectionPlaceholder from './pages/Admin/Settings/SectionPlaceholder';
+import AdminSettingsGeneral from './pages/Admin/Settings/sections/General';
+import AdminSettingsAuditLog from './pages/Admin/Settings/sections/AuditLog';
 
 // Onboarding (landing page + wizard)
 import OnboardingPage from './pages/Onboarding/OnboardingPage';
@@ -193,13 +195,7 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: (
-              <SectionPlaceholder
-                title="General"
-                description="Personal preferences for your super admin account."
-                scope="Personal"
-              />
-            ),
+            element: <AdminSettingsGeneral />,
           },
           {
             path: 'access-roles',
@@ -223,13 +219,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'audit-log',
-            element: (
-              <SectionPlaceholder
-                title="Audit Log"
-                description="Recent admin actions and access attempts."
-                scope="Read-only"
-              />
-            ),
+            element: <AdminSettingsAuditLog />,
           },
           {
             path: 'integrations',
