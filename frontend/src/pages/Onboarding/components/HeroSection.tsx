@@ -35,7 +35,7 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
             </h1>
 
             <p className="max-w-xl text-lg leading-relaxed text-gray-400 sm:text-xl">
-              Turn every new sales rep into your best closer on Day 1—our Agent X
+              Turn every new sales rep into your best closer on Day 1-our Agent X
               not only tells them what to do –{' '}
               <strong className="text-white font-medium">as a top-tier RevOps</strong> – but
               also handles the CRM updates for them. Just connect, capture,{' '}
