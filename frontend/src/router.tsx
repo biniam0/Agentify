@@ -42,6 +42,7 @@ import AdminSettingsPage from './pages/Admin/AdminSettingsPage';
 import SectionPlaceholder from './pages/Admin/Settings/SectionPlaceholder';
 import AdminSettingsGeneral from './pages/Admin/Settings/sections/General';
 import AdminSettingsAuditLog from './pages/Admin/Settings/sections/AuditLog';
+import AdminSettingsAccessRoles from './pages/Admin/Settings/sections/AccessRoles';
 
 // Onboarding (landing page + wizard)
 import OnboardingPage from './pages/Onboarding/OnboardingPage';
@@ -199,13 +200,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'access-roles',
-            element: (
-              <SectionPlaceholder
-                title="Access & Roles"
-                description="Promote, demote, and manage platform admins."
-                scope="Platform"
-              />
-            ),
+            element: <AdminSettingsAccessRoles />,
           },
           {
             path: 'tenants',
