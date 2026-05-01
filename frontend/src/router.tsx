@@ -39,6 +39,7 @@ import BarrierXInfo from './pages/Admin/BarrierXInfo';
 import ClientsDeals from './pages/Admin/ClientsDeals';
 import AgentXInvestigations from './pages/Admin/AgentXInvestigations';
 import AdminSettingsPage from './pages/Admin/AdminSettingsPage';
+import SectionPlaceholder from './pages/Admin/Settings/SectionPlaceholder';
 
 // Onboarding (landing page + wizard)
 import OnboardingPage from './pages/Onboarding/OnboardingPage';
@@ -190,8 +191,76 @@ const router = createBrowserRouter([
           </RoleGuard>
         ),
         children: [
-          { index: true, element: <div /> },
-          { path: 'users', element: <div /> },
+          {
+            index: true,
+            element: (
+              <SectionPlaceholder
+                title="General"
+                description="Personal preferences for your super admin account."
+                scope="Personal"
+              />
+            ),
+          },
+          {
+            path: 'access-roles',
+            element: (
+              <SectionPlaceholder
+                title="Access & Roles"
+                description="Promote, demote, and manage platform admins."
+                scope="Platform"
+              />
+            ),
+          },
+          {
+            path: 'tenants',
+            element: (
+              <SectionPlaceholder
+                title="Tenants"
+                description="View and manage tenants connected to AgentX."
+                scope="Platform"
+              />
+            ),
+          },
+          {
+            path: 'audit-log',
+            element: (
+              <SectionPlaceholder
+                title="Audit Log"
+                description="Recent admin actions and access attempts."
+                scope="Read-only"
+              />
+            ),
+          },
+          {
+            path: 'integrations',
+            element: (
+              <SectionPlaceholder
+                title="Integrations"
+                description="Platform-level integration health and configuration."
+                scope="Platform"
+              />
+            ),
+          },
+          {
+            path: 'environment',
+            element: (
+              <SectionPlaceholder
+                title="Environment"
+                description="Feature flags and environment metadata."
+                scope="Platform"
+              />
+            ),
+          },
+          {
+            path: 'danger-zone',
+            element: (
+              <SectionPlaceholder
+                title="Danger Zone"
+                description="Destructive global actions. Proceed with caution."
+                scope="Dangerous"
+              />
+            ),
+          },
         ],
       },
     ],
