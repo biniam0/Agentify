@@ -33,9 +33,6 @@ const ROLE_OPTIONS: { value: InviteRole; label: string }[] = [
 // Matches the screenshot's initial 4 rows: Read-only, Read-only, Editor, Admin.
 const createInitialRows = (): InviteRow[] => [
   { id: 1, email: '', role: 'READ_ONLY' },
-  { id: 2, email: '', role: 'READ_ONLY' },
-  { id: 3, email: '', role: 'EDITOR' },
-  { id: 4, email: '', role: 'ADMIN' },
 ];
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -76,7 +73,7 @@ const InviteTeam = () => {
     setSending(true);
     try {
       const response = await api.post('/user/tenant-invites', { invites });
-      
+
       if (response.data?.success) {
         toast.success(`Sent ${invites.length} invite${invites.length === 1 ? '' : 's'}`);
         setRows(createInitialRows());

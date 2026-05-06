@@ -2,13 +2,12 @@ import { Separator } from '@/components/ui/separator';
 
 import PersonalInfo from './PersonalInfo';
 import HubSpotDataSync from './HubSpotDataSync';
-import ConnectAccount from './ConnectAccount';
 import SocialUrl from './SocialUrl';
 import DangerZone from './DangerZone';
 import { useIntegrationsStatus } from '../hooks/useIntegrationsStatus';
 
 const UserGeneral = () => {
-  const { connectedProviders, setConnectedProviders, loading } = useIntegrationsStatus();
+  const { connectedProviders, loading } = useIntegrationsStatus();
 
   return (
     <section className="py-3">
