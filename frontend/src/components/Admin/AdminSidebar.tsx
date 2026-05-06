@@ -6,12 +6,10 @@
 import {
   Activity,
   AlertCircle,
-  Bell,
   Briefcase,
   Calendar,
   ChevronRight,
   FileText,
-  HelpCircle,
   MessageSquare,
   Phone,
   SearchCode,
@@ -220,29 +218,16 @@ export function AdminSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer with actions */}
+      {/* Footer */}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Help">
-              <button>
-                <HelpCircle />
-                <span>Help</span>
-              </button>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Notifications" className="relative">
-              <button>
-                <Bell />
-                <span>Notifications</span>
-                <span className="absolute left-5 top-1 h-1.5 w-1.5 bg-red-500 rounded-full border border-sidebar-background"></span>
-              </button>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Settings">
-              <button>
+            <SidebarMenuButton
+              asChild
+              isActive={location.pathname.startsWith('/app/admin/settings')}
+              tooltip="Settings"
+            >
+              <button onClick={() => navigate('/app/admin/settings')}>
                 <Settings />
                 <span>Settings</span>
               </button>

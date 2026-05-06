@@ -38,6 +38,11 @@ import ErrorsLog from './components/Admin/ErrorsLog';
 import BarrierXInfo from './pages/Admin/BarrierXInfo';
 import ClientsDeals from './pages/Admin/ClientsDeals';
 import AgentXInvestigations from './pages/Admin/AgentXInvestigations';
+import AdminSettingsPage from './pages/Admin/AdminSettingsPage';
+import SectionPlaceholder from './pages/Admin/Settings/SectionPlaceholder';
+import AdminSettingsGeneral from './pages/Admin/Settings/sections/General';
+import AdminSettingsAuditLog from './pages/Admin/Settings/sections/AuditLog';
+import AdminSettingsAccessRoles from './pages/Admin/Settings/sections/AccessRoles';
 
 // Onboarding (landing page + wizard)
 import OnboardingPage from './pages/Onboarding/OnboardingPage';
@@ -179,6 +184,68 @@ const router = createBrowserRouter([
           { path: 'crm-actions', element: <CrmActionsLog /> },
           { path: 'scheduler', element: <SchedulerLog /> },
           { path: 'errors', element: <ErrorsLog /> },
+        ],
+      },
+      {
+        path: 'settings',
+        element: (
+          <RoleGuard roles={['SUPER_ADMIN']} fallback="/app/admin">
+            <AdminSettingsPage />
+          </RoleGuard>
+        ),
+        children: [
+          {
+            index: true,
+            element: <AdminSettingsGeneral />,
+          },
+          {
+            path: 'access-roles',
+            element: <AdminSettingsAccessRoles />,
+          },
+          {
+            path: 'tenants',
+            element: (
+              <SectionPlaceholder
+                title="Tenants"
+                description="View and manage tenants connected to AgentX."
+                scope="Platform"
+              />
+            ),
+          },
+          {
+            path: 'audit-log',
+            element: <AdminSettingsAuditLog />,
+          },
+          {
+            path: 'integrations',
+            element: (
+              <SectionPlaceholder
+                title="Integrations"
+                description="Platform-level integration health and configuration."
+                scope="Platform"
+              />
+            ),
+          },
+          {
+            path: 'environment',
+            element: (
+              <SectionPlaceholder
+                title="Environment"
+                description="Feature flags and environment metadata."
+                scope="Platform"
+              />
+            ),
+          },
+          {
+            path: 'danger-zone',
+            element: (
+              <SectionPlaceholder
+                title="Danger Zone"
+                description="Destructive global actions. Proceed with caution."
+                scope="Dangerous"
+              />
+            ),
+          },
         ],
       },
     ],
