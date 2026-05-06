@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,12 +9,7 @@ import api from '@/services/api';
 
 const RESYNC_COOLDOWN_MS = 60000; // 60 seconds
 
-interface HubSpotDataSyncProps {
-  hubSpotConnected: boolean;
-  integrationsLoading: boolean;
-}
-
-const HubSpotDataSync = ({ hubSpotConnected, integrationsLoading }: HubSpotDataSyncProps) => {
+const HubSpotDataSync = () => {
   const [resyncing, setResyncing] = useState(false);
   const [resyncCooldown, setResyncCooldown] = useState(0);
   const [showResyncConfirm, setShowResyncConfirm] = useState(false);
@@ -27,12 +22,8 @@ const HubSpotDataSync = ({ hubSpotConnected, integrationsLoading }: HubSpotDataS
     return () => clearInterval(interval);
   }, [resyncCooldown]);
 
-  useEffect(() => {
-    if (!hubSpotConnected) setShowResyncConfirm(false);
-  }, [hubSpotConnected]);
-
   const handleResyncClick = () => {
-    if (!hubSpotConnected || integrationsLoading || resyncCooldown > 0 || resyncing) return;
+    if (resyncCooldown > 0 || resyncing) return;
     setShowResyncConfirm(true);
   };
 
@@ -65,8 +56,7 @@ const HubSpotDataSync = ({ hubSpotConnected, integrationsLoading }: HubSpotDataS
     }
   };
 
-  const resyncDisabled =
-    !hubSpotConnected || integrationsLoading || resyncing || resyncCooldown > 0;
+  const resyncDisabled = resyncing || resyncCooldown > 0;
 
   return (
     <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
@@ -75,12 +65,6 @@ const HubSpotDataSync = ({ hubSpotConnected, integrationsLoading }: HubSpotDataS
         <p className="text-muted-foreground text-sm">
           Refresh all HubSpot data for your tenant. Runs in the background (typically 5–10 minutes).
         </p>
-        {!hubSpotConnected && !integrationsLoading && (
-          <p className="text-muted-foreground text-sm pt-1">
-            Connect HubSpot in <span className="text-foreground font-medium">Connect Accounts</span>{' '}
-            below to enable resync.
-          </p>
-        )}
       </div>
 
       <div className="lg:col-span-2">
@@ -138,8 +122,6 @@ const HubSpotDataSync = ({ hubSpotConnected, integrationsLoading }: HubSpotDataS
                   </>
                 ) : resyncCooldown > 0 ? (
                   `Resync in ${resyncCooldown}s`
-                ) : integrationsLoading ? (
-                  'Loading...'
                 ) : (
                   <>
                     <RefreshCw className="h-4 w-4 mr-1.5" />
