@@ -22,12 +22,12 @@ const UserGeneral = () => {
           integrationsLoading={loading}
         />
         <Separator className="my-10" />
-        <ConnectAccount
+        {/* <ConnectAccount
           connectedProviders={connectedProviders}
           setConnectedProviders={setConnectedProviders}
           loading={loading}
         />
-        <Separator className="my-10" />
+        <Separator className="my-10" /> */}
         <SocialUrl />
         <Separator className="my-10" />
         <DangerZone />
