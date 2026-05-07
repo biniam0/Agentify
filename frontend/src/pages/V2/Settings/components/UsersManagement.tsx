@@ -101,8 +101,16 @@ const UsersManagement = () => {
       <div className="flex flex-col space-y-1">
         <h3 className="font-semibold">Team Members</h3>
         <p className="text-muted-foreground text-sm">
-          View and manage users in your organization.{tenantName ? ` (${tenantName})` : ''}
+          View and manage users in your organization.
         </p>
+        {tenantName && (
+          <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-1.5 w-fit">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-medium text-foreground/80 tracking-wide">
+              {tenantName}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="space-y-6 lg:col-span-2">
