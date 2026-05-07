@@ -1,4 +1,4 @@
-import { LogOut, Settings, Calendar, Moon, Sun } from 'lucide-react';
+import { LogOut, Calendar, Moon, Sun } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -122,10 +122,6 @@ const AdminLayout: React.FC = () => {
                   >
                     <Calendar className="mr-2 h-4 w-4" />
                     <span>Clients Page</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer focus:!bg-gray-100 focus:!text-gray-900 dark:focus:!bg-gray-700 dark:focus:!text-gray-100 hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer focus:!bg-gray-100 focus:!text-gray-900 dark:focus:!bg-gray-700 dark:focus:!text-gray-100 hover:!bg-gray-100 hover:!text-gray-900 dark:hover:!bg-gray-700 dark:hover:!text-gray-100">
                     {theme === 'light' ? (

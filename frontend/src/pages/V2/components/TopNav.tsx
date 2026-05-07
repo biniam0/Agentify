@@ -1,4 +1,4 @@
-import { Search, Settings, Bell, LogOut } from 'lucide-react';
+import { Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -55,18 +55,18 @@ const TopNav = () => {
 
           {/* Right: Search, Settings, Notifications, Profile */}
           <div className="flex items-center gap-1">
-            <button className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors">
+            {/* <button className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors">
               <Search className="h-[18px] w-[18px] text-gray-500" />
-            </button>
+            </button> */}
             <button
               className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors"
               onClick={() => navigate('/app/v2/settings')}
             >
               <Settings className="h-[18px] w-[18px] text-gray-500" />
             </button>
-            <button className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors relative">
+            {/* <button className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors relative">
               <Bell className="h-[18px] w-[18px] text-gray-500" />
-            </button>
+            </button> */}
 
             <div className="ml-2 pl-3 border-l border-gray-200">
               <DropdownMenu>
